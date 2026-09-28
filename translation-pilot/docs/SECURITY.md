@@ -1,0 +1,16 @@
+# Security boundaries
+
+- Organization identity is derived only from the authenticated server session. Organization-owned queries filter it. Account/location/category bindings cannot be changed through client payloads. Location events use the meeting’s server-validated location, account, and device.
+- Location and individual accounts have separate categories. PHP enforces roles, creation capability, template ownership/use/edit/sharing, record scopes, and media authorization independently of UI controls.
+- Passwords use PHP password_hash/password_verify. Sessions use 256-bit opaque random tokens; only SHA-256 hashes are stored. Production cookies are Secure/HttpOnly/SameSite=Strict. Session CSRF tokens and exact Origin checks protect mutations. Device revocation, disabled accounts, disabled locations, and expiry are checked on authenticated requests.
+- Failed/successful login attempts consume rate-limit buckets per IP and normalized username: ten attempts per fifteen minutes. IT should consider shared-NAT traffic when onboarding many devices; stagger initial enrollment. Password reset invalidates existing sessions for that account. No predictable default password is seeded.
+- PDO prepared statements, strict error mode, organization locks, transactions, bounded mutation batches, unique event keys, and optimistic versions guard writes. Errors use a request ID and safe envelope; sensitive exception details go to server logs only.
+- Media accepts JPEG/PNG/WebP with fileinfo and getimagesize validation, random private paths, byte/dimension limits, hashes, authenticated reads, and no script execution. GD optimizes to WebP and creates a thumbnail when available. Without GD, validated original bytes are retained. This fallback is not a malware scanner; uploaded bytes remain private and are served with a fixed validated MIME and nosniff. Physical deletion checks historical references.
+- Audit records cover logins, account/location/device changes, record saves/sharing/archive, image uploads/archive/deletion, and organization changes. No password or session token is logged.
+- The public tree excludes config, setup tools, migration files, React source, database dumps, and node_modules. Apache denies direct access to API internals. Security headers and CSP restrict execution/framing. YouTube is explicitly allowed for online embedded playback.
+- Offline browser copies are intentional. Server revocation is enforced on reconnect and cannot erase an already offline image. Device passcodes/MDM, inventory, and employee access procedures remain necessary. Avoid shared public computers.
+- `test_http` is an explicitly isolated localhost test override; never enable it in production. The example production config excludes it. There is no public bootstrap route.
+
+## Staging checks
+
+Verify HTTPS redirect, cookie flags, exact Origin/CSRF rejection, direct `/api/src/` denial, private path inaccessibility, upload limits, two companies and two locations, device revocation, and a restored backup. Review web/PHP error logs during testing. The generated `Content-Security-Policy` needs verification on your actual Apache/YouTube/browser combination. CI/local tests do not substitute for hosting configuration checks.

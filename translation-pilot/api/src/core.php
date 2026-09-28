@@ -1,0 +1,25 @@
+<?php
+declare(strict_types=1);
+function fail(int $status,string $message): never {http_response_code($status);echo json_encode(['error'=>['message'=>$message,'request_id'=>$GLOBALS['request_id']??'']]);exit;}
+function json_out(mixed $data,int $status=200): never {http_response_code($status);echo json_encode($data,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);exit;}
+function query(string $sql,array $args=[]): PDOStatement {$q=$GLOBALS['pdo']->prepare($sql);$q->execute($args);return $q;}
+function one(string $sql,array $args=[]): array|false {return query($sql,$args)->fetch(PDO::FETCH_ASSOC);}
+function rows(string $sql,array $args=[]): array {return query($sql,$args)->fetchAll(PDO::FETCH_ASSOC);}
+function uuid(): string {$b=random_bytes(16);$b[6]=chr((ord($b[6])&15)|64);$b[8]=chr((ord($b[8])&63)|128);$s=bin2hex($b);return substr($s,0,8).'-'.substr($s,8,4).'-'.substr($s,12,4).'-'.substr($s,16,4).'-'.substr($s,20);}
+function valid_id(mixed $id):bool {return is_string($id)&&preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i',$id)===1;}
+function require_id(mixed $id):string {if(!valid_id($id))fail(422,'Invalid identifier');return $id;}
+function encoded(mixed $v):string{return json_encode($v,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);}
+function payload(array $r):array{return json_decode($r['payload'],true,512,JSON_THROW_ON_ERROR);}
+function actor():array{return $GLOBALS['actor'];}
+function org():string{return actor()['organization_id'];}
+function role(array $roles):void{if(!in_array(actor()['role'],$roles,true))fail(403,'This account cannot perform that action');}
+function audit(string $action,string $target,array $detail=[]):void{query('INSERT INTO audit_log(organization_id,account_id,action,target_id,detail,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP(6))',[org(),actor()['id'],$action,$target,encoded($detail)]);}
+function begin_write():void{$GLOBALS['pdo']->beginTransaction();query('SELECT id FROM organizations WHERE id=? FOR UPDATE',[org()]);}
+function change(string $kind,string $id):void{query('UPDATE organizations SET sequence=sequence+1 WHERE id=?',[org()]);query('INSERT INTO sync_changes(organization_id,sequence,kind,record_id) SELECT id,sequence,?,? FROM organizations WHERE id=?',[$kind,$id,org()]);}
+function record_row(string $kind,string $id):array|false{return one('SELECT * FROM records WHERE organization_id=? AND kind=? AND id=?',[org(),$kind,$id]);}
+function scoped(array $r,array $a):bool{return empty($r['locations'])||in_array($a['location_id']??'', $r['locations'],true)||$a['role']!=='location';}
+function template_permission(array $t,array $a,string $action):bool{if(($t['organization_id']??null)!==$a['organization_id'])return false;if($a['role']==='administrator'||($t['owner_id']??null)===$a['id'])return true;if($action==='share')return false;if($action==='use'&&!empty($t['company_visible']))return true;foreach($t['access']??[] as $access)if((($access['account_id']??null)===$a['id']||(!empty($a['location_id'])&&($access['location_id']??null)===$a['location_id']))&&!empty($access['can_'.$action]))return true;return false;}
+function visible(string $kind,array $r):bool{if($kind==='templates')return template_permission($r,actor(),'use')||template_permission($r,actor(),'edit');if(!scoped($r,actor()))return false;if($kind==='items'&&!empty($r['libraryId'])){$library=record_row('libraries',$r['libraryId']);if(!$library||!scoped(payload($library),actor()))return false;}return true;}
+function verify_targets(array $r):void{foreach($r['locations']??[] as $id)if(!one('SELECT id FROM locations WHERE organization_id=? AND id=?',[org(),require_id($id)]))fail(422,'Invalid location');foreach($r['access']??[] as $a){if(!empty($a['account_id'])&&!one('SELECT id FROM accounts WHERE organization_id=? AND id=?',[org(),require_id($a['account_id'])]))fail(422,'Invalid account');if(!empty($a['location_id'])&&!one('SELECT id FROM locations WHERE organization_id=? AND id=?',[org(),require_id($a['location_id'])]))fail(422,'Invalid location');}}
+function location_scope(string $id):void{if(actor()['category']==='location'&&actor()['location_id']!==$id)fail(403,'Location access denied');if(!one('SELECT id FROM locations WHERE organization_id=? AND id=? AND enabled=1',[org(),$id]))fail(403,'Location unavailable');}
+function require_content(array $c):void{if(!in_array($c['type']??'', ['lesson','text','image','image-text','external-video','link','vocabulary','recognition','stretch'],true))fail(422,'Use text, images, YouTube, or external links');if(strlen($c['title']??'')<1||strlen($c['title'])>300)fail(422,'Content title required');if(!empty($c['url'])){$u=parse_url($c['url']);if(!in_array($u['scheme']??'',['https','http'],true))fail(422,'Invalid link');if(($c['type']??'')==='external-video'&&!in_array(strtolower($u['host']??''),['youtube.com','www.youtube.com','m.youtube.com','youtu.be'],true))fail(422,'Use a YouTube link');}if(!empty($c['assetId'])&&!one('SELECT id FROM media_assets WHERE organization_id=? AND id=?',[org(),$c['assetId']]))fail(422,'Image unavailable');}

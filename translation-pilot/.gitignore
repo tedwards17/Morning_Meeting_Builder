@@ -1,0 +1,9 @@
+node_modules/
+build/
+deploy/
+artifacts/
+.env
+*.log
+config.php
+private/
+test-results/
