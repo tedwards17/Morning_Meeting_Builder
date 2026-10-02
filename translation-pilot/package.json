@@ -1,6 +1,6 @@
 {
   "name": "morning-meeting-builder",
-  "version": "0.3.7",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,13 +12,13 @@
     "build:demo": "python3 scripts/clean-build.py demo && vite build --mode demo && python3 scripts/sw.py build/demo",
     "build:hosted": "python3 scripts/clean-build.py hosted && vite build --mode hosted && python3 scripts/sw.py build/hosted",
     "package": "python3 scripts/package.py",
-    "check:php": "python3 scripts/check_php.py"
+    "check:php": "python3 scripts/check_php.py",
+    "pilot:php": "php -S 0.0.0.0:8081 -t build/demo scripts/php-pilot-router.php"
   },
   "dependencies": {
     "fflate": "0.8.3",
     "idb": "8.0.3",
     "lucide-react": "1.46.0",
-    "microsoft-cognitiveservices-speech-sdk": "1.51.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.5"

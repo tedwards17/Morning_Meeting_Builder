@@ -8,7 +8,7 @@ import type { State } from "./types";
 
 const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4] };
 
-export const APP_VERSION = "0.3.7";
+export const APP_VERSION = "0.4.0";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;

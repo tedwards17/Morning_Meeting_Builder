@@ -7,8 +7,6 @@ return [
  'origin'=>'https://meetings.example.invalid',
  'max_image_bytes'=>15*1024*1024, 'max_storage_bytes'=>10*1024*1024*1024,
  'session_days'=>90,
- // Optional Azure Speech + Azure Translator resources for live captions.
- // Keep these values in this private server configuration, never in browser files.
- 'speech_key'=>'', 'speech_region'=>'',
- 'translator_key'=>'', 'translator_region'=>'',
+ // Optional captions use separate private translation configuration.
+ // See translation-api/config.example.php and docs/ROUND4_HANDOFF.md.
 ];

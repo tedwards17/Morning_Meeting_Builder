@@ -205,18 +205,24 @@
   pointer-events: none;
 }
 .translation-state.error { color: #ffe2bc; }
+/* Bottom captions use only the text width; controls rise above the caption. */
 .translation-caption {
-  position: absolute; z-index: 4; bottom: max(66px, calc(env(safe-area-inset-bottom) + 60px));
-  left: 50%; transform: translateX(-50%); width: min(94vw, 1320px);
-  padding: clamp(12px, 1.5vw, 22px) clamp(18px, 2.3vw, 38px);
-  border: 1px solid #ffffff55; border-radius: 12px; background: #06111de9;
-  box-shadow: 0 5px 28px #000a; text-align: center; pointer-events: none;
+  position: absolute; z-index: 4; bottom: calc(env(safe-area-inset-bottom, 0px) + var(--caption-gap, 6px));
+  left: 50%; transform: translateX(-50%); width: max-content;
+  max-width: min(92%, 1320px); box-sizing: border-box;
+  padding: 6px 12px; border: 1px solid #ffffff55; border-radius: 8px;
+  background: #06111de9; box-shadow: 0 3px 12px #0008; text-align: center; pointer-events: none;
 }
-.translation-caption span { display: block; margin-bottom: 5px; color: #badcff; font-size: clamp(12px, 1.1vw, 19px); font-weight: 750; letter-spacing: .07em; }
+.translation-caption span { display: block; margin: 0 0 2px; color: #badcff; font-size: clamp(10px, .85vw, 15px); font-weight: 750; }
 .translation-caption p {
-  color: #fff; font-size: clamp(24px, 3.2vw, 58px); font-weight: 750; line-height: 1.17;
+  margin: 0; color: #fff; font-size: clamp(23px, 2.6vw, 46px); font-weight: 750; line-height: 1.15;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden; overflow-wrap: anywhere;
+}
+.presentation.has-caption .presentation-controls { bottom: calc(env(safe-area-inset-bottom, 0px) + var(--caption-gap, 6px) + var(--caption-height, 100px) + 8px); }
+.fullscreen-message {
+  position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; z-index: 6;
+  width: min(60%, 520px); padding: 10px; font-size: 14px; background: #071521f2; border-radius: 8px;
 }
 .presentation-controls { z-index: 5; }
 .presentation-controls .translation-toggle { min-height: 44px; padding: 6px 14px; font-size: .88rem; }
@@ -224,8 +230,11 @@
 @media (max-width: 700px) {
   .presentation-clock { font-size: 17px; padding: 5px 8px; }
   .translation-state { top: 48px; max-width: 75vw; font-size: 11px; }
-  .translation-caption { bottom: max(110px, calc(env(safe-area-inset-bottom) + 106px)); width: 96vw; }
-  .translation-caption p { font-size: clamp(23px, 5.5vw, 32px); }
+  .translation-caption { max-width: 94%; padding: 5px 9px; }
+  .translation-caption p { font-size: clamp(22px, 5vw, 30px); }
   .presentation-controls { flex-wrap: wrap; justify-content: center; gap: 5px; }
   .presentation-controls .translation-toggle, .presentation-controls .translation-preview { font-size: 12px; padding: 5px 7px; }
 }
+
+/* A saved-meeting notice must not cover the bottom captions. */
+body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area-inset-top) + 60px)); left: 12px; transform: none; max-width: min(65vw, 520px); }

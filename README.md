@@ -1,15 +1,11 @@
-# Morning Meeting Builder
+# Morning Meeting Builder — Round 4 (v0.4.0)
 
-This branch is the Round 3 development build, based on the approved Round 2
-commit `076990c`. The root of the repository is the ready-to-publish demo build.
+Development branch: **Round-4-Development**, based on approved Round 3 commit `b99ef562`. The repository root is the static GitHub Pages test build. It preserves existing content and YouTube presentation embedding. No PHP or private configuration is deployed by GitHub Pages.
 
-Round 3 starts with five protected default libraries: Stretches, Safety, Lean
-learning, Improvements, and Quote of the day. Personal Share is a local media
-slide. The Round 2 safety, Lean, and quote entries are retained in
-the app's shipped starter content.
+Round 4 adds Deepgram Nova-3 + Azure Translator captions through a PHP gateway, compact bottom captions, explicit presentation fullscreen controls, optional translation switches and 45-minute session safeguards. Production requires static files and PHP, not a Node service.
 
-The editable source project and tests are distributed separately. This public
-branch holds only the browser build, as earlier deployment branches did.
-GitHub Pages remains configured to use the Round 2 pilot until Round 3 is
-approved. Keep previous hashed assets when deploying so already open tabs can
-finish.
+Editable project: `translation-pilot/`. Start with [Round 4 setup and handoff](translation-pilot/docs/ROUND4_HANDOFF.md) and [tested checks and gaps](translation-pilot/docs/ROUND4_VERIFICATION.md). Build with `npm ci`, `npm run build:demo`, `npm run build:hosted`, and `npm run package` from that directory. Node is build tooling only.
+
+The recommended deployment ZIP is `morning-meeting-builder-round4-php.zip`: built local-browser app plus independent PHP captions gateway. The optional full company account/MySQL package remains separate. No provider keys or presenter credentials belong in the repository or browser settings.
+
+Pages settings and the default branch are unchanged. Publish this testing branch through Pages settings only when ready; live microphone tests use the private same-origin PHP pilot documented in the handoff. Preserve previous hashed assets for already-open tabs.

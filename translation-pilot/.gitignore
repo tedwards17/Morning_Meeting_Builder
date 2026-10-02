@@ -2,7 +2,7 @@ node_modules/
 build/
 deploy/
 artifacts/
-.env
+.env*
 *.log
 config.php
 private/

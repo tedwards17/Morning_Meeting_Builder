@@ -3,6 +3,7 @@ import { APP_VERSION, defaults, upgradeDefaults } from "./defaults";
 import { expireSavedMedia } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
+import { translationEnabled, captionGap, toggleFullscreen } from "./presentation-config";
 import * as db from "./db";
 import {
   insertBroadcasts,
@@ -352,7 +353,7 @@ export function sync(): Promise<void> {
 async function doSync() {
   if (!hosted) {
     status = navigator.onLine
-      ? translationPilot ? "Local pilot · Azure translation" : "Demo / Local data only"
+      ? translationPilot ? "Local pilot · Deepgram + Azure captions" : "Demo / Local data only"
       : "Offline · local data";
     announce();
     return;
@@ -668,6 +669,9 @@ globalThis.MMB = {
   hosted,
   translationPilot,
   startTranslation,
+  translationEnabled,
+  captionGap,
+  toggleFullscreen,
   expireMeetingState: expireSavedMedia,
   discardExpiredMedia,
   canUse: (t: Row) =>

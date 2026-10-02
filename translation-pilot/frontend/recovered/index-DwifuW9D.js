@@ -23965,6 +23965,10 @@ function EE({ meeting: n, onExit: i }) {
     [translationStatus, setTranslationStatus] = ae.useState("off"),
     [translationError, setTranslationError] = ae.useState(""),
     [caption, setCaption] = ae.useState(null),
+    [captionHeight, setCaptionHeight] = ae.useState(0),
+    [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
+    [fullscreenMessage, setFullscreenMessage] = ae.useState(""),
+    translationPending = ae.useRef(null),
     translationSession = ae.useRef(null),
     translationGeneration = ae.useRef(0),
     captionTimer = ae.useRef(null),
@@ -24008,6 +24012,7 @@ function EE({ meeting: n, onExit: i }) {
     ),
     stopTranslation = ae.useCallback(() => {
       translationGeneration.current++;
+      translationPending.current?.abort();
       translationSession.current?.stop();
       translationSession.current = null;
       clearTimeout(captionTimer.current);
@@ -24019,8 +24024,10 @@ function EE({ meeting: n, onExit: i }) {
       const generation = ++translationGeneration.current;
       setTranslationError("");
       setTranslationStatus("connecting");
+      translationPending.current = new AbortController();
       try {
         const session = await globalThis.MMB.startTranslation({
+          signal: translationPending.current.signal,
           onStatus: (status) => {
             if (translationGeneration.current === generation) setTranslationStatus(status);
           },
@@ -24048,11 +24055,26 @@ function EE({ meeting: n, onExit: i }) {
     }, []);
   return (
     ae.useEffect(() => {
+      const element = document.querySelector(".translation-caption");
+      if (!element) { setCaptionHeight(0); return; }
+      const measure = () => setCaptionHeight(element.getBoundingClientRect().height);
+      measure();
+      const observer = new ResizeObserver(measure);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }, [caption]),
+    ae.useEffect(() => {
+      const changed = () => setFullscreen(Boolean(document.fullscreenElement));
+      document.addEventListener("fullscreenchange", changed);
+      return () => document.removeEventListener("fullscreenchange", changed);
+    }, []),
+    ae.useEffect(() => {
       const timer = setInterval(() => setClock(new Date()), 15000);
       return () => clearInterval(timer);
     }, []),
     ae.useEffect(() => () => {
       translationGeneration.current++;
+      translationPending.current?.abort();
       translationSession.current?.stop();
       clearTimeout(captionTimer.current);
     }, []),
@@ -24062,7 +24084,7 @@ function EE({ meeting: n, onExit: i }) {
           ((ne.key === "ArrowRight" || ne.key === " ") &&
             (ne.preventDefault(), L(1)),
           ne.key === "ArrowLeft" && (ne.preventDefault(), L(-1)),
-          ne.key === "Escape" && M());
+          ne.key === "Escape" && !document.fullscreenElement && M());
       };
       return (
         document.addEventListener("keydown", V),
@@ -24096,7 +24118,8 @@ function EE({ meeting: n, onExit: i }) {
       );
     }, [r.settings.wakeLock]),
     d.jsxs("div", {
-      className: "presentation",
+      className: `presentation ${caption ? "has-caption" : ""}`,
+      style: { "--caption-gap": `${globalThis.MMB.captionGap}px`, "--caption-height": `${captionHeight}px` },
       onPointerMove: () => {
         (_(Date.now()), g(!0));
       },
@@ -24126,6 +24149,7 @@ function EE({ meeting: n, onExit: i }) {
           "aria-label": "Current time",
           children: clock.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
         }),
+        fullscreenMessage && d.jsx("div", { className: "fullscreen-message", role: "status", children: fullscreenMessage }),
         (translationStatus !== "off" || translationError) && d.jsx("div", {
           className: `translation-state ${translationStatus === "unavailable" ? "error" : ""}`,
           role: "status",
@@ -24153,12 +24177,20 @@ function EE({ meeting: n, onExit: i }) {
             }),
             d.jsxs("span", { children: [f + 1, " / ", S.length] }),
             d.jsx("button", {
-              className: "translation-toggle",
-              disabled: translationStatus === "connecting",
-              onClick: translationStatus === "listening" || translationStatus === "translating" ? stopTranslation : startTranslation,
-              children: translationStatus === "listening" || translationStatus === "translating" ? "Stop Translation" : "Start Translation",
+              className: "fullscreen-toggle",
+              onClick: async () => {
+                setFullscreenMessage("");
+                try { await globalThis.MMB.toggleFullscreen(); }
+                catch (error) { setFullscreenMessage(error.message); }
+              },
+              children: fullscreen ? "Exit fullscreen" : "Fullscreen",
             }),
-            !globalThis.MMB.hosted && !globalThis.MMB.translationPilot && d.jsx("button", {
+            globalThis.MMB.translationEnabled && d.jsx("button", {
+              className: "translation-toggle",
+              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : startTranslation,
+              children: ["connecting", "listening", "translating"].includes(translationStatus) ? "Stop Translation" : "Start Translation",
+            }),
+            globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-preview",
               onClick: () => {
                 setCaption({ source: "en", text: "Asegurémonos de que este camión pase por control de calidad antes del almuerzo." });
@@ -26010,7 +26042,7 @@ function rz() {
       });
     },
     V = (H) => {
-      (g(H), document.documentElement.requestFullscreen?.().catch(() => {}));
+      g(H);
     },
     ne = ae.useCallback((outcome) => {
       m &&
