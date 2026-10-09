@@ -9,10 +9,16 @@ export type TranslationCallbacks = {
 };
 export const MAX_SESSION_MS = 45 * 60 * 1000;
 
+function captionHeaders(csrf: string) {
+  // Keep the browser's actual origin available when the private Codespaces tunnel
+  // rewrites Origin/Host. The production gateway still checks native Origin.
+  return { "Content-Type": "application/json", "X-MMB-CSRF": csrf, "X-MMB-Page-Origin": window.location.origin };
+}
+
 export async function translationApi(action: string, body: unknown, csrf = "", signal?: AbortSignal) {
   const response = await fetch(`./translation-api/index.php?action=${action}`, {
     method: "POST", credentials: "same-origin", cache: "no-store", signal,
-    headers: { "Content-Type": "application/json", "X-MMB-CSRF": csrf },
+    headers: captionHeaders(csrf),
     body: JSON.stringify(body),
   });
   const type = response.headers.get("content-type") || "";
@@ -57,7 +63,7 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
     if (socket) { socket.onclose = null; socket.onerror = null; socket.close(); }
     if (csrf && sessionId) void fetch("./translation-api/index.php?action=stop", {
       method: "POST", credentials: "same-origin", keepalive: true,
-      headers: { "Content-Type": "application/json", "X-MMB-CSRF": csrf },
+      headers: captionHeaders(csrf),
       body: JSON.stringify({ sessionId }),
     }).catch(() => {});
   };

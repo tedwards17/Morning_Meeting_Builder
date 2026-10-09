@@ -3,7 +3,7 @@
 $root = realpath(__DIR__.'/../build/demo');
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if ($path === '/translation-api/index.php') {
-    // Codespaces can rewrite Origin to localhost while retaining the external Host.
+    // Codespaces can rewrite both Origin and Host to localhost.
     // Normalize only this development router's loopback tunnel, never production PHP.
     $configured = getenv('MMB_TRANSLATION_ORIGIN') ?: '';
     $codespace = getenv('CODESPACE_NAME') ?: '';
@@ -11,12 +11,15 @@ if ($path === '/translation-api/index.php') {
     $port = (string)($_SERVER['SERVER_PORT'] ?? '');
     $forwardedHost = $codespace.'-'.$port.'.'.$domain;
     $received = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $pageOrigin = $_SERVER['HTTP_X_MMB_PAGE_ORIGIN'] ?? '';
+    $allowedHosts = [$forwardedHost, 'localhost:'.$port, '127.0.0.1:'.$port];
     $localOrigins = ['http://localhost:'.$port, 'http://127.0.0.1:'.$port,
         'https://localhost:'.$port, 'https://127.0.0.1:'.$port];
     if (PHP_SAPI === 'cli-server' && $codespace !== '' &&
         filter_var(getenv('MMB_TRANSLATION_TEST_HTTP'), FILTER_VALIDATE_BOOLEAN) &&
         $configured === 'https://'.$forwardedHost &&
-        ($_SERVER['HTTP_HOST'] ?? '') === $forwardedHost &&
+        in_array($_SERVER['HTTP_HOST'] ?? '', $allowedHosts, true) &&
+        $pageOrigin === $configured &&
         in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true) &&
         in_array($received, $localOrigins, true)) {
         $_SERVER['HTTP_ORIGIN'] = $configured;
@@ -26,6 +29,7 @@ if ($path === '/translation-api/index.php') {
         error_log('MMB pilot origin mismatch '.json_encode([
             'expected'=>$configured, 'received'=>$received,
             'host'=>$_SERVER['HTTP_HOST'] ?? '',
+            'pageOrigin'=>$pageOrigin,
         ]));
     }
     require __DIR__.'/../translation-api/index.php';

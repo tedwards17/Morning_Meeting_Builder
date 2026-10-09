@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.resetModules(); sockets=[];
   track = {stop:vi.fn(), addEventListener:vi.fn()};
   const getUserMedia = vi.fn().mockResolvedValue({getTracks:()=>[track], getAudioTracks:()=>[track]});
-  vi.stubGlobal('window', Object.assign(new EventTarget(), {AudioContext:FakeAudio, AudioWorkletNode:FakeWorklet, prompt:vi.fn()}));
+  vi.stubGlobal('window', Object.assign(new EventTarget(), {AudioContext:FakeAudio, AudioWorkletNode:FakeWorklet, prompt:vi.fn(), location:{origin:'https://test.invalid'}}));
   vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden:false}));
   vi.stubGlobal('navigator', {onLine:true, mediaDevices:{getUserMedia}});
   vi.stubGlobal('AudioContext', FakeAudio); vi.stubGlobal('AudioWorkletNode',FakeWorklet); vi.stubGlobal('WebSocket',FakeSocket);
@@ -61,10 +61,16 @@ test('uses a temporary bearer token and Nova-3 PCM; translates English and Spani
   result('es'); await vi.waitFor(()=>expect(callbacks.onCaption).toHaveBeenCalledWith({text:'Good morning',source:'es'}));
   session.stop(); expect(track.stop).toHaveBeenCalledOnce(); expect(sockets[0].close).toHaveBeenCalledOnce();
   expect(fetchMock.mock.calls.some(([url])=>String(url).endsWith('action=stop'))).toBe(true);
+  for (const [, init] of fetchMock.mock.calls) {
+    expect(new Headers(init.headers).get('X-MMB-Page-Origin')).toBe(window.location.origin);
+  }
 });
 test('page exit releases the microphone and socket',async()=>{
   await start(); window.dispatchEvent(new Event('pagehide'));
   expect(track.stop).toHaveBeenCalledOnce(); expect(sockets[0].close).toHaveBeenCalledOnce();
+  const stopRequest=fetchMock.mock.calls.find(([url])=>String(url).endsWith('action=stop'));
+  expect(stopRequest?.[1].keepalive).toBe(true);
+  expect(new Headers(stopRequest?.[1].headers).get('X-MMB-Page-Origin')).toBe(window.location.origin);
 });
 test('45-minute deadline stops capture and ignores later speech',async()=>{
   vi.useFakeTimers(); const pending=start(); await vi.runAllTimersAsync();

@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as tmp:
     try:
         jar=http.cookiejar.CookieJar();client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
         def request(action,body=None,csrf='',custom_origin=origin):
-            req=urllib.request.Request(origin+'/translation-api/index.php?action='+action,data=json.dumps(body or {}).encode(),headers={'Origin':custom_origin,'Content-Type':'application/json','X-MMB-CSRF':csrf})
+            req=urllib.request.Request(origin+'/translation-api/index.php?action='+action,data=json.dumps(body or {}).encode(),headers={'Origin':custom_origin,'Content-Type':'application/json','X-MMB-CSRF':csrf,'X-MMB-Page-Origin':origin})
             try:
                 with client.open(req,timeout=3) as res:return res.status,json.load(res)
             except urllib.error.HTTPError as err:return err.code,json.load(err)
@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory() as tmp:
             try:status,body=request('status');break
             except urllib.error.URLError:time.sleep(.1)
         check('status requires presenter authentication',status==200 and not body['authenticated'])
-        check('rejects incorrect origin',request('status',custom_origin='https://untrusted.invalid')[0]==403)
+        check('rejects incorrect native origin even with the configured page-origin header',request('status',custom_origin='https://untrusted.invalid')[0]==403)
         check('blocks token mint before authentication',request('session')[0]==401)
         check('rejects incorrect passphrase',request('unlock',{'passphrase':'incorrect'})[0]==401)
         status,auth=request('unlock',{'passphrase':'example-only-test-passphrase'});csrf=auth['csrf']
