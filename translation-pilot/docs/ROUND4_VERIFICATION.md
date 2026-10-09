@@ -50,3 +50,11 @@ npm run package
 The PHP integration uses `php -n` and a test-only cURL substitute, so it requires PHP CLI but no API keys. The test router is never packaged into public deployment files. The browser test explicitly mocks provider APIs and YouTube; it uses the browser's synthetic audio device.
 
 If Chromium is installed outside the project's Playwright package, set `PLAYWRIGHT_MODULE` to the corresponding package path. `PHP_BIN` selects the syntax-check executable; `PHP_BINARY` selects the PHP integration executable. These are local tooling paths, not production configuration.
+
+## October 9 Codespaces origin correction
+
+Codespaces can rewrite the browser Origin to localhost while retaining the external forwarded Host. The development router now normalizes that case only with the exact configured Codespaces hostname and port, loopback peer and explicit pilot HTTP switch. The production gateway remains unchanged.
+
+The real PHP development router passed 11 HTTP regression checks with simulated tunnel headers: exact external origin and four localhost forms accepted; other origins, missing origin, wrong port/host and disabled pilot/non-Codespaces modes rejected. The 16 existing PHP gateway checks also passed. The actual user Codespace still needs the pull/restart and phone retry; no live provider success is claimed.
+
+Reproduce with `python3 tests/api/codespaces-origin.py` (PHP CLI required).
