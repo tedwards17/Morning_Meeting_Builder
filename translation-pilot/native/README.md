@@ -1,0 +1,2 @@
+# Native provenance
+The supplied browser ZIP contained Capacitor runtime chunks, which remain in frontend/recovered. It did not include Android or iOS project directories, signing material, or native build configuration. No original native folders were deleted. capacitor.config.ts is recreated for future native work; APK/IPA builds are outside this V2 release. Regenerate native projects with Capacitor after choosing package identifiers and installing the native dependencies. The supported V2 delivery is the PWA.

@@ -1,0 +1,11 @@
+# Dated announcements
+
+Administrator: open Company workspace → Announcements / broadcasts → Create broadcast. Leave **Automatic dated announcement after stretches** enabled. Enter a title and date (organization timezone), upload a JPEG/PNG/WebP image or enter a message, choose receiving meeting accounts by area, then choose Published and Save. Select all includes current and future meeting accounts. Unchecking every account requires a recipient before publishing. A draft is not pushed. Archive or return a record to Draft to withdraw it from meetings that have not started.
+
+The reserved announcement slot is hidden and skipped when empty. Active published content is automatically included after stretches and before Safety. More than one announcement follows priority order. It has the existing required-broadcast skip-with-reason control in live presentation. Future saved meetings update their announcement placement when their date changes and refresh from the server before the first presentation; an already-started meeting keeps its original snapshot and transcript history. Offline clients can use only their last synchronized announcements. Sync online before meetings on an announcement date.
+
+Recipient checkboxes correspond to enabled location/meeting accounts, labeled with meeting area and account name. The PHP API restricts announcement changes to administrators and validates target account IDs; a location account receives only its own targeted announcements. Content managers may continue to manage ordinary broadcasts. Ordinary broadcast scheduling and named slots remain available by disabling the automatic announcement option.
+
+Cross-device distribution and account enforcement require the PHP/MySQL account deployment. The local PHP captions pilot and GitHub Pages demo have one browser-local workspace; their announcement editor tests placement on that browser only. They do not push to other tablets or provide company account authentication. No new database tables are required: announcements use the existing versioned broadcast records, sync, and media storage.
+
+Validation covers published dates, account targets, all/none recipients, empty-slot skipping, placement and snapshot preservation in frontend/PHP tests. A real PHP/MySQL multi-account push test remains required before company rollout.

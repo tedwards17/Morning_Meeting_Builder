@@ -1,0 +1,17 @@
+// Mono linear PCM for Deepgram; works without browser-specific recording containers.
+class MicrophonePCM extends AudioWorkletProcessor {
+  constructor() { super(); this.samples = new Int16Array(2048); this.offset = 0; }
+  process(inputs) {
+    const channel = inputs[0]?.[0];
+    if (channel) for (const value of channel) {
+      const clamped = Math.max(-1, Math.min(1, value));
+      this.samples[this.offset++] = clamped < 0 ? clamped * 32768 : clamped * 32767;
+      if (this.offset === this.samples.length) {
+        this.port.postMessage(this.samples.buffer, [this.samples.buffer]);
+        this.samples = new Int16Array(2048); this.offset = 0;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('microphone-pcm', MicrophonePCM);

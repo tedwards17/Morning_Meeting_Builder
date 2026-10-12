@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"bundler","lib":["ES2022","DOM","DOM.Iterable"],"jsx":"react","strict":true,"allowJs":true,"checkJs":false,"skipLibCheck":true,"noEmit":true,"esModuleInterop":true,"types":["vite/client"]},"include":["frontend/src"]}
