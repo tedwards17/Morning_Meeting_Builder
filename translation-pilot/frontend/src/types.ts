@@ -41,6 +41,10 @@ export type Broadcast = Row & {
   priority: number;
   sequence: number;
   locations: string[];
+  accounts?: string[];
+  allAccounts?: boolean;
+  announcement?: boolean;
+  announcementDate?: string;
   status: "draft" | "published";
   content: Row;
 };

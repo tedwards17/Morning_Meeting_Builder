@@ -7,7 +7,7 @@ function save_record(array $write):array{
   if($prior){if(!template_permission($prior,actor(),'edit'))fail(403,'Template edit denied');if(($data['access']??[])!==($prior['access']??[])||($data['company_visible']??false)!==($prior['company_visible']??false))if(!template_permission($prior,actor(),'share'))fail(403,'Only owner or administrator can share');}
   elseif(!actor()['can_create_templates']&&actor()['role']!=='administrator'&&actor()['role']!=='content_manager')fail(403,'Template creation denied');
   if(!is_array($data['slides']??null)||count($data['slides'])<1||count($data['slides'])>100)fail(422,'Templates require 1–100 slides');
-  foreach($data['slides'] as &$slide){if(($slide['type']??'')==='intro'){unset($slide['libraryId']);$slide['contentIds']=[];}if(!empty($slide['libraryId'])){$lib=record_row('libraries',$slide['libraryId']);if(!$lib||!visible('libraries',payload($lib)))fail(422,'Library unavailable');}foreach($slide['contentIds']??[] as $cid){$content=record_row('items',$cid);if(!$content||!visible('items',payload($content)))fail(422,'Content unavailable');}}unset($slide);
+  foreach($data['slides'] as &$slide){if(isset($slide['builderColor'])&&!preg_match('/^#[a-f0-9]{6}$/i',$slide['builderColor']))fail(422,'Invalid builder slide color');if(isset($slide['defaultSkipped'])&&!is_bool($slide['defaultSkipped']))fail(422,'Invalid default skip setting');if(empty($slide['optional']))$slide['defaultSkipped']=false;if(!empty($slide['personalShare'])||($slide['id']??'')==='00000000-0000-4000-8000-000000001001'||strtolower(trim($slide['title']??''))==='personal share'){$slide['personalShare']=true;$slide['optional']=false;$slide['mediaOptional']=true;$slide['defaultSkipped']=false;}if(($slide['type']??'')==='intro'){unset($slide['libraryId']);$slide['contentIds']=[];}if(!empty($slide['libraryId'])){$lib=record_row('libraries',$slide['libraryId']);if(!$lib||!visible('libraries',payload($lib)))fail(422,'Library unavailable');}foreach($slide['contentIds']??[] as $cid){$content=record_row('items',$cid);if(!$content||!visible('items',payload($content)))fail(422,'Content unavailable');}}unset($slide);
  }else role(['administrator','content_manager']);
  if((int)($write['expected_version']??-1)!==(int)($old['version']??0))fail(409,'This record changed elsewhere. Refresh and retry your edit.');
  verify_targets($data);
@@ -16,6 +16,9 @@ function save_record(array $write):array{
 
  if($kind==='items'){require_content($data);$lib=record_row('libraries',require_id($data['libraryId']??''));if(!$lib)fail(422,'Library unavailable');}
  if($kind==='broadcasts'){
+  if(!empty($data['announcement'])||!empty($prior['announcement']))role(['administrator']);
+  if(!empty($data['announcement'])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$data['announcementDate']??''))fail(422,'Announcement date required');if(($data['allAccounts']??true)===false&&empty($data['accounts']))fail(422,'Select receiving meeting accounts');$data['slot']='Announcements';$data['importance']='required';$data['recurrence']='every';}
+
   if(!in_array($data['importance']??'', ['available','suggested','required'],true)||!in_array($data['recurrence']??'', ['once','every'],true)||!in_array($data['status']??'', ['draft','published'],true))fail(422,'Invalid broadcast settings');
   $start=strtotime($data['start']??'');$end=strtotime($data['end']??'');if($start===false||$end===false||$end<$start)fail(422,'Invalid date window');
   $data['start']=gmdate('Y-m-d\TH:i:s.000\Z',$start);$data['end']=gmdate('Y-m-d\TH:i:s.000\Z',$end);if(strlen($data['slot']??'')<1)fail(422,'Insertion slot required');require_content($data['content']??[]);

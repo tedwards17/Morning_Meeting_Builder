@@ -1,12 +1,17 @@
+import { isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor } from "./slide-policy";
+import { remoteDirection } from "./remote";
 import { recalculate, media } from "../recovered/index-DwifuW9D.js";
 import { APP_VERSION, defaults, upgradeDefaults } from "./defaults";
-import { expireSavedMedia } from "./retention";
+import { expireSavedMedia, isMeetingExpired } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
+import { withTranscript, withPresentedTopic, transcriptText, canReadMeeting } from "./meeting-history";
 import { translationEnabled, captionGap, toggleFullscreen } from "./presentation-config";
 import * as db from "./db";
 import {
   insertBroadcasts,
+  refreshAnnouncements,
+  ensureAnnouncementSlot,
   selectBroadcasts,
   locationUsage,
   canTemplate,
@@ -187,6 +192,7 @@ export const repository = {
       await db.saveState(s);
     }
     if (session) {
+      s!.meetings = s!.meetings.filter((meeting) => canReadMeeting(session!.account, meeting));
       const sharedEvents = await db.all<Usage>("events");
       const scope =
         session.account.location_id ?? (await db.get("meta", "location")) ?? "";
@@ -309,15 +315,23 @@ export const repository = {
     }
     for (const meeting of next.meetings) {
       const prior = before?.meetings.find((r) => r.id === meeting.id);
+      // Builder saves and presentation exit can contain an older React snapshot.
+      // Preserve already-persisted speech and topic snapshots on every write.
+      if (prior) {
+        if (prior.transcript || meeting.transcript) meeting.transcript = [...new Map([...(prior.transcript ?? []), ...(meeting.transcript ?? [])]
+          .map((entry: Row) => [entry.id, entry])).values()];
+        if (prior.presentedTopics || meeting.presentedTopics) meeting.presentedTopics = [...new Map([...(prior.presentedTopics ?? []), ...(meeting.presentedTopics ?? [])]
+          .map((topic: Row) => [topic.slideId, topic])).values()];
+      }
       if (JSON.stringify(prior) !== JSON.stringify(meeting)) {
         meeting.location_id =
           meeting.location_id ??
           session?.account.location_id ??
           (await db.get("meta", "location")) ??
           next.device.id;
-        meeting.account_id = session?.account.id;
-        meeting.device_id = next.device.id;
-        meeting.organization_id = session?.account.organization_id;
+        meeting.account_id ??= session?.account.id;
+        meeting.device_id ??= next.device.id;
+        meeting.organization_id ??= session?.account.organization_id;
         if (hosted)
           await db.put("outbox", meeting.id, {
             id: meeting.id,
@@ -399,6 +413,7 @@ async function doSync() {
             ? `sync/changes?after=${after}`
             : "sync/bootstrap",
       );
+      const pending = await db.all("outbox");
       const d = await db.db;
       const tx = d.transaction(
         [
@@ -429,6 +444,8 @@ async function doSync() {
           "locations",
           "organizations",
           "usage",
+          "meetings",
+          "events",
         ])
           await tx.objectStore(name).clear();
       for (const r of result.changes) {
@@ -456,6 +473,10 @@ async function doSync() {
         }
       }
       for (const a of localAssets) await tx.objectStore("assets").put(a, a.id);
+      for (const write of pending) {
+        if (write.data.account_id !== session?.account.id) continue;
+        await tx.objectStore(write.kind === "meeting" ? "meetings" : "events").put(write.data, write.data.id);
+      }
       // Commit the snapshot cursor only after its final page; interrupted snapshots restart safely.
       if (!result.next)
         await tx.objectStore("meta").put(result.cursor, "cursor");
@@ -520,6 +541,7 @@ export async function record(
   if (!hosted) await db.remove("outbox", e.id);
 }
 export async function opened(meeting: Row, slide: Row, ids: string[]) {
+  await globalThis.MMB.updateMeetingHistory(meeting.id, (current: Row) => withPresentedTopic(current, slide, ids));
   globalThis.MMB.videoEvent = (content: Row, kind: string) =>
     record(meeting, slide, kind, content);
   await record(meeting, slide, "slide_opened");
@@ -632,8 +654,10 @@ export function broadcasts(meeting: Row, state: State) {
     chosen,
     globalThis.MMB.events ?? [],
     new Date().toISOString(),
+    session?.account.id ?? "demo",
+    meeting.date,
   );
-  return insertBroadcasts(meeting, active);
+  return insertBroadcasts(ensureAnnouncementSlot(meeting), active);
 }
 export async function saveRecord(kind: string, data: Row) {
   if (hosted) {
@@ -650,7 +674,7 @@ export async function saveRecord(kind: string, data: Row) {
 }
 export function canNavigate(page: string) {
   if (!session) return true;
-  if (session.account.role === "report_viewer") return ["home"].includes(page);
+  if (session.account.role === "report_viewer") return ["home", "meetings"].includes(page);
   if (page === "templates")
     return (
       session.account.can_create_templates ||
@@ -666,13 +690,24 @@ declare global {
   var MMB: any;
 }
 globalThis.MMB = {
+  appVersion: APP_VERSION,
+  isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
   hosted,
   translationPilot,
   startTranslation,
+  captureTranscript: (meetingId: string, slide: Row, phrase: {text: string; source: "en" | "es"}) =>
+    globalThis.MMB.updateMeetingHistory(meetingId, (current: Row) => withTranscript(current, slide, phrase)),
+  exportTranscript: (meeting: Row) => {
+    const url = URL.createObjectURL(new Blob([transcriptText(meeting)], {type:"text/plain;charset=utf-8"}));
+    const link = document.createElement("a"); link.href = url;
+    link.download = `Meeting-${meeting.date}-${meeting.id}.txt`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
   translationEnabled,
   captionGap,
   toggleFullscreen,
   expireMeetingState: expireSavedMedia,
+  isMeetingExpired,
   discardExpiredMedia,
   canUse: (t: Row) =>
     !hosted || !session || canTemplate(session.account, t, "use"),
@@ -940,3 +975,33 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
 globalThis.MMB.meetingMedia = meetingMedia;
 // Kept for older builder integrations.
 globalThis.MMB.meetingImage = async () => (await meetingMedia())[0];
+
+globalThis.MMB.remoteDirection = remoteDirection;
+
+globalThis.MMB.preparePresentation = async (meeting: Row) => {
+  if (meeting.startedAt) return meeting;
+  await sync();
+  const state = await repository.load();
+  const active = selectBroadcasts(state.broadcasts as Broadcast[], meeting.location_id ?? state.device.id,
+    globalThis.MMB.events ?? [], new Date().toISOString(), session?.account.id ?? "demo",
+    new Intl.DateTimeFormat("en-CA",{timeZone:session?.organization.timezone ?? "America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
+  return refreshAnnouncements(meeting, active);
+};
+
+globalThis.MMB.refreshMeetingAnnouncements = (meeting:Row,state:State) => refreshAnnouncements(meeting,
+  selectBroadcasts(state.broadcasts as Broadcast[],meeting.location_id??state.device.id,globalThis.MMB.events??[],new Date().toISOString(),session?.account.id??"demo",meeting.date));
+globalThis.MMB.announcementImage = async (file:File) => {
+  if (!file.size || file.size>25*1024*1024 || !["image/jpeg","image/png","image/webp"].includes(file.type))
+    throw new Error("Choose a JPEG, PNG or WebP image up to 25 MB.");
+  let asset:Row;
+  if(hosted) asset=(await upload(file)).asset;
+  else {
+    const hash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,"0")).join("");
+    await media.write(hash,file);
+    asset={id:crypto.randomUUID(),hash,name:file.name,mime:file.type,size:file.size,createdAt:new Date().toISOString()};
+  }
+  if(globalThis.MMB.addMediaAssets)await globalThis.MMB.addMediaAssets([asset]);
+  else await db.put("assets",asset.id,asset);
+  await refreshAssets();
+  return {...globalThis.MMB.meetingOnly(file.name,""),type:"image-text",assetId:asset.id,source:"Announcement"};
+};

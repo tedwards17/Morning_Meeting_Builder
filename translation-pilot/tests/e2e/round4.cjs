@@ -12,8 +12,7 @@ await p.route('https://www.youtube.com/iframe_api',route=>route.fulfill({content
 await p.route(/https:\/\/(www\.youtube|www\.youtube-nocookie)\.com\/embed\//,route=>route.fulfill({contentType:'text/html',body:'<html><body style="background:#111;color:white">YouTube iframe placeholder</body></html>'}));
 await p.goto('http://127.0.0.1:5183/demo/');await p.locator('.start-panel').waitFor();
 await p.getByRole('button',{name:/Build a meeting/}).last().click();await p.getByPlaceholder('Who is leading today?').fill('Round 4 test');
-for(const title of ['Personal share','Small changes. Better work.']){await p.locator('.agenda-select').filter({hasText:title}).click();await p.getByLabel('Skip this slide',{exact:true}).check();} await p.getByRole('button',{name:'Save presentation',exact:true}).click();
-await p.locator('.recent-list button').first().waitFor();
+for(const title of ['Small changes. Better work.']){await p.locator('.agenda-select').filter({hasText:title}).click();await p.getByLabel('Skip this slide',{exact:true}).check();} await p.getByRole('button',{name:'Save presentation',exact:true}).click();await p.getByText('Presentation saved for future use.',{exact:true}).waitFor();
 await p.evaluate(async()=>{const state=await MMB.repository.load();const meeting=state.meetings.at(-1);const slide=meeting.slides.find(s=>s.definition.title==='Safety Moment');const video=state.items.find(item=>item.type==='external-video'&&item.libraryId===slide.definition.libraryId)||state.items.find(item=>item.type==='external-video');if(!video)throw new Error('Missing shipped YouTube test content');slide.items=[structuredClone(video)];await MMB.repository.save(state);});
 await p.reload();await p.locator('.recent-list button').first().click();
 await p.getByRole('button',{name:'Present saved meeting',exact:true}).last().click();await p.locator('.presentation').waitFor();
@@ -30,7 +29,7 @@ ok(`${viewport.width}: navigation remains above captions`,controls.y+controls.he
 ok(`${viewport.width}: caption stays inside visible width`,box.x>=0&&box.x+box.width<=viewport.width);
 await p.screenshot({path:`test-results/round4-${viewport.width}.png`});
 // Slide changes preserve overlay; advance to the existing safety YouTube slide.
-for(let i=0;i<2;i++)await p.getByRole('button',{name:'Next slide',exact:true}).click();
+for(let i=0;i<3;i++)await p.getByRole('button',{name:'Next slide',exact:true}).click();
 await p.locator('.youtube-player iframe').waitFor({timeout:5000});
 await p.getByRole('button',{name:'Preview captions',exact:true}).click();
 ok(`${viewport.width}: YouTube embed retained with captions`,await p.locator('.youtube-player iframe').count()===1&&await p.locator('.translation-caption').isVisible());
@@ -60,8 +59,8 @@ await audioPage.route('**/translation-api/index.php?*',async route=>{
   await route.fulfill({contentType:'application/json',body:JSON.stringify(response)});
 });
 await audioPage.goto('http://127.0.0.1:5183/demo/');await audioPage.locator('.start-panel').waitFor();await audioPage.getByRole('button',{name:/Build a meeting/}).last().click();await audioPage.getByPlaceholder('Who is leading today?').fill('PCM pipeline test');
-for(const title of ['Personal share','Small changes. Better work.']){await audioPage.locator('.agenda-select').filter({hasText:title}).click();await audioPage.getByLabel('Skip this slide',{exact:true}).check();}
-await audioPage.getByRole('button',{name:'Save presentation',exact:true}).click();await audioPage.locator('.recent-list button').first().click();await audioPage.getByRole('button',{name:'Present saved meeting',exact:true}).click();
+for(const title of ['Small changes. Better work.']){await audioPage.locator('.agenda-select').filter({hasText:title}).click();await audioPage.getByLabel('Skip this slide',{exact:true}).check();}
+await audioPage.getByRole('button',{name:'Save presentation',exact:true}).click();await audioPage.getByText('Presentation saved for future use.',{exact:true}).waitFor();await audioPage.getByRole('button',{name:'Present saved meeting',exact:true}).click();
 await audioPage.getByRole('button',{name:'Start Translation',exact:true}).click();
 await audioPage.waitForFunction(()=>window.testSocket?.binaryCount>2);
 ok('actual browser AudioWorklet sends PCM from a synthetic microphone',await audioPage.evaluate(()=>testSocket.binaryCount>2&&testSocket.url.includes('encoding=linear16')&&testSocket.protocols[0]==='bearer'));
@@ -77,7 +76,7 @@ ok('exiting presentation releases the actual browser capture pipeline',await aud
 await audioContext.close();
 const context=await browser.newContext({serviceWorkers:'block'});const p=await context.newPage();
 await p.route('**/config.js',r=>r.fulfill({contentType:'application/javascript',body:'window.MMB_CONFIG={translationEnabled:false,captionGap:0}'}));
-await p.goto('http://127.0.0.1:5183/demo/');await p.locator('.start-panel').waitFor();await p.getByRole('button',{name:/Build a meeting/}).last().click();await p.getByPlaceholder('Who is leading today?').fill('Disabled captions test');for(const title of ['Personal share','Small changes. Better work.']){await p.locator('.agenda-select').filter({hasText:title}).click();await p.getByLabel('Skip this slide',{exact:true}).check();} await p.getByRole('button',{name:'Save presentation',exact:true}).click();await p.locator('.recent-list button').first().waitFor();await p.locator('.recent-list button').first().click();await p.getByRole('button',{name:'Present saved meeting',exact:true}).last().click();await p.locator('.presentation').waitFor();
+await p.goto('http://127.0.0.1:5183/demo/');await p.locator('.start-panel').waitFor();await p.getByRole('button',{name:/Build a meeting/}).last().click();await p.getByPlaceholder('Who is leading today?').fill('Disabled captions test');for(const title of ['Small changes. Better work.']){await p.locator('.agenda-select').filter({hasText:title}).click();await p.getByLabel('Skip this slide',{exact:true}).check();} await p.getByRole('button',{name:'Save presentation',exact:true}).click();await p.getByText('Presentation saved for future use.',{exact:true}).waitFor();await p.getByRole('button',{name:'Present saved meeting',exact:true}).last().click();await p.locator('.presentation').waitFor();
 ok('disabled configuration hides captions and keeps presentation navigation',await p.getByRole('button',{name:'Start Translation',exact:true}).count()===0&&await p.getByRole('button',{name:'Preview captions',exact:true}).count()===0&&await p.getByRole('button',{name:'Next slide',exact:true}).isVisible());
 await context.close();fs.writeFileSync('test-results/round4-checks.json',JSON.stringify(checks,null,2));console.log(`${checks.length} browser checks passed. YouTube frames mocked; mobile layouts emulated.`);
 }finally{await browser?.close();server.kill();}

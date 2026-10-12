@@ -6,18 +6,26 @@ function store_meeting(array $m):void{
  if(!in_array($m['status']??'',['draft','presenting','completed'],true)||strlen($m['presenter']??'')>300||count($m['slides']??[])>100)fail(422,'Invalid meeting');
  $old=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$id]);
  if($old&&($old['account_id']!==actor()['id']||$old['device_id']!==$GLOBALS['device']['id']))fail(403,'Meeting belongs to another device');
- if($old&&$old['status']==='completed'){if(encoded(payload($old))!==encoded($m))return;return;}
  $m['organization_id']=org();$m['account_id']=actor()['id'];$m['device_id']=$GLOBALS['device']['id'];
+ validate_meeting_history($m);
+ if($old&&$old['status']==='completed')$m=append_completed_history(payload($old),$m);
  foreach($m['slides']??[] as $s){require_id($s['id']??'');if(!empty($s['broadcast_id'])){$broadcast=record_row('broadcasts',$s['broadcast_id']);if(!$broadcast||!visible('broadcasts',payload($broadcast)))fail(403,'Broadcast unavailable');$version=one('SELECT payload FROM record_versions WHERE organization_id=? AND kind=? AND record_id=? AND version=?',[org(),'broadcasts',$s['broadcast_id'],$s['broadcast_version']??0]);if(!$version)fail(422,'Unknown broadcast version');$b=payload($version);if($b['importance']==='required'){if(empty($s['required'])||!empty($s['skipped']))fail(422,'Required broadcast cannot be removed or skipped in draft');if(count($s['items']??[])!==1||($s['items'][0]['id']??'')!==$b['content']['id']||($s['items'][0]['description']??'')!==($b['content']['description']??'')||($s['items'][0]['assetId']??null)!==($b['content']['assetId']??null))fail(422,'Required broadcast content cannot be changed');}}}
  // Enforce required slides known at this device's last synchronization, without retroactively
  // adding broadcasts that arrived while the device was offline.
  if($m['status']!=='draft'){
   $seen=[];$cutoff=$GLOBALS['device']['last_sync']??gmdate('Y-m-d H:i:s');$at=strtotime($m['createdAt']??'')?:time();$cutoff=min($cutoff,gmdate('Y-m-d H:i:s',$at+1));
   foreach(rows("SELECT record_id,payload FROM record_versions WHERE organization_id=? AND kind='broadcasts' AND created_at<=? ORDER BY version DESC",[org(),$cutoff]) as $rv){if(isset($seen[$rv['record_id']]))continue;$seen[$rv['record_id']]=true;$b=payload($rv);
-   if(($b['importance']??'')!=='required'||($b['status']??'')!=='published'||!empty($b['archived'])||!scoped($b,array_merge(actor(),['location_id'=>$location,'role'=>'location']))||strtotime($b['start'])>$at||strtotime($b['end'])<$at)continue;
+   if(!empty($b['announcement'])||($b['importance']??'')!=='required'||($b['status']??'')!=='published'||!empty($b['archived'])||!scoped($b,array_merge(actor(),['location_id'=>$location,'role'=>'location']))||strtotime($b['start'])>$at||strtotime($b['end'])<$at)continue;
    $completed=false;if($b['recurrence']==='once'){foreach(rows("SELECT payload FROM usage_events WHERE organization_id=? AND location_id=? AND broadcast_id=? AND event_type='broadcast_presented' AND occurred_at_utc<=?",[org(),$location,$b['id'],gmdate('Y-m-d H:i:s',$at)]) as $er){$ev=payload($er);$skips=rows("SELECT payload FROM usage_events WHERE organization_id=? AND meeting_id=? AND broadcast_id=? AND event_type='broadcast_skipped'",[org(),$ev['meeting_id'],$b['id']]);if(!array_filter($skips,fn($skip)=>(payload($skip)['slide_id']??'')===($ev['slide_id']??''))){$completed=true;break;}}}
    if(!$completed&&!array_filter($m['slides'],fn($slide)=>($slide['broadcast_id']??'')===$b['id']&&!empty($slide['required'])))fail(422,'A required broadcast is missing. Rebuild the meeting after synchronizing.');
   }
+  $announcementAt=strtotime($m['startedAt']??'')?:time();$seenAnnouncements=[];
+  foreach(rows("SELECT record_id,payload FROM record_versions WHERE organization_id=? AND kind='broadcasts' AND created_at<=? ORDER BY version DESC",[org(),$GLOBALS['device']['last_sync']??gmdate('Y-m-d H:i:s')]) as $rv){
+   if(isset($seenAnnouncements[$rv['record_id']]))continue;$seenAnnouncements[$rv['record_id']]=true;$b=payload($rv);
+   if(empty($b['announcement'])||($b['status']??'')!=='published'||!empty($b['archived'])||!scoped($b,array_merge(actor(),['location_id'=>$location]))||strtotime($b['start'])>$announcementAt||strtotime($b['end'])<$announcementAt)continue;
+   if(!array_filter($m['slides'],fn($slide)=>($slide['broadcast_id']??'')===$b['id']&&!empty($slide['required'])))fail(422,'An announcement is missing. Sync and reopen this saved meeting.');
+  }
+
  }
  query('INSERT INTO meetings(id,organization_id,location_id,account_id,device_id,presenter,status,payload,created_at) VALUES(?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE presenter=VALUES(presenter),status=VALUES(status),payload=VALUES(payload)',[$id,org(),$location,actor()['id'],$GLOBALS['device']['id'],$m['presenter']??'',$m['status'],encoded($m)]);change('meetings',$id);
 }
@@ -46,7 +54,8 @@ function sync_row(string $kind,string $id):array{
  if(in_array($kind,['templates','libraries','items','broadcasts'],true)){$r=record_row($kind,$id);if($r){$p=payload($r);if(visible($kind,$p))$data=$p;}}
  elseif($kind==='assets'){$r=one('SELECT * FROM media_assets WHERE organization_id=? AND id=?',[org(),$id]);if($r&&media_allowed($id))$data=media_meta($r);}
  elseif($kind==='locations'){$r=one('SELECT id,organization_id,name,enabled FROM locations WHERE organization_id=? AND id=?',[org(),$id]);if($r&&(actor()['role']!=='location'||actor()['location_id']===$id))$data=$r;}
- elseif(in_array($kind,['events','meetings'],true)){$table=$kind==='events'?'usage_events':'meetings';$r=one("SELECT * FROM $table WHERE organization_id=? AND id=?",[org(),$id]);if($r&&(actor()['role']!=='location'||$r['location_id']===actor()['location_id']))$data=payload($r);}
+ elseif($kind==='meetings'){$r=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$id]);if($r&&can_read_meeting($r))$data=payload($r);}
+ elseif($kind==='events'){$r=one('SELECT * FROM usage_events WHERE organization_id=? AND id=?',[org(),$id]);if($r&&(actor()['role']!=='location'||$r['location_id']===actor()['location_id']))$data=payload($r);}
  return ['id'=>$id,'kind'=>$kind,'deleted'=>$data===null,'data'=>$data];
 }
 function bootstrap_token(array $value):string{
@@ -65,7 +74,7 @@ if(in_array($path,['sync/bootstrap','sync/changes'],true)&&$method==='GET'){
   $first=$position===null;$anchor=$position['anchor']??(int)$o['sequence'];$lastKind=$position['kind']??'';$lastId=$position['id']??'';$batch=[];
   foreach(['assets'=>'media_assets','broadcasts'=>'records','events'=>'usage_events','items'=>'records','libraries'=>'records','locations'=>'locations','meetings'=>'meetings','templates'=>'records'] as $kind=>$table){
    if(strcmp($kind,$lastKind)<0)continue;$remaining=251-count($batch);if($remaining<=0)break;
-   $args=[org()];$where='organization_id=?';if($table==='records'){$where.=' AND kind=?';$args[]=$kind;}if($kind===$lastKind){$where.=' AND id>?';$args[]=$lastId;}
+   $args=[org()];$where='organization_id=?';if($table==='records'){$where.=' AND kind=?';$args[]=$kind;}if($kind==='meetings'&&actor()['role']!=='administrator'){$where.=' AND account_id=?';$args[]=actor()['id'];}if($kind===$lastKind){$where.=' AND id>?';$args[]=$lastId;}
    foreach(rows("SELECT id FROM $table WHERE $where ORDER BY id LIMIT $remaining",$args) as $r)$batch[]=['kind'=>$kind,'id'=>$r['id']];
   }
   $pending=count($batch)>250;$batch=array_slice($batch,0,250);foreach($batch as $r)$changes[]=sync_row($r['kind'],$r['id']);

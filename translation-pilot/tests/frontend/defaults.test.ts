@@ -16,7 +16,7 @@ describe("Round 3 starter data and browser upgrade", () => {
     expect(state.templates[0].slides.at(-2).title).toBe("Quote of the day");
     expect(state.templates[0].slides.at(-1).title).toBe("Let’s get to work");
     expect(state.templates[0].slides.find((slide) => slide.title === "Small changes. Better work."))
-      .toMatchObject({ type: "gallery", layout: "full-media", count: 12 });
+      .toMatchObject({ type: "gallery", layout: "full-media", count: 12, optional:true,defaultSkipped:true });
     expect(state.templates[0].slides.find((slide) => slide.title === "Small changes. Better work.")?.libraryId).toBeUndefined();
     expect(state.items.filter((item) => item.libraryId.endsWith("0008")).every((item) => !/^Quote of the day #?\d+/.test(item.title))).toBe(true);
     expect(state.items.filter((item) => item.libraryId.endsWith("0008")).every((item) => item.title === item.title.trim())).toBe(true);

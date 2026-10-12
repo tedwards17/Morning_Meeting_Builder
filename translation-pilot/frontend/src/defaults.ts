@@ -5,10 +5,11 @@ import items3 from "./round2-seed-items-3.json";
 import items4 from "./round2-seed-items-4.json";
 import deduplicatedVideos from "./round3-dedup-map.json";
 import type { State } from "./types";
+import { templateDefaults } from "./slide-policy";
 
 const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4] };
 
-export const APP_VERSION = "0.4.0";
+export const APP_VERSION = "0.4.10";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;
@@ -30,7 +31,7 @@ export function defaults(): State {
       dateFormat: "long", hideControls: true, wakeLock: true,
       appVersion: APP_VERSION, round3DefaultsVersion: DEFAULTS_VERSION,
     },
-    templates: [structuredClone(starter.template)],
+    templates: [templateDefaults(structuredClone(starter.template))],
     libraries: structuredClone(starter.libraries),
     items: structuredClone(starter.items),
     assets: [], meetings: [], usage: [],
@@ -39,7 +40,11 @@ export function defaults(): State {
 }
 
 // Upgrade saved Round 2 data without changing personal content, history, or other templates.
-export function upgradeDefaults(state: State): State {
+export function upgradeDefaults(state:State):State {
+  const upgraded=upgradeLegacyDefaults(state);
+  return {...upgraded,templates:upgraded.templates.map(templateDefaults)};
+}
+function upgradeLegacyDefaults(state: State): State {
   if (state.settings.round3DefaultsVersion === DEFAULTS_VERSION)
     return { ...state, settings: { ...state.settings, appVersion: APP_VERSION } };
   if (state.settings.round3DefaultsVersion === 4) {

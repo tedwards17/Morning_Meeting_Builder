@@ -72,6 +72,16 @@ test('page exit releases the microphone and socket',async()=>{
   expect(stopRequest?.[1].keepalive).toBe(true);
   expect(new Headers(stopRequest?.[1].headers).get('X-MMB-Page-Origin')).toBe(window.location.origin);
 });
+test('transcript-only capture saves final speech without Azure text requests',async()=>{
+  const {startTranslation}=await import('../../frontend/src/translation');
+  const onTranscript=vi.fn().mockResolvedValue(undefined);
+  const session=await startTranslation({translate:false,onTranscript,onStatus:vi.fn(),onCaption:vi.fn(),onError:vi.fn()});
+  result('en');result('es');
+  await vi.waitFor(()=>expect(onTranscript).toHaveBeenCalledTimes(2));
+  expect(onTranscript.mock.calls[0][0]).toEqual({text:'Good morning',source:'en'});
+  expect(fetchMock.mock.calls.some(([url])=>String(url).endsWith('action=text'))).toBe(false);
+  session.stop();
+});
 test('45-minute deadline stops capture and ignores later speech',async()=>{
   vi.useFakeTimers(); const pending=start(); await vi.runAllTimersAsync();
   const {callbacks}=await pending;

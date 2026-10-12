@@ -18057,8 +18057,7 @@ Zv((n) => ({
     return Mg(i, r) || n.has(i, r);
   },
 }));
-const $v = "0.3.7",
-  Vi = 1,
+const Vi = 1,
   Ke = xx(),
   gn = Lv(),
   Us = el().regex(/^#[0-9a-f]{6}$/i),
@@ -18121,6 +18120,10 @@ const $v = "0.3.7",
     text: sr,
     notes: sr,
     optional: Na(),
+    builderColor: Us.optional(),
+    defaultSkipped: Na().optional(),
+    mediaOptional: Na().optional(),
+    personalShare: Na().optional(),
     duration: Gs().int().min(0).max(3600),
     libraryId: Ke.optional(),
     contentIds: Zt(Ke).max(20),
@@ -18594,6 +18597,8 @@ function $j({ children: n }) {
     [s, c] = ae.useState(""),
     [f, h] = ae.useState(""),
     [m, g] = ae.useState(0);
+  const messageTimer = ae.useRef(null);
+  ae.useEffect(() => () => clearTimeout(messageTimer.current), []);
   ae.useEffect(() => {
     ((Ms ??= Bj()), (globalThis.MMB.refresh = () => Ms.load().then(r)));
     Ms.load()
@@ -18607,12 +18612,17 @@ function $j({ children: n }) {
       const A = await Ms.update(S);
       return (r(A), A);
     }, []),
-    _ = ae.useCallback((S) => h(S), []),
+    _ = ae.useCallback((S, duration = 0) => {
+      clearTimeout(messageTimer.current);
+      h(S);
+      if (duration) messageTimer.current = setTimeout(() => h(""), duration);
+    }, []),
     b = ae.useCallback(async (S) => {
       g((A) => A + 1);
       try {
         await S();
       } catch (A) {
+        clearTimeout(messageTimer.current);
         (console.error("[Morning Meeting]", A),
           h(
             A instanceof ax
@@ -18628,6 +18638,10 @@ function $j({ children: n }) {
   globalThis.MMB.addMediaAssets = (assets) => v((state) => ({
     ...state, assets: [...state.assets, ...assets],
   }));
+  globalThis.MMB.updateMeetingHistory = (id, transform) => v((state) => {
+    if (!state.meetings.some(meeting=>meeting.id===id)) throw new Error("Meeting record unavailable. Stop speech capture and reopen the meeting.");
+    return {...state, meetings: state.meetings.map((meeting) => meeting.id === id ? transform(meeting) : meeting)};
+  });
   globalThis.MMB.expireSavedMeetings = async () => {
     let hashes = [];
     await v((state) => {
@@ -18666,7 +18680,7 @@ function $j({ children: n }) {
                   d.jsx("span", { children: f }),
                   d.jsx("button", {
                     "aria-label": "Dismiss message",
-                    onClick: () => h(""),
+                    onClick: () => { clearTimeout(messageTimer.current); h(""); },
                     children: "×",
                   }),
                 ],
@@ -19195,15 +19209,25 @@ const nE = [
     ["path", { d: "m6 6 12 12", key: "d8bk6v" }],
   ],
   iy = xe("x", nE);
-function Ii({ title: n, children: i, onClose: r, wide: s = !1 }) {
-  const c = ae.useRef(null);
+function Ii({ title: n, children: i, onClose: r, wide: s = !1, practice = false }) {
+  const c = ae.useRef(null), ownedFullscreen = ae.useRef(false),
+    [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
+    [fullscreenMessage, setFullscreenMessage] = ae.useState("");
   return (
     ae.useEffect(() => {
       const f = c.current;
-      return (f?.showModal(), () => f?.close());
+      f?.showModal();
+      if (practice) globalThis.MMB.practicePreview = true;
+      const changed = () => setFullscreen(Boolean(document.fullscreenElement));
+      document.addEventListener("fullscreenchange", changed);
+      return () => {
+        f?.close(); document.removeEventListener("fullscreenchange", changed);
+        if (practice) globalThis.MMB.practicePreview = false;
+        if (ownedFullscreen.current && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      };
     }, []),
     d.jsxs("dialog", {
-      className: s ? "modal wide" : "modal",
+      className: `${s ? "modal wide" : "modal"}${practice ? " practice-preview" : ""}`,
       ref: c,
       onCancel: (f) => {
         (f.preventDefault(), r());
@@ -19213,6 +19237,15 @@ function Ii({ title: n, children: i, onClose: r, wide: s = !1 }) {
         d.jsxs("header", {
           children: [
             d.jsx("h2", { children: n }),
+            practice && d.jsx("button", {
+              onClick: async () => {
+                setFullscreenMessage("");
+                const entering = !document.fullscreenElement;
+                try { await globalThis.MMB.toggleFullscreen(); ownedFullscreen.current = entering; }
+                catch (error) { setFullscreenMessage(error.message); }
+              },
+              children: fullscreen ? "Exit fullscreen" : "Fullscreen preview",
+            }),
             d.jsx("button", {
               className: "icon-button",
               "aria-label": "Close",
@@ -19221,6 +19254,7 @@ function Ii({ title: n, children: i, onClose: r, wide: s = !1 }) {
             }),
           ],
         }),
+        fullscreenMessage && d.jsx("p", { role: "status", children: fullscreenMessage }),
         i,
       ],
     })
@@ -19398,7 +19432,7 @@ function rotationOrder(slide, items, usedElsewhere) {
 }
 function iu(n, i) {
   const r = new Set(),
-    s = n.slides.map((c) => {
+    s = globalThis.MMB.templateDefaults(n).slides.map((c) => {
       const f =
         c.type !== "intro" && c.type !== "stretch" && (c.libraryId || c.contentIds.length)
           ? ry(c, i, r)
@@ -19407,9 +19441,9 @@ function iu(n, i) {
         f.forEach((h) => r.add(h.id)),
         {
           id: Bt(),
-          definition: structuredClone(c),
+          definition: globalThis.MMB.slidePolicy(structuredClone(c)),
           items: structuredClone(f),
-          skipped: !1,
+          skipped: Boolean(c.optional && c.defaultSkipped && !globalThis.MMB.isPersonalShare(c)),
         }
       );
     });
@@ -19780,7 +19814,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
             className: "external-content video-only",
             children: d.jsx(YouTubePlayer, {
               item: n,
-              onEvent: r ? (kind) => globalThis.MMB.videoEvent(n, kind) : undefined,
+              onEvent: r ? (kind) => !globalThis.MMB.practicePreview && globalThis.MMB.videoEvent?.(n, kind) : undefined,
             }),
           })
         : d.jsxs("div", {
@@ -19866,8 +19900,8 @@ function Fi({
                 L.length === 1 && !O && v.type !== "gallery" &&
                   v.title !== "Quote of the day" &&
                   d.jsx("p", { className: "slide-topic", children: L[0].title }),
-                v.text &&
-                  d.jsx("p", { className: "slide-intro", children: v.text }),
+                (v.text || (globalThis.MMB.isPersonalShare(v) && !L.length)) &&
+                  d.jsx("p", { className: "slide-intro", children: v.text || "Share a quick personal update. A photo or video is optional." }),
                 v.type === "intro" &&
                   d.jsxs("div", {
                     className: "presenter-line",
@@ -20974,12 +21008,21 @@ function pE({ template: n, onClose: i }) {
                         children: [
                           d.jsx("input", {
                             type: "checkbox",
-                            checked: O.optional,
-                            onChange: (C) => V({ optional: C.target.checked }),
+                            checked: globalThis.MMB.isPersonalShare(O) ? false : O.optional,
+                            disabled: globalThis.MMB.isPersonalShare(O),
+                            onChange: (C) => V({ optional: C.target.checked, defaultSkipped: C.target.checked ? O.defaultSkipped : false }),
                           }),
                           " ",
-                          "Presenter can skip this slide",
+                          globalThis.MMB.isPersonalShare(O) ? "Personal share is always included; media is optional" : "Presenter can skip this slide",
                         ],
+                      }),
+                      d.jsxs("label", {
+                        className: "check",
+                        children: [d.jsx("input", {
+                          type: "checkbox", checked: Boolean(O.optional && O.defaultSkipped),
+                          disabled: !O.optional || globalThis.MMB.isPersonalShare(O),
+                          onChange: (C) => V({defaultSkipped:C.target.checked}),
+                        }), "Skipped by default in new meetings"],
                       }),
                       d.jsxs("label", {
                         className: "check",
@@ -20995,6 +21038,17 @@ function pE({ template: n, onClose: i }) {
                         ],
                       }),
                     ],
+                  }),
+                  d.jsx(Ne, {
+                    label: "Builder slide color",
+                    hint: "A subtle highlight in the meeting builder’s slide list only.",
+                    children: d.jsxs("select", {
+                      "aria-label": "Builder slide color",
+                      value: O.builderColor ?? "",
+                      onChange: (C) => V({builderColor:C.target.value || undefined}),
+                      children: [d.jsx("option", {value:"",children:"No highlight"}),
+                        ...globalThis.MMB.builderColors.map(color=>d.jsx("option",{value:color.value,children:color.label},color.value))],
+                    }),
                   }),
                   d.jsxs("details", {
                     children: [
@@ -23149,17 +23203,20 @@ function MeetingReadiness({ meeting }) {
 }
 function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false }) {
   const { state: s, update: c, run: f, notify: h, busy: m } = qt(),
-    [g, v] = ae.useState(n),
+    [g, v] = ae.useState(n ? globalThis.MMB.normalizeUnstartedMeeting(n) : n),
     [_, b] = ae.useState(0),
     [S, A] = ae.useState(null),
     [M, L] = ae.useState(null),
     [O, V] = ae.useState(!1),
-    rotations = ae.useRef(new Map());
+    rotations = ae.useRef(new Map()),
+    autosaveTimer = ae.useRef(null),
+    starting = ae.useRef(false);
   au(O);
   ae.useEffect(() => {
-    if (!g || isMeetingExpired(g) || !O) return;
+    if (!g || isMeetingExpired(g) || !O || starting.current) return;
     const snapshot = g;
     const timer = setTimeout(() => {
+      if (starting.current) return;
       c((state) => ({
         ...state,
         meetings: state.meetings.some((meeting) => meeting.id === snapshot.id)
@@ -23167,6 +23224,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
           : [...state.meetings, snapshot],
       })).then(() => V(false)).catch((error) => h(error instanceof Error ? error.message : "Could not save this meeting."));
     }, 650);
+    autosaveTimer.current = timer;
     return () => clearTimeout(timer);
   }, [g, O, c, h]);
   ae.useEffect(() => {
@@ -23226,10 +23284,10 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       ...lE(H),
       ...H.slides.filter((slide) => !slide.skipped &&
         ["gallery", "image", "image-text", "video"].includes(slide.definition.type) &&
-        !slide.items.length).map((slide) => `Add media to “${slide.definition.title}” or skip/delete the slide.`),
+        !slide.definition.mediaOptional && !globalThis.MMB.isPersonalShare(slide.definition) && !slide.items.length).map((slide) => `Add media to “${slide.definition.title}” or skip/delete the slide.`),
     ],
     x = (N) => {
-      (v(N), V(!0));
+      (v(N.date !== H.date ? globalThis.MMB.refreshMeetingAnnouncements(N,s) : N), V(!0));
     },
     E = (N, te) =>
       x({
@@ -23256,7 +23314,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       })),
         v(te),
         V(!1),
-        h("Presentation saved on this device."),
+        h("Presentation saved for future use.", 3000),
         onSaved?.(te));
     },
     start = async () => {
@@ -23264,14 +23322,21 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       if (!H.presenter.trim()) throw new Error("Enter the presenter’s name before starting.");
       if (G.length) throw new Error(G.join(" "));
       if (!C.length) throw new Error("Choose at least one slide to present.");
-      if (O) throw new Error("Save your changes before presenting.");
-      const { endedAt, ...editable } = H;
-      const te = { ...editable, status: "presenting", startedAt: H.startedAt ?? gt() };
+      starting.current = true; clearTimeout(autosaveTimer.current);
+      try {
+      const source = H.status === "completed" ? { ...H, id: Bt(), date: Qv(), createdAt: gt(),
+        status: "draft", startedAt: undefined, endedAt: undefined, transcript: [], presentedTopics: [] } : H;
+      const prepared = await globalThis.MMB.preparePresentation(source);
+      const { endedAt, ...editable } = prepared;
+      const te = { ...editable, presenter: H.presenter.trim(), status: "presenting", startedAt: prepared.startedAt ?? gt() };
       await c((state) => ({
         ...state,
-        meetings: state.meetings.map((meeting) => meeting.id === te.id ? te : meeting),
+        settings: {...state.settings,lastTemplateId:te.templateId},
+        meetings: state.meetings.some(meeting=>meeting.id===te.id)
+          ? state.meetings.map((meeting) => meeting.id === te.id ? te : meeting) : [...state.meetings,te],
       }));
-      i(te);
+      V(false); i(te);
+      } catch (error) { starting.current = false; V(true); throw error; }
     },
     J = (N) => {
       const te = H.slides[N].definition,
@@ -23326,21 +23391,21 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
               onClick: () => L(0),
               children: [d.jsx(cw, { size: 18 }), " Preview"],
             }),
-            !ie && canPresent && H.status === "presenting" &&
+            !ie && H.status === "presenting" &&
               d.jsx("button", {
                 className: "primary",
-                disabled: m || O,
+                disabled: m || !H.presenter.trim(),
                 onClick: () => f(start),
                 children: "Resume presentation",
               }),
-            !ie && canPresent && H.status !== "presenting" &&
+            !ie && H.status !== "presenting" &&
               d.jsxs("button", {
                 className: "primary",
-                disabled: m || O,
+                disabled: m || !H.presenter.trim(),
                 onClick: () => {
                   f(start);
                 },
-                children: [d.jsx(nu, { size: 18 }), H.status === "completed" ? " Present again" : " Present saved meeting"],
+                children: [d.jsx(nu, { size: 18 }), H.status === "completed" ? " Present again" : canPresent ? " Present saved meeting" : " Present meeting"],
               }),
             ie && d.jsx("span", { className: "status-chip", children: "Replay window ended · meeting media removed" }),
           ],
@@ -23449,10 +23514,11 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 ],
               }),
               H.slides.map((N, te) =>
-                d.jsxs(
+                N.definition.announcementSlot ? null : d.jsxs(
                   "div",
                   {
-                    className: `agenda-row ${_ === te ? "selected" : ""} ${N.skipped ? "skipped" : ""}`,
+                    className: `agenda-row ${_ === te ? "selected" : ""} ${N.skipped ? "skipped" : ""} ${globalThis.MMB.builderColor(N.definition) ? "colored-agenda" : ""}`,
+                    style: { "--builder-slide-color": globalThis.MMB.builderColor(N.definition) },
                     children: [
                       d.jsxs("button", {
                         className: "agenda-select",
@@ -23515,7 +23581,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   }),
                   !ie &&
                     !le.required &&
-                    le.definition.optional &&
+                    le.definition.optional && !globalThis.MMB.isPersonalShare(le.definition) &&
                     d.jsxs("label", {
                       className: "check",
                       children: [
@@ -23544,7 +23610,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 className: "panel media-organizer",
                 children: [
                   d.jsx("h3", { children: "Meeting media" }),
-                  d.jsx("p", { className: "muted", children: "Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Every included media slide needs an item." }),
+                  d.jsx("p", { className: "muted", children: "Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Media is optional for Personal share; other included media slides need an item." }),
                   d.jsxs("div", { className: "actions", children: [
                     d.jsx("button", {
                       disabled: le.items.length >= 12,
@@ -23557,7 +23623,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     d.jsx("button", {
                       onClick: () => {
                         const copy = { ...structuredClone(le), id: Bt(), definition: {
-                          ...structuredClone(le.definition), id: Bt(), title: `${le.definition.title} ${mediaSlides.length + 1}`,
+                          ...structuredClone(le.definition), id: Bt(), title: `${le.definition.title} ${mediaSlides.length + 1}`, personalShare: false, mediaOptional: false, optional: true, defaultSkipped: false,
                         }, items: [], skipped: !1, mediaAdded: !0 };
                         const slides = [...H.slides]; slides.splice(_ + 1, 0, copy);
                         x({ ...H, slides }); b(_ + 1);
@@ -23605,7 +23671,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                                 }),
                               ] }),
                           ],
-                        }, item.id)) : d.jsx("p", { className: "warning", children: "Drop an image or video here, or delete this slide." }),
+                        }, item.id)) : d.jsx("p", { className: globalThis.MMB.isPersonalShare(slide.definition) ? "muted" : "warning", children: globalThis.MMB.isPersonalShare(slide.definition) ? "Media is optional. Share a personal update with the team." : "Drop an image or video here, or delete this slide." }),
                       ],
                     }, slide.id),
                   ) }),
@@ -23780,6 +23846,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       M !== null &&
         d.jsxs(Ii, {
           title: `Meeting preview · ${M + 1} of ${C.length}`,
+          practice: true,
           onClose: () => L(null),
           wide: !0,
           children: [
@@ -23964,6 +24031,7 @@ function EE({ meeting: n, onExit: i }) {
     [clock, setClock] = ae.useState(() => new Date()),
     [translationStatus, setTranslationStatus] = ae.useState("off"),
     [translationError, setTranslationError] = ae.useState(""),
+    [captureMode, setCaptureMode] = ae.useState("translation"),
     [caption, setCaption] = ae.useState(null),
     [captionHeight, setCaptionHeight] = ae.useState(0),
     [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
@@ -23975,16 +24043,17 @@ function EE({ meeting: n, onExit: i }) {
     b = ae.useRef(null),
     S = n.slides.filter((V) => !V.skipped),
     A = S[f],
+    currentSlide = ae.useRef(A),
     M = ae.useCallback(() => {
       confirm(
         "Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded.",
       ) && i("paused");
     }, [i]),
     L = ae.useCallback(
-      (V) => {
-        (h((ne) => Math.max(0, Math.min(S.length - 1, ne + V))),
-          _(Date.now()),
-          g(!0));
+      (V, reveal = true) => {
+        h((ne) => Math.max(0, Math.min(S.length - 1, ne + V)));
+        if (reveal) _(Date.now());
+        g(reveal);
       },
       [S.length],
     ),
@@ -24020,14 +24089,17 @@ function EE({ meeting: n, onExit: i }) {
       setTranslationError("");
       setTranslationStatus("off");
     }, []),
-    startTranslation = ae.useCallback(async () => {
+    startTranslation = ae.useCallback(async (mode = "translation") => {
       const generation = ++translationGeneration.current;
+      setCaptureMode(mode);
       setTranslationError("");
       setTranslationStatus("connecting");
       translationPending.current = new AbortController();
       try {
         const session = await globalThis.MMB.startTranslation({
           signal: translationPending.current.signal,
+          translate: mode === "translation",
+          onTranscript: (phrase) => globalThis.MMB.captureTranscript(n.id, currentSlide.current, phrase),
           onStatus: (status) => {
             if (translationGeneration.current === generation) setTranslationStatus(status);
           },
@@ -24052,7 +24124,8 @@ function EE({ meeting: n, onExit: i }) {
           setTranslationError(error instanceof Error ? error.message : "Translation unavailable. Try again.");
         }
       }
-    }, []);
+    }, [n.id]);
+  currentSlide.current = A;
   return (
     ae.useEffect(() => {
       const element = document.querySelector(".translation-caption");
@@ -24076,21 +24149,24 @@ function EE({ meeting: n, onExit: i }) {
       translationGeneration.current++;
       translationPending.current?.abort();
       translationSession.current?.stop();
+      globalThis.MMB.videoEvent = undefined;
       clearTimeout(captionTimer.current);
     }, []),
     ae.useEffect(() => {
       const V = (ne) => {
-        ne.target?.closest("video,a,input") ||
-          ((ne.key === "ArrowRight" || ne.key === " ") &&
-            (ne.preventDefault(), L(1)),
-          ne.key === "ArrowLeft" && (ne.preventDefault(), L(-1)),
-          ne.key === "Escape" && !document.fullscreenElement && M());
+        if (ne.target?.closest("video,a,input,textarea,select,[contenteditable=true]") || ne.target?.closest("iframe")) return;
+        const direction = globalThis.MMB.remoteDirection(ne, r.settings.remoteKeys);
+        if (direction) {
+          ne.preventDefault(); ne.stopPropagation();
+          if (ne.target instanceof HTMLButtonElement) ne.target.blur();
+          L(direction, false);
+        } else if (ne.key === "Escape" && !document.fullscreenElement) M();
       };
       return (
         document.addEventListener("keydown", V),
         () => document.removeEventListener("keydown", V)
       );
-    }, [L, M]),
+    }, [L, M, r.settings.remoteKeys]),
     ae.useEffect(() => {
       if (!r.settings.hideControls) return;
       const V = setTimeout(() => g(!1), 4500);
@@ -24153,7 +24229,7 @@ function EE({ meeting: n, onExit: i }) {
         (translationStatus !== "off" || translationError) && d.jsx("div", {
           className: `translation-state ${translationStatus === "unavailable" ? "error" : ""}`,
           role: "status",
-          children: translationError || ({ connecting: "Connecting microphone…", listening: "Translation ON · Listening…", translating: "Translating…", unavailable: "Translation unavailable" })[translationStatus],
+          children: translationError || ({ connecting: "Connecting microphone…", listening: captureMode === "transcript" ? "Transcript ON · Saving speech text…" : "Translation ON · Saving transcript…", translating: "Translating · Saving transcript…", unavailable: "Speech capture unavailable" })[translationStatus],
         }),
         caption && d.jsxs("div", {
           className: "translation-caption",
@@ -24187,8 +24263,15 @@ function EE({ meeting: n, onExit: i }) {
             }),
             globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-toggle",
-              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : startTranslation,
-              children: ["connecting", "listening", "translating"].includes(translationStatus) ? "Stop Translation" : "Start Translation",
+              disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "translation",
+              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("translation"),
+              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "translation" ? "Stop Translation" : "Start Translation",
+            }),
+            d.jsx("button", {
+              disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "transcript",
+              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("transcript"),
+              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "transcript" ? "Stop transcript" : "Start transcript",
+              title: "Save speech text with this meeting without using Azure translation",
             }),
             globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-preview",
@@ -25296,7 +25379,7 @@ async function JE(n) {
       JSON.stringify({
         format: "dtb-morning-meeting",
         version: 1,
-        appVersion: $v,
+        appVersion: globalThis.MMB.appVersion,
         exportedAt: gt(),
         state: i,
       }),
@@ -25768,7 +25851,7 @@ function iz() {
     [m, g] = ae.useState(n.device.name),
     [v, _] = ae.useState("");
   return (
-    au(m !== n.device.name || JSON.stringify(f) !== JSON.stringify(n.settings)),
+    au(m !== n.device.name || JSON.stringify({ ...f, remoteKeys: n.settings.remoteKeys }) !== JSON.stringify(n.settings)),
     d.jsxs(d.Fragment, {
       children: [
         d.jsx(ka, {
@@ -25783,7 +25866,7 @@ function iz() {
               r(async () => {
                 (await i((S) => ({
                   ...S,
-                  settings: { ...f, company: f.company.trim() },
+                  settings: { ...f, remoteKeys: S.settings.remoteKeys, company: f.company.trim() },
                   device: { ...S.device, name: m.trim() },
                 })),
                   s("Settings saved."));
@@ -25927,6 +26010,7 @@ function iz() {
             }),
           ],
         }),
+        d.jsx(globalThis.MMB.RemoteSettings, {}),
         d.jsxs("section", {
           className: "panel settings-form",
           children: [
@@ -25936,7 +26020,7 @@ function iz() {
             d.jsxs("p", {
               children: [
                 "App ",
-                $v,
+                `v${globalThis.MMB.appVersion}`,
                 " · Database ",
                 Vi,
                 " ·",
@@ -25988,7 +26072,7 @@ function iz() {
 }
 const lz = [
   { id: "home", label: "Home", icon: vw },
-  { id: "meeting", label: "Build a meeting", icon: nu },
+  { id: "meetings", label: "Meetings", icon: nu },
   { id: "templates", label: "Templates", icon: ey },
   { id: "library", label: "Content library", icon: Pv },
   { id: "backup", label: "Backup & restore", icon: tu },
@@ -26047,19 +26131,17 @@ function rz() {
     ne = ae.useCallback((outcome) => {
       m &&
         r(async () => {
-          const H = outcome === "finished"
-            ? { ...m, status: "completed", endedAt: gt() }
-            : { ...m, status: "presenting" };
-          (await i((ie) => ({
+          let H;
+          await i((ie) => {
+            const latest = ie.meetings.find((meeting) => meeting.id === m.id) ?? m;
+            H = outcome === "finished" ? { ...latest, status: "completed", endedAt: gt() }
+              : { ...latest, status: "presenting" };
+            return {
             ...ie,
             meetings: ie.meetings.map((le) => (le.id === H.id ? H : le)),
-          })),
-            document.fullscreenElement &&
-              (await document.exitFullscreen().catch(() => {})),
-            g(void 0),
-            h(H),
-            c("meeting"),
-            M((ie) => ie + 1));
+          }; });
+          if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+          g(void 0); h(H); c("meeting"); M((ie) => ie + 1);
         });
     }, [m, r, i]);
   return m
@@ -26099,8 +26181,8 @@ function rz() {
                   d.jsxs(
                     "button",
                     {
-                      className: s === H.id ? "active" : "",
-                      "aria-current": s === H.id ? "page" : void 0,
+                      className: s === H.id || (s === "meeting" && H.id === "meetings") ? "active" : "",
+                      "aria-current": s === H.id || (s === "meeting" && H.id === "meetings") ? "page" : void 0,
                       disabled: !globalThis.MMB.canNavigate(H.id),
                       onClick: () => L(H.id),
                       children: [d.jsx(H.icon, { size: 20 }), H.label],
@@ -26128,7 +26210,7 @@ function rz() {
                   }),
                   d.jsx("span", {
                     className: "pilot-label",
-                    children: "DTB · Round 3",
+                    children: "DTB",
                   }),
                 ],
               }),
@@ -26149,12 +26231,15 @@ function rz() {
                   },
                 }),
               s === "templates" && d.jsx(mE, { onUse: O }),
+              s === "meetings" && d.jsx(globalThis.MMB.Meetings, { onBuild: O, onOpen: (meeting) => {
+                h(structuredClone(meeting)); setFromSaved(!0); c("meeting"); M((value) => value + 1);
+              } }),
               s === "library" && d.jsx(SE, {}),
               s === "meeting" &&
                 d.jsx(
                   jE,
                   { initial: f, onPresent: V, onBuild: O, canPresent: fromSaved,
-                    onSaved: () => { h(void 0); setFromSaved(!1); c("home"); M((ie) => ie + 1); } },
+                    onSaved: (saved) => { h(saved); setFromSaved(!0); } },
                   `${f?.id ?? "new"}-${A}`,
                 ),
               s === "backup" && d.jsx(az, {}),

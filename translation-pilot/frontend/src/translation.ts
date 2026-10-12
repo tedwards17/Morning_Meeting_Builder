@@ -4,7 +4,9 @@ export type Caption = { text: string; source: "en" | "es" };
 export type TranslationCallbacks = {
   onStatus: (status: "listening" | "translating") => void;
   onCaption: (caption: Caption) => void;
+  onTranscript?: (phrase: Caption) => Promise<void>;
   onError: (message: string) => void;
+  translate?: boolean;
   signal?: AbortSignal;
 };
 export const MAX_SESSION_MS = 45 * 60 * 1000;
@@ -30,7 +32,7 @@ export async function translationApi(action: string, body: unknown, csrf = "", s
 }
 
 export async function startTranslation(callbacks: TranslationCallbacks): Promise<{ stop: () => void }> {
-  if (!translationEnabled) throw new Error("Live translation is disabled.");
+  if (callbacks.translate !== false && !translationEnabled) throw new Error("Live translation is disabled.");
   if (!navigator.onLine) throw new Error("Connect to the internet to start live translation.");
   if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext || !window.AudioWorkletNode)
     throw new Error("This browser cannot stream microphone audio here. Use a current browser over HTTPS.");
@@ -150,8 +152,13 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
           const language = String(alternative.languages?.[0] || "").split("-")[0];
           if (language === "en" || language === "es") runs.push({ source: language, text: alternative.transcript.trim() });
         }
-        // A caption is the latest phrase, not a scrolling transcript.
-        for (const run of runs) if (run.text.trim()) void translate(run);
+        for (const run of runs) if (run.text.trim()) {
+          // Save every final recognition phrase before the caption queue can replace it.
+          // Pending saves finish even when capture is stopped or the presentation exits.
+          if (callbacks.onTranscript) void callbacks.onTranscript(run)
+            .catch(() => fail("Transcript could not be saved. Capture stopped; previously saved text is still available."));
+          if (callbacks.translate !== false) void translate(run);
+        }
       } catch { fail("Speech response could not be read. Restart translation."); }
     };
     input = context.createMediaStreamSource(stream);

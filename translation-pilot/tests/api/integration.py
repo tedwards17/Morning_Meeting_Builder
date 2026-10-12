@@ -67,6 +67,18 @@ def push(client,writes):return client.req('sync/push',{'writes':writes})
 check('cross-location meeting denied',push(pnt,[{'id':meeting['id'],'kind':'meeting','data':meeting}])[0]==403)
 check('required draft skip denied',push(asm,[{'id':meeting['id'],'kind':'meeting','data':{**meeting,'slides':[{**ms,'skipped':True}]}}])[0]==422)
 check('meeting accepted',push(asm,[{'id':meeting['id'],'kind':'meeting','data':meeting}])[0]==200)
+def visible_meetings(client):
+ return [row['data'] for row in client.req('sync/bootstrap')[1]['changes'] if row['kind']=='meetings' and not row.get('deleted')]
+check('same account on another device can view own meeting',any(row['id']==meeting['id'] for row in visible_meetings(asm2)))
+check('administrator can view all company meetings',any(row['id']==meeting['id'] for row in visible_meetings(admin)))
+for client,role in [(pnt,'other location'),(manager,'content manager'),(viewer,'report viewer')]:
+ check(role+' cannot read another account transcript',not any(row['id']==meeting['id'] for row in visible_meetings(client)))
+late={'id':uid(),'at':fmt(now),'text':'Keep the aisle clear.','language':'en','presenter':meeting['presenter'],'slideId':ms['id'],'slideTitle':ms['definition']['title'],'contentTitles':[item['title']]}
+meeting={**meeting,'transcript':[late]}
+check('late transcript append to completed meeting accepted',push(asm,[{'id':meeting['id'],'kind':'meeting','data':meeting}])[0]==200)
+check('saved transcript returned only to its account',next(row for row in visible_meetings(asm2) if row['id']==meeting['id'])['transcript'][0]['text']==late['text'])
+check('completed transcript cannot be erased',push(asm,[{'id':meeting['id'],'kind':'meeting','data':{**meeting,'transcript':[]}}])[0]==409)
+
 event={'id':uid(),'meeting_id':meeting['id'],'slide_id':ms['id'],'content_id':item['id'],'broadcast_id':broadcast['id'],'event_type':'content_presented','occurred_at_utc':fmt(now),'event_key':'client-key','organization_id':other,'location_id':paint}
 check('event accepted with server-owned identity',push(asm,[{'id':event['id'],'kind':'event','data':event}])[0]==200)
 check('retry event is idempotent',push(asm,[{'id':event['id'],'kind':'event','data':event}])[0]==200)

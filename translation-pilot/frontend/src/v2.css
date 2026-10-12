@@ -238,3 +238,21 @@
 
 /* A saved-meeting notice must not cover the bottom captions. */
 body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area-inset-top) + 60px)); left: 12px; transform: none; max-width: min(65vw, 520px); }
+.meeting-list { display: grid; gap: .6rem; }
+.meeting-list-row { display:flex; justify-content:space-between; gap:1rem; text-align:left; width:100%; padding:1rem; }
+.meeting-list-row small { display:block; font-weight:normal; margin-top:.25rem; }
+.meeting-metadata { display:grid; grid-template-columns:max-content 1fr; gap:.5rem 1.5rem; }
+.meeting-metadata dd { margin:0; overflow-wrap:anywhere; }
+.meeting-transcript li { margin-bottom:1rem; }
+.meeting-transcript p { margin:.3rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+@media(max-width:600px) { .meeting-list-row { flex-direction:column; } .meeting-metadata { grid-template-columns:1fr; gap:.3rem; } }
+
+:fullscreen .modal.practice-preview { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+:fullscreen .practice-preview > .slide-canvas { flex: 1; min-height: 0; }
+.practice-preview header { flex-wrap: wrap; gap: 8px; }
+.practice-preview .modal-actions { flex-shrink: 0; flex-wrap: wrap; }
+
+/* Template colors guide builders without affecting audience slides. */
+.meeting-agenda .agenda-row.colored-agenda { border-left: 6px solid var(--builder-slide-color); background: color-mix(in srgb, var(--builder-slide-color) 25%, white); }
+.meeting-agenda .agenda-row.colored-agenda.selected { outline: 2px solid #56788f; outline-offset: -2px; }
+.meeting-agenda .agenda-row.colored-agenda .agenda-select { color: #17232e; }

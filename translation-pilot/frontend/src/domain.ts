@@ -21,14 +21,19 @@ export function selectBroadcasts(
   location: string,
   events: Usage[],
   at: string,
+  account?: string,
+  meetingDate?: string,
 ) {
   return broadcasts
     .filter(
       (b) =>
         b.status === "published" &&
         !b.archived &&
-        b.start <= at &&
-        b.end >= at &&
+        (b.announcement && b.announcementDate && meetingDate
+          ? b.announcementDate === meetingDate
+          : b.start <= at && b.end >= at) &&
+        (!b.accounts?.length || (b.announcement && b.allAccounts === true) || (!!account && b.accounts.includes(account))) &&
+        !(b.announcement && b.allAccounts === false && !b.accounts?.length) &&
         (!b.locations.length || b.locations.includes(location)) &&
         !(
           b.recurrence === "once" &&
@@ -60,7 +65,7 @@ export function insertBroadcasts(
   broadcasts: Broadcast[],
   selected: string[] = [],
 ) {
-  const result = structuredClone(meeting);
+  const result = broadcasts.some(b=>b.announcement) ? ensureAnnouncementSlot(structuredClone(meeting)) : structuredClone(meeting);
   result.warnings = [];
   result.broadcast_choices = broadcasts.filter(
     (b) => b.importance !== "required",
@@ -83,6 +88,7 @@ export function insertBroadcasts(
     const slide = {
       id: crypto.randomUUID(),
       broadcast_id: b.id,
+      announcement: !!b.announcement,
       broadcast_version: b.version,
       required: b.importance === "required",
       definition: {
@@ -192,4 +198,20 @@ export function zonedUtc(input: string, zone: string) {
       "This local time does not exist because of daylight saving time. Choose another time.",
     );
   return iso;
+}
+
+// A hidden, empty slot reserves placement without requiring presenter input.
+export function ensureAnnouncementSlot(meeting: Row): Row {
+  if (meeting.slides.some((slide: Row) => slide.definition.announcementSlot)) return meeting;
+  let index = meeting.slides.findIndex((slide: Row) => slide.definition.type === "stretch");
+  if (index < 0) index = meeting.slides.findIndex((slide: Row) => slide.definition.type === "intro");
+  const placeholder = {id:crypto.randomUUID(),definition:{id:crypto.randomUUID(),title:"Announcements",slot:"Announcements",announcementSlot:true,type:"discussion",layout:"center",text:"",notes:"",optional:false,duration:0,contentIds:[],selection:"manual",count:1,allowRepeat:true},items:[],skipped:true};
+  return {...meeting,slides:[...meeting.slides.slice(0,index+1),placeholder,...meeting.slides.slice(index+1)]};
+}
+export function refreshAnnouncements(meeting: Row, broadcasts: Broadcast[]): Row {
+  // Preserve the exact history of a meeting that has already started.
+  if (meeting.startedAt) return meeting;
+  const clean = {...meeting,slides:meeting.slides.filter((slide:Row)=>!slide.announcement)};
+  return {...insertBroadcasts(clean,broadcasts.filter(b=>b.announcement)),
+    broadcast_choices:meeting.broadcast_choices};
 }

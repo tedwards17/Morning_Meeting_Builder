@@ -19,5 +19,5 @@ if($method!=='GET'&&!hash_equals($GLOBALS['session']['csrf'],$_SERVER['HTTP_X_CS
 require __DIR__.'/src/translation.php';
 if($path==='auth/session'&&$method==='GET')json_out(session_response());
 if($path==='auth/logout'&&$method==='POST'){query('DELETE FROM sessions WHERE token_hash=?',[$GLOBALS['session']['token_hash']]);setcookie('mmb_session','',['expires'=>1,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Strict']);json_out(['ok'=>true]);}
-require __DIR__.'/src/media.php';require __DIR__.'/src/records.php';require __DIR__.'/src/sync.php';require __DIR__.'/src/admin.php';
+require __DIR__.'/src/media.php';require __DIR__.'/src/records.php';require __DIR__.'/src/history.php';require __DIR__.'/src/sync.php';require __DIR__.'/src/admin.php';
 fail(404,'Route not found');

@@ -1,4 +1,6 @@
-# Morning Meeting Builder Round 4 — v0.4.0
+# Morning Meeting Builder Round 4 — v0.4.10
+
+**Follow-up changes:** read [ROUND4_FOLLOWUP_HANDOFF.md](ROUND4_FOLLOWUP_HANDOFF.md) for the ten checkpointed changes, transcripts, meeting accounts, announcements and updated test path. The full PHP/MySQL package is required for company-wide account history and announcement pushes.
 
 Round 4 starts from `Round-3-Development` commit `b99ef562785f4a021fbdc5d9d2618797fc2916b1` (the working v0.3.7 translation pilot). Changes live on **Round-4-Development**. The default branch and existing Pages setting are not changed. Existing starter libraries, safety/Lean/quote content, saved presentations, media handling and YouTube player are retained.
 
