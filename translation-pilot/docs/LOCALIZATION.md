@@ -1,6 +1,8 @@
-# Interface languages — v0.4.11
+# Interface languages — v0.4.12
 
 The top language button shows a US flag for **English** and a Mexico flag for **Español**. The same selector is available before sign-in and in Company workspace. Its choice is remembered in this browser/device, independently of the company account. Changing it updates the current page without reloading or discarding form input.
+
+The application name **Morning Meeting Builder** remains in English in every language. Wrapped sidebar labels stay aligned to the left.
 
 The interface uses Mexican Spanish: navigation, page headings, form labels, helper text, accessible names, empty states, menus, notices, app confirmations/text-entry dialogs, admin/report columns and presentation/practice controls. Date/time display follows the selected interface locale; the organization's scheduling timezone does not change. Presenter passphrase entry is masked and is never persisted by the dialog.
 
@@ -22,4 +24,4 @@ Add a JSON catalog with the same English source keys in `frontend/src/locales/`;
 
 Frontend checks cover both-direction switching, subscriptions, persistence/storage failure, dynamic messages and content preservation. Browser checks cover home, templates, library editor, meetings/details, backup, settings, remote configuration, announcements, practice/live presentation controls, saved/unsaved page state, custom dialogs, reload persistence and a 390-pixel mobile viewport. A separate hosted-build browser test uses mocked API responses to cover sign-in, accounts/roles, reports, locations/devices, organization, storage, audit and server checks. Backend permissions and actual provider connections are not revalidated by those mocks.
 
-Use Settings → Local data to confirm **v0.4.11**. GitHub Pages serves the static interface; the existing PHP Codespaces pilot is still needed for live speech. Physical mobile/fullscreen/remote and a real PHP/MySQL staging trial remain separate checks.
+Use Settings → Local data to confirm **v0.4.12**. GitHub Pages serves the static interface; the existing PHP Codespaces pilot is still needed for live speech. Physical mobile/fullscreen/remote and a real PHP/MySQL staging trial remain separate checks.

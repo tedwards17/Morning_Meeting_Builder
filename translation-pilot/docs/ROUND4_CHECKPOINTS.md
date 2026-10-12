@@ -56,3 +56,7 @@ All ten items complete at v0.4.10. Final verification: 45 frontend unit checks; 
 English / Mexican Spanish selector, reusable catalogs, translated interface/dialogs/admin reports, language persistence and build-time localization checks. Content-library seed files and saved presentation/transcript values are unchanged. See LOCALIZATION.md for the maintenance pattern and verification boundaries.
 
 Validation: 49 frontend tests, 21 localization browser checks, 10 hosted-interface checks with mocked server responses, 24 follow-up workflow checks, and 4 quick-start/template/replay/mobile-preview checks passed. TypeScript, lint, demo/hosted builds, localization catalog/placeholder audit and package path checks passed. All starter content JSON files are byte-identical to v0.4.10. New live provider calls, physical devices and real MySQL staging were not exercised.
+
+## Interface corrections — v0.4.12
+
+Wrapped sidebar navigation text stays left-aligned. The application name and sidebar logo remain Morning Meeting Builder in both interface languages; Spanish references to the application retain that name.

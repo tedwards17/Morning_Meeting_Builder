@@ -1,4 +1,4 @@
-# Morning Meeting Builder — Round 4 (v0.4.11)
+# Morning Meeting Builder — Round 4 (v0.4.12)
 
 Development branch: **Round-4-Development**, based on approved Round 3 commit `b99ef562`. The repository root is the static GitHub Pages test build. It preserves existing content and YouTube presentation embedding. No PHP or private configuration is deployed by GitHub Pages.
 

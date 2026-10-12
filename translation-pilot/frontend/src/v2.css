@@ -284,3 +284,5 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .localized-file-picker { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
 .localized-file-native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; clip-path: inset(50%); overflow: hidden; }
 .localized-file-name { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+
+.sidebar nav button { text-align: left; }

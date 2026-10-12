@@ -36,6 +36,9 @@ for (const file of files) {
   walk(sf);
 }
 for (const [locale, values] of Object.entries(catalogs)) {
+ for (const brand of ["Morning Meeting Builder", "Morning Meeting", "BUILDER"]) {
+  if (values[brand] !== brand) throw Error(`Keep the app name in English: ${locale}: ${brand}`);
+ }
  for (const english of Object.keys(catalog)) {
   const spanish = values[english];
   const placeholders = text => [...new Set(text.match(/\{\w+\}/g) ?? [])].sort().join(",");

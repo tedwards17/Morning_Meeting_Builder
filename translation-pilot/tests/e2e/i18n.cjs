@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
   await page.getByRole('button',{name:'Switch interface language',exact:true}).click();
   await page.getByRole('button',{name:'Español',exact:true}).click();
   await page.getByRole('button',{name:'Inicio',exact:true}).waitFor();
-  ok('Spanish selector updates navigation, page greeting, document language and title',await page.getByRole('heading',{name:'Buenos días.',exact:true}).isVisible()&&await page.evaluate(()=>document.documentElement.lang==='es-MX'&&document.title==='Generador de reuniones matutinas'));
+  ok('Spanish selector updates navigation, page greeting and document language while preserving the app name',await page.getByRole('heading',{name:'Buenos días.',exact:true}).isVisible()&&await page.evaluate(()=>document.documentElement.lang==='es-MX'&&document.title==='Morning Meeting Builder'));
   const spanish=await page.evaluate(()=>MMB.repository.load());
   ok('switching language does not rewrite library content or templates',JSON.stringify(original.items)===JSON.stringify(spanish.items)&&JSON.stringify(original.libraries)===JSON.stringify(spanish.libraries)&&JSON.stringify(original.templates)===JSON.stringify(spanish.templates));
   await page.getByRole('button',{name:'Reuniones',exact:true}).click();
