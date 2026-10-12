@@ -1,3 +1,4 @@
+import { t as translateUI } from "./i18n";
 import { isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor } from "./slide-policy";
 import { remoteDirection } from "./remote";
 import { recalculate, media } from "../recovered/index-DwifuW9D.js";
@@ -23,7 +24,7 @@ declare const __TRANSLATION_PILOT__: boolean;
 export const hosted = __HOSTED__;
 export const translationPilot = __TRANSLATION_PILOT__;
 export let session: Session | null = null;
-export let status = "Starting";
+export let status = translateUI("Starting");
 export let lastSync = "";
 export let error = "";
 const listeners = new Set<() => void>();
@@ -63,7 +64,7 @@ export async function api(
       session = null;
       announce();
     }
-    throw new Error(data.error?.message || "Request failed");
+    throw new Error(data.error?.message || translateUI("Request failed"));
   }
   return data;
 }
@@ -83,7 +84,7 @@ export async function login(username: string, password: string, name: string) {
   if (previous && previous !== next.account.id) {
     if ((await db.all("outbox")).length)
       throw new Error(
-        "This browser has unsent records from another account. Sign into that account and sync first.",
+        translateUI("This browser has unsent records from another account. Sign into that account and sync first."),
       );
     await db.clearAccount();
     await db.put("meta", "installation", id);
@@ -102,7 +103,7 @@ export async function initialize() {
       const prev = await db.get("meta", "account");
       if (prev && prev !== session!.account.id) {
         session = null;
-        throw new Error("Sign in to change accounts safely.");
+        throw new Error(translateUI("Sign in to change accounts safely."));
       }
       await db.put("meta", "account", session!.account.id);
       await db.put("meta", "offlineSession", { ...session, csrf: "" });
@@ -124,7 +125,7 @@ export async function initialize() {
 }
 export async function logout() {
   if ((await db.all("outbox")).length)
-    throw new Error("Sync pending meetings before signing out.");
+    throw new Error(translateUI("Sync pending meetings before signing out."));
   await api("auth/logout", {});
   session = null;
   await db.clearAccount();
@@ -236,7 +237,7 @@ export const repository = {
   async save(next: State) {
     const before = await db.loadState();
     if (hosted) {
-      if (!session) throw new Error("Sign in first.");
+      if (!session) throw new Error(translateUI("Sign in first."));
       // Legacy backup import: upload local image bytes before saving server records, then remap references.
       const remap = new Map<string, string>();
       for (let index = 0; index < next.assets.length; index++) {
@@ -249,10 +250,10 @@ export const repository = {
           continue;
         if (!["image/jpeg", "image/png", "image/webp"].includes(asset.mime))
           throw new Error(
-            "Hosted import accepts JPEG, PNG and WebP only. Remove local videos/GIFs from this backup first.",
+            translateUI("Hosted import accepts JPEG, PNG and WebP only. Remove local videos/GIFs from this backup first."),
           );
         const blob = await media.read(asset.hash, asset.mime);
-        if (!blob) throw new Error("A backup image is missing.");
+        if (!blob) throw new Error(translateUI("A backup image is missing."));
         const result = await upload(
           new File([blob], asset.name, { type: asset.mime }),
         );
@@ -298,7 +299,7 @@ export const repository = {
       if (writes.length) {
         if (!navigator.onLine)
           throw new Error(
-            "Library and template edits require a connection. Your edit has not been saved.",
+            translateUI("Library and template edits require a connection. Your edit has not been saved."),
           );
         const response: { records: Row[] } = { records: [] };
         for (let start = 0; start < writes.length; start += 50) {
@@ -367,8 +368,8 @@ export function sync(): Promise<void> {
 async function doSync() {
   if (!hosted) {
     status = navigator.onLine
-      ? translationPilot ? "Local pilot · Deepgram + Azure captions" : "Demo / Local data only"
-      : "Offline · local data";
+      ? translationPilot ? translateUI("Local pilot · Deepgram + Azure captions") : translateUI("Demo / Local data only")
+      : translateUI("Offline · local data");
     announce();
     return;
   }
@@ -583,13 +584,13 @@ export async function download(meeting: Row) {
   try {
     for (const id of ids) {
       const asset = state.assets.find((a) => a.id === id);
-      if (!asset) throw new Error("Missing image metadata");
+      if (!asset) throw new Error(translateUI("Missing image metadata"));
       let blob = await media.read(asset.hash, asset.mime);
       if (!blob) {
         const res = await fetch(mediaUrl(asset.hash)!, {
           credentials: "same-origin",
         });
-        if (!res.ok) throw new Error("Missing image");
+        if (!res.ok) throw new Error(translateUI("Missing image"));
         blob = await res.blob();
         await media.write(asset.hash, blob);
       }
@@ -602,7 +603,7 @@ export async function download(meeting: Row) {
     await db.put("meetings", meeting.id, meeting);
     await db.put("meta", `download:${meeting.id}`, "Ready offline");
     window.dispatchEvent(new Event("mmb-readiness"));
-    return "Ready offline. YouTube and external links still require internet.";
+    return translateUI("Ready offline. YouTube and external links still require internet.");
   } catch (e) {
     await db.put("meta", `download:${meeting.id}`, "Missing");
     window.dispatchEvent(new Event("mmb-readiness"));
@@ -615,7 +616,7 @@ export function mediaUrl(hash: string) {
   return hosted && asset ? `./api/v1/media/${asset.id}` : null;
 }
 export async function upload(file: File) {
-  if (!navigator.onLine) throw new Error("Image upload needs a connection");
+  if (!navigator.onLine) throw new Error(translateUI("Image upload needs a connection"));
   const body = new FormData();
   body.append("image", file);
   const asset = await api("media", body);
@@ -627,7 +628,7 @@ export async function refreshAssets() {
 }
 export function broadcasts(meeting: Row, state: State) {
   if (session?.account.role === "report_viewer")
-    throw new Error("This account has read-only reporting access.");
+    throw new Error(translateUI("This account has read-only reporting access."));
   const chosen =
     session?.account.location_id ?? globalThis.MMB.location ?? state.device.id;
   if (
@@ -636,7 +637,7 @@ export function broadcasts(meeting: Row, state: State) {
     !globalThis.MMB.location
   )
     throw new Error(
-      "Choose a meeting location in the top bar before building.",
+      translateUI("Choose a meeting location in the top bar before building."),
     );
   const template = state.templates.find((t) => t.id === meeting.templateId);
   if (
@@ -646,7 +647,7 @@ export function broadcasts(meeting: Row, state: State) {
     !canTemplate(session.account, template, "use")
   )
     throw new Error(
-      "This template is shared for editing only, not meeting use.",
+      translateUI("This template is shared for editing only, not meeting use."),
     );
   meeting.location_id = chosen;
   const active = selectBroadcasts(
@@ -740,7 +741,7 @@ globalThis.MMB = {
   }),
   opened,
   skip: async (m: Row, s: Row, r: string) => {
-    if (!r.trim()) throw new Error("A skip reason is required");
+    if (!r.trim()) throw new Error(translateUI("A skip reason is required"));
     await record(m, s, "broadcast_skipped", undefined, r);
   },
   download,
@@ -775,14 +776,14 @@ function meetingAssetIds(meeting: Row): Set<string> {
 }
 export async function readiness(meeting: Row) {
   if ((await db.get("meta", `download:${meeting.id}`)) === "Downloading")
-    return "Downloading";
+    return translateUI("Downloading");
   const state = await repository.load();
   for (const id of meetingAssetIds(meeting)) {
     const asset = state.assets.find((a) => a.id === id);
     if (!asset || !(await media.read(asset.hash, asset.mime)))
-      return "Missing — download meeting images";
+      return translateUI("Missing — download meeting images");
   }
-  return "Ready offline · YouTube and external links need internet";
+  return translateUI("Ready offline · YouTube and external links need internet");
 }
 export async function cleanDownloads() {
   const state = await repository.load();
@@ -832,7 +833,7 @@ export async function cleanDownloads() {
   }
   legacy.close();
   window.dispatchEvent(new Event("mmb-readiness"));
-  return `Removed ${older.length} optional image downloads older than 30 days. Drafts and the last ten completed meetings were retained.`;
+  return translateUI("Removed {arg0} optional image downloads older than 30 days. Drafts and the last ten completed meetings were retained.", {arg0: older.length});
 }
 globalThis.MMB.readiness = readiness;
 
@@ -872,7 +873,7 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
     input.click();
   });
   if (!files.length) return [];
-  if (files.length > maxFiles) throw new Error(`This slide has room for ${maxFiles} more file(s). Add another media slide first.`);
+  if (files.length > maxFiles) throw new Error(translateUI("This slide has room for {arg0} more file(s). Add another media slide first.", {arg0: maxFiles}));
   const images = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
   const videos = ["video/mp4", "video/webm", "video/quicktime"];
   const readyFiles: File[] = [];
@@ -887,16 +888,16 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
     const mime = mimeByExtension[extension ?? ""];
     const file = mime && original.type !== mime
       ? new File([original], original.name, { type: mime }) : original;
-    if (file.size === 0) throw new Error(`${file.name}: empty files cannot be imported.`);
+    if (file.size === 0) throw new Error(translateUI("{arg0}: empty files cannot be imported.", {arg0: file.name}));
     if (!images.includes(file.type) && !videos.includes(file.type))
-      throw new Error(`${file.name}: choose a JPEG, PNG, WebP, HEIC, HEIF, MP4, WebM, or MOV file.`);
+      throw new Error(translateUI("{arg0}: choose a JPEG, PNG, WebP, HEIC, HEIF, MP4, WebM, or MOV file.", {arg0: file.name}));
     if (file.size > (images.includes(file.type) ? 25 : 150) * 1024 * 1024)
-      throw new Error(`${file.name}: image limit 25 MB; video limit 150 MB.`);
+      throw new Error(translateUI("{arg0}: image limit 25 MB; video limit 150 MB.", {arg0: file.name}));
     if (images.includes(file.type)) {
       let image: ImageBitmap | HTMLImageElement;
       let closeImage = () => {};
       try {
-        if (typeof createImageBitmap !== "function") throw new Error("Bitmap decoding unavailable");
+        if (typeof createImageBitmap !== "function") throw new Error(translateUI("Bitmap decoding unavailable"));
         const bitmap = await createImageBitmap(file);
         image = bitmap;
         closeImage = () => bitmap.close();
@@ -907,13 +908,13 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
           image = await new Promise<HTMLImageElement>((resolve, reject) => {
             const element = new Image();
             element.onload = () => resolve(element);
-            element.onerror = () => reject(new Error("Image could not be decoded"));
+            element.onerror = () => reject(new Error(translateUI("Image could not be decoded")));
             element.src = url;
           });
           closeImage = () => URL.revokeObjectURL(url);
         } catch {
           URL.revokeObjectURL(url);
-          throw new Error(`${file.name}: this browser cannot display this image. Try a JPEG or a screenshot.`);
+          throw new Error(translateUI("{arg0}: this browser cannot display this image. Try a JPEG or a screenshot.", {arg0: file.name}));
         }
       }
       const width = "naturalWidth" in image ? image.naturalWidth : image.width;
@@ -921,7 +922,7 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
       const tooLarge = width * height > 100_000_000;
       if (tooLarge) {
         closeImage();
-        throw new Error(`${file.name}: image exceeds 100 megapixels.`);
+        throw new Error(translateUI("{arg0}: image exceeds 100 megapixels.", {arg0: file.name}));
       }
       if (["image/heic", "image/heif", "image/jpeg"].includes(file.type) &&
           (file.type !== "image/jpeg" || width > 2560 || height > 1600 || file.size > 5 * 1024 * 1024)) {
@@ -933,12 +934,12 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
         const context = canvas.getContext("2d");
         if (!context) {
           closeImage();
-          throw new Error(`${file.name}: could not prepare this photo for conversion.`);
+          throw new Error(translateUI("{arg0}: could not prepare this photo for conversion.", {arg0: file.name}));
         }
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         closeImage();
         const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
-        if (!jpeg) throw new Error(`${file.name}: could not convert this photo to JPEG.`);
+        if (!jpeg) throw new Error(translateUI("{arg0}: could not convert this photo to JPEG.", {arg0: file.name}));
         readyFiles.push(new File([jpeg], file.name.replace(/\.(heic|heif|jpe?g)$/i, "") + ".jpg", { type: "image/jpeg" }));
       } else {
         closeImage();
@@ -992,7 +993,7 @@ globalThis.MMB.refreshMeetingAnnouncements = (meeting:Row,state:State) => refres
   selectBroadcasts(state.broadcasts as Broadcast[],meeting.location_id??state.device.id,globalThis.MMB.events??[],new Date().toISOString(),session?.account.id??"demo",meeting.date));
 globalThis.MMB.announcementImage = async (file:File) => {
   if (!file.size || file.size>25*1024*1024 || !["image/jpeg","image/png","image/webp"].includes(file.type))
-    throw new Error("Choose a JPEG, PNG or WebP image up to 25 MB.");
+    throw new Error(translateUI("Choose a JPEG, PNG or WebP image up to 25 MB."));
   let asset:Row;
   if(hosted) asset=(await upload(file)).asset;
   else {

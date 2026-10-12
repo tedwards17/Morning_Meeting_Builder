@@ -1,3 +1,8 @@
+import { confirmUI } from "./dialogs";
+import { t as translateUI, getLanguage, getLocale, subscribeLanguage, uiText, uiError, uiLabel } from "./i18n";
+import { LanguageSelector } from "./language-selector";
+import { fieldLabel, fieldValue } from "./ui-fields";
+import { FilePicker } from "./file-picker";
 import type * as RT from "react";
 import {
   React as RecoveredReact,
@@ -17,6 +22,7 @@ import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
 import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
+globalThis.MMB.FilePicker = FilePicker;
 const Original = OriginalApp as RT.ComponentType;
 const Provider = AppProvider as RT.ComponentType<{ children: RT.ReactNode }>;
 function useRuntime() {
@@ -39,26 +45,26 @@ function RemoteSettings() {
   const [message,setMessage]=React.useState("");
   React.useEffect(()=>{
     if(!learning)return;
-    const timer=setTimeout(()=>{setLearning(null);setMessage("No keyboard key received. Check tablet pairing and keyboard mode; volume and camera buttons may be intercepted by the tablet.");},15000);
+    const timer=setTimeout(()=>{setLearning(null);setMessage(translateUI("No keyboard key received. Check tablet pairing and keyboard mode; volume and camera buttons may be intercepted by the tablet."));},15000);
     const pressed=(event:KeyboardEvent)=>{
       if(event.key==="Escape"){setLearning(null);return;}
       event.preventDefault();event.stopPropagation();
-      if(event.repeat||event.ctrlKey||event.altKey||event.metaKey||event.shiftKey||!learnableKey(event.key)){setMessage("Choose a plain keyboard key other than Tab or Escape.");return;}
+      if(event.repeat||event.ctrlKey||event.altKey||event.metaKey||event.shiftKey||!learnableKey(event.key)){setMessage(translateUI("Choose a plain keyboard key other than Tab or Escape."));return;}
       const other=learning==="next"?"previous":"next";
-      if(state.settings.remoteKeys?.[other]===event.key){setMessage("Use a different key for each direction.");return;}
-      setLearning(null);setMessage("Saving remote key…");
-      run(async()=>{await update(s=>({...s,settings:{...s.settings,remoteKeys:{...s.settings.remoteKeys,[learning]:event.key}}}));setMessage(`Saved ${event.key===" "?"Space":event.key} for ${learning}.`);});
+      if(state.settings.remoteKeys?.[other]===event.key){setMessage(translateUI("Use a different key for each direction."));return;}
+      setLearning(null);setMessage(translateUI("Saving remote key…"));
+      run(async()=>{await update(s=>({...s,settings:{...s.settings,remoteKeys:{...s.settings.remoteKeys,[learning]:event.key}}}));setMessage(translateUI("Saved {arg0} for {arg1}.", {arg0: event.key===" "?translateUI("Space"):event.key, arg1: getLanguage() === "en" ? learning : uiLabel(learning!)}));});
     };
     document.addEventListener("keydown",pressed,true);
     return()=>{clearTimeout(timer);document.removeEventListener("keydown",pressed,true);};
   },[learning,state.settings.remoteKeys,run,update]);
-  return <section className="panel"><h2>Presentation remote</h2>
-    <p>Pair your Bluetooth remote in tablet settings, or connect a wired keyboard / USB receiver. Keyboard remotes work without an app pairing step.</p>
-    <p className="muted">Next: right/down arrow, Page Down, Space or Enter. Previous: left/up arrow, Page Up or Backspace. Remote navigation hides controls; touch the slide to show them.</p>
-    <div className="actions">{(["next","previous"] as const).map(direction=><button key={direction} onClick={()=>{setMessage("");setLearning(direction);}}>Learn {direction} key{state.settings.remoteKeys?.[direction]?` · ${state.settings.remoteKeys[direction]===" "?"Space":state.settings.remoteKeys[direction]}`:""}</button>)}
-      <button onClick={()=>run(async()=>{await update(s=>({...s,settings:{...s.settings,remoteKeys:{}}}));setMessage("Standard keys restored.");})}>Reset remote keys</button>
-      {learning&&<button onClick={()=>setLearning(null)}>Cancel learning</button>}</div>
-    <p role="status">{learning?`Press the remote’s ${learning} button now. Escape cancels.`:message}</p>
+  return <section className="panel"><h2>{translateUI("Presentation remote")}</h2>
+    <p>{translateUI("Pair your Bluetooth remote in tablet settings, or connect a wired keyboard / USB receiver. Keyboard remotes work without an app pairing step.")}</p>
+    <p className="muted">{translateUI("Next: right/down arrow, Page Down, Space or Enter. Previous: left/up arrow, Page Up or Backspace. Remote navigation hides controls; touch the slide to show them.")}</p>
+    <div className="actions">{(["next","previous"] as const).map(direction=><button key={direction} onClick={()=>{setMessage("");setLearning(direction);}}>{translateUI(direction === "next" ? "Learn next key" : "Learn previous key")}{state.settings.remoteKeys?.[direction]?` · ${state.settings.remoteKeys[direction]===" "?translateUI("Space"):state.settings.remoteKeys[direction]}`:""}</button>)}
+      <button onClick={()=>run(async()=>{await update(s=>({...s,settings:{...s.settings,remoteKeys:{}}}));setMessage(translateUI("Standard keys restored."));})}>{translateUI("Reset remote keys")}</button>
+      {learning&&<button onClick={()=>setLearning(null)}>{translateUI("Cancel learning")}</button>}</div>
+    <p role="status">{learning?translateUI("Press the remote’s {arg0} button now. Escape cancels.", {arg0: getLanguage() === "en" ? learning : uiLabel(learning!)}):uiText(message)}</p>
   </section>;
 }
 globalThis.MMB.RemoteSettings=RemoteSettings;
@@ -75,40 +81,40 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
       !globalThis.MMB.isMeetingExpired(meeting);
     const topics=meeting.presentedTopics??[];
     return <section className="meeting-record">
-      <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||"Presenter not entered"} · {meeting.date}</p></div>
-        <div className="actions"><button onClick={()=>setSelected(null)}>Back to Meetings</button>
-          {editable&&<button className="primary" onClick={()=>onOpen(meeting)}>Open saved presentation</button>}
-          <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>Download meeting notes</button></div></div>
-      <div className="panel"><h2>Meeting details</h2><dl className="meeting-metadata">
-        <dt>Presenter</dt><dd>{meeting.presenter||"Not entered"}</dd><dt>Scheduled date</dt><dd>{meeting.date}</dd>
-        <dt>Status</dt><dd>{meeting.status==="presenting"?"Paused / in progress":meeting.status==="completed"?"Presented":"Saved for presentation"}</dd>
-        <dt>Meeting area</dt><dd>{(globalThis.MMB.locations??[]).find((row:Row)=>row.id===meeting.location_id)?.name??state.device.name}</dd>
-        {meeting.startedAt&&<><dt>Started</dt><dd>{new Date(meeting.startedAt).toLocaleString()}</dd></>}
-        {meeting.endedAt&&<><dt>Finished</dt><dd>{new Date(meeting.endedAt).toLocaleString()}</dd></>}
+      <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</p></div>
+        <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
+          {editable&&<button className="primary" onClick={()=>onOpen(meeting)}>{translateUI("Open saved presentation")}</button>}
+          <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
+      <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
+        <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{meeting.date}</dd>
+        <dt>{translateUI("Status")}</dt><dd>{meeting.status==="presenting"?translateUI("Paused / in progress"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved for presentation")}</dd>
+        <dt>{translateUI("Meeting area")}</dt><dd>{(globalThis.MMB.locations??[]).find((row:Row)=>row.id===meeting.location_id)?.name??state.device.name}</dd>
+        {meeting.startedAt&&<><dt>{translateUI("Started")}</dt><dd>{new Date(meeting.startedAt).toLocaleString(getLocale())}</dd></>}
+        {meeting.endedAt&&<><dt>{translateUI("Finished")}</dt><dd>{new Date(meeting.endedAt).toLocaleString(getLocale())}</dd></>}
       </dl></div>
-      <div className="panel"><h2>{topics.length?"Presented topics":"Prepared agenda"}</h2>
+      <div className="panel"><h2>{topics.length?translateUI("Presented topics"):translateUI("Prepared agenda")}</h2>
         {topics.length?<ol>{topics.map((topic:Row)=><li key={topic.slideId}><strong>{topic.title}</strong>
           {(topic.content??[]).length>0&&<span> — {topic.content.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>
           :<ol>{meeting.slides.filter((slide:Row)=>!slide.skipped).map((slide:Row)=><li key={slide.id}>{slide.definition.title}
             {slide.items.length>0&&<span> — {slide.items.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>}
-        {meeting.mediaExpiredAt&&<p className="muted">Temporary presentation media expired. Saved topic titles and transcript remain available.</p>}
+        {meeting.mediaExpiredAt&&<p className="muted">{translateUI("Temporary presentation media expired. Saved topic titles and transcript remain available.")}</p>}
       </div>
-      <div className="panel meeting-transcript"><h2>Transcript</h2>
+      <div className="panel meeting-transcript"><h2>{translateUI("Transcript")}</h2>
         {(meeting.transcript??[]).length?<ol>{meeting.transcript.map((entry:Row)=><li key={entry.id}>
-          <small><time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString()}</time> · {entry.slideTitle} · {entry.language.toUpperCase()}</small>
-          <p>{entry.text}</p></li>)}</ol>:<p>No transcript was captured. During presentation, choose Start transcript or Start Translation to save speech text.</p>}
+          <small><time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(getLocale())}</time> · {entry.slideTitle} · {entry.language.toUpperCase()}</small>
+          <p>{entry.text}</p></li>)}</ol>:<p>{translateUI("No transcript was captured. During presentation, choose Start transcript or Start Translation to save speech text.")}</p>}
       </div>
     </section>;
   }
   return <section className="meetings-page">
-    <div className="page-title"><div><h1>Meetings</h1><p>{runtime.hosted&&account?.role==="administrator"?"All meeting accounts":"Your saved meetings and meeting notes"}</p></div>
-      <button className="primary" disabled={account?.role==="report_viewer"} onClick={newMeeting}>Build a new meeting</button></div>
-    {!runtime.hosted&&<p className="muted">Meetings are saved in this browser. Company account history requires the hosted account service.</p>}
+    <div className="page-title"><div><h1>{translateUI("Meetings")}</h1><p>{runtime.hosted&&account?.role==="administrator"?translateUI("All meeting accounts"):translateUI("Your saved meetings and meeting notes")}</p></div>
+      <button className="primary" disabled={account?.role==="report_viewer"} onClick={newMeeting}>{translateUI("Build a new meeting")}</button></div>
+    {!runtime.hosted&&<p className="muted">{translateUI("Meetings are saved in this browser. Company account history requires the hosted account service.")}</p>}
     {([['Saved for presentation',groups.saved],['Previously presented',groups.presented]] as const).map(([title,list])=><section className="panel" key={title}>
-      <h2>{title}</h2>{list.length?<div className="meeting-list">{list.map(meeting=><button className="meeting-list-row" key={meeting.id} onClick={()=>setSelected(meeting.id)}>
-        <span><strong>{meeting.templateName}</strong><small>{meeting.presenter||"Presenter not entered"} · {meeting.date}</small></span>
-        <span>{meeting.status==="presenting"?"Paused":meeting.status==="completed"?"Presented":"Saved"} · {(meeting.transcript??[]).length} transcript phrases</span>
-      </button>)}</div>:<p className="muted">{title==='Saved for presentation'?"No saved presentations yet.":"No presentations logged yet."}</p>}</section>)}
+      <h2>{uiText(title)}</h2>{list.length?<div className="meeting-list">{list.map(meeting=><button className="meeting-list-row" key={meeting.id} onClick={()=>setSelected(meeting.id)}>
+        <span><strong>{meeting.templateName}</strong><small>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</small></span>
+        <span>{meeting.status==="presenting"?translateUI("Paused"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved")} · {(meeting.transcript??[]).length} {translateUI("transcript phrases")}</span>
+      </button>)}</div>:<p className="muted">{title==='Saved for presentation'?translateUI("No saved presentations yet."):translateUI("No presentations logged yet.")}</p>}</section>)}
   </section>;
 }
 globalThis.MMB.Meetings=Meetings;
@@ -146,6 +152,7 @@ function Login() {
   const [error, setError] = React.useState("");
   return (
     <main className="boot">
+      <LanguageSelector />
       <form
         className="panel login"
         onSubmit={async (e) => {
@@ -163,15 +170,13 @@ function Login() {
         }}
       >
         <span className="eyebrow">DOUGLASS TRUCK BODIES</span>
-        <h1>Morning Meeting Builder</h1>
-        <p>Sign in with your location or management account.</p>
+        <h1>{translateUI("Morning Meeting Builder")}</h1>
+        <p>{translateUI("Sign in with your location or management account.")}</p>
         <label>
-          Username
-          <input name="username" autoComplete="username" required />
+          {translateUI("Username")}<input name="username" autoComplete="username" required />
         </label>
         <label>
-          Password
-          <input
+          {translateUI("Password")}<input
             name="password"
             type="password"
             autoComplete="current-password"
@@ -179,11 +184,10 @@ function Login() {
           />
         </label>
         <label>
-          This device’s name
-          <input name="device" defaultValue="Meeting tablet" required />
+          {translateUI("This device’s name")}<input name="device" defaultValue="Meeting tablet" required />
         </label>
-        <button className="primary">Sign in</button>
-        <p role="alert">{error}</p>
+        <button className="primary">{translateUI("Sign in")}</button>
+        <p role="alert">{uiError(error)}</p>
       </form>
     </main>
   );
@@ -204,7 +208,7 @@ function CheckList({
   return (
     <fieldset>
       <legend>{label}</legend>
-      {selectAll&&<label className="check"><input type="checkbox" checked={rows.length>0&&rows.every(row=>selected.includes(row.id))} onChange={e=>onChange(e.target.checked?rows.map(row=>row.id):[])}/>Select all meeting areas</label>}
+      {selectAll&&<label className="check"><input type="checkbox" checked={rows.length>0&&rows.every(row=>selected.includes(row.id))} onChange={e=>onChange(e.target.checked?rows.map(row=>row.id):[])}/>{translateUI("Select all meeting areas")}</label>}
       {rows.map((r) => (
         <label className="check" key={r.id}>
           <input
@@ -224,8 +228,14 @@ function CheckList({
     </fieldset>
   );
 }
+function RecordDetails({value}: {value: unknown}) {
+  if (value === null) return null;
+  if (Array.isArray(value)) return <ol className="record-details">{value.map((item,index)=><li key={index}>{typeof item === "object" ? <RecordDetails value={item}/> : String(item)}</li>)}</ol>;
+  if (typeof value !== "object") return <span>{String(value)}</span>;
+  return <dl className="record-details">{Object.entries(value as Record<string,unknown>).map(([key,item])=><div key={key}><dt>{fieldLabel(key)}</dt><dd>{item !== null && typeof item === "object" ? <RecordDetails value={item}/> : fieldValue(key,item)}</dd></div>)}</dl>;
+}
 function Table({ rows, onEdit }: { rows: Row[]; onEdit?: (r: Row) => void }) {
-  if (!rows.length) return <p>No records in this view.</p>;
+  if (!rows.length) return <p>{translateUI("No records in this view.")}</p>;
   const keys = [...new Set(rows.flatMap(Object.keys))].filter(
     (k) => !["payload", "password_hash", "csrf", "organization_id"].includes(k),
   );
@@ -235,9 +245,9 @@ function Table({ rows, onEdit }: { rows: Row[]; onEdit?: (r: Row) => void }) {
         <thead>
           <tr>
             {keys.map((k) => (
-              <th key={k}>{k.replaceAll("_", " ")}</th>
+              <th scope="col" key={k}>{fieldLabel(k)}</th>
             ))}
-            {onEdit && <th>Action</th>}
+            {onEdit && <th scope="col">{translateUI("Action")}</th>}
           </tr>
         </thead>
         <tbody>
@@ -247,17 +257,17 @@ function Table({ rows, onEdit }: { rows: Row[]; onEdit?: (r: Row) => void }) {
                 <td key={k}>
                   {typeof r[k] === "object" ? (
                     <details>
-                      <summary>Details</summary>
-                      <pre>{JSON.stringify(r[k], null, 2)}</pre>
+                      <summary>{translateUI("Details")}</summary>
+                      <RecordDetails value={r[k]} />
                     </details>
                   ) : (
-                    String(r[k] ?? "")
+                    fieldValue(k,r[k])
                   )}
                 </td>
               ))}
               {onEdit && (
                 <td>
-                  <button onClick={() => onEdit(r)}>Manage</button>
+                  <button onClick={() => onEdit(r)}>{translateUI("Manage")}</button>
                 </td>
               )}
             </tr>
@@ -312,6 +322,7 @@ function Manager({ close }: { close: () => void }) {
             Object.entries(await runtime.api("admin/readiness")).map(
               ([k, v]) => ({
                 id: k,
+                check: fieldLabel(k),
                 value: typeof v === "object" ? JSON.stringify(v) : v,
               }),
             ),
@@ -345,15 +356,15 @@ function Manager({ close }: { close: () => void }) {
   };
   const save = async () => {
     if (!editing) return;
-    if(uploadingAnnouncement)throw new Error("Wait for the image upload to finish.");
+    if(uploadingAnnouncement)throw new Error(translateUI("Wait for the image upload to finish."));
     const row = { ...editing };
     if (tab === "broadcasts") {
       if (!row.title?.trim() || !row.content)
-        throw new Error("Choose a title and content");
+        throw new Error(translateUI("Choose a title and content"));
       if(row.announcement){
-        if(!admin)throw new Error("Only administrators can publish announcements.");
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(row.announcementDate??""))throw new Error("Choose the announcement date.");
-        if(row.allAccounts===false&&!row.accounts?.length)throw new Error("Select at least one meeting account, or select all.");
+        if(!admin)throw new Error(translateUI("Only administrators can publish announcements."));
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(row.announcementDate??""))throw new Error(translateUI("Choose the announcement date."));
+        if(row.allAccounts===false&&!row.accounts?.length)throw new Error(translateUI("Select at least one meeting account, or select all."));
         const zone=runtime.session?.organization.timezone??"America/Los_Angeles";
         row.start=zonedUtc(`${row.announcementDate}T00:00`,zone);
         row.end=new Date(Date.parse(zonedUtc(`${row.announcementDate}T23:59`,zone))+59000).toISOString();
@@ -407,10 +418,10 @@ function Manager({ close }: { close: () => void }) {
       <div className="v2-workspace">
         <header>
           <div>
-            <span className="eyebrow">COMPANY WORKSPACE</span>
-            <h1>Manage & report</h1>
+            <span className="eyebrow">{translateUI("COMPANY WORKSPACE")}</span>
+            <h1>{translateUI("Manage & report")}</h1>
           </div>
-          <button onClick={close}>Back to meeting builder</button>
+          <div className="actions"><LanguageSelector /><button onClick={close}>{translateUI("Back to meeting builder")}</button></div>
         </header>
         <nav className="tabs">
           {[
@@ -441,16 +452,15 @@ function Manager({ close }: { close: () => void }) {
                   setTab(t);
                 }}
               >
-                {t === "items" ? "Content scope" : t === "broadcasts" ? "Announcements / broadcasts" : t}
+                {t === "items" ? translateUI("Content scope") : t === "broadcasts" ? translateUI("Announcements / broadcasts") : uiLabel(t)}
               </button>
             ))}
         </nav>
-        <p role="alert">{error}</p>
+        <p role="alert">{uiError(error)}</p>
         {tab === "reports" && (
           <div className="toolbar">
             <label>
-              Report
-              <select
+              {translateUI("Report")}<select aria-label={translateUI("Report")}
                 value={report}
                 onChange={(e) => setReport(e.target.value)}
               >
@@ -463,19 +473,18 @@ function Manager({ close }: { close: () => void }) {
                   "safety",
                   "meetings",
                 ].map((t) => (
-                  <option key={t}>{t}</option>
+                  <option key={t} value={t}>{uiLabel(t)}</option>
                 ))}
               </select>
             </label>
             <label>
-              Location
-              <select
+              {translateUI("Location")}<select aria-label={translateUI("Location")}
                 value={filter.location}
                 onChange={(e) =>
                   setFilter({ ...filter, location: e.target.value })
                 }
               >
-                <option value="">All locations</option>
+                <option value="">{translateUI("All locations")}</option>
                 {directory.locations.map((l) => (
                   <option value={l.id} key={l.id}>
                     {l.name}
@@ -484,43 +493,35 @@ function Manager({ close }: { close: () => void }) {
               </select>
             </label>
             <label>
-              From
-              <input
+              {translateUI("From")}<input
                 type="date"
                 value={filter.from}
                 onChange={(e) => setFilter({ ...filter, from: e.target.value })}
               />
             </label>
             <label>
-              Through
-              <input
+              {translateUI("Through")}<input
                 type="date"
                 value={filter.to}
                 onChange={(e) => setFilter({ ...filter, to: e.target.value })}
               />
             </label>
             <button onClick={() => saveFile(`mmb-${report}.csv`, csv(rows))}>
-              Export CSV
-            </button>
+              {translateUI("Export CSV")}</button>
           </div>
         )}
         {["broadcasts", "accounts", "locations"].includes(tab) && manager && (
           <button className="primary" onClick={newRow}>
-            Create {tab.slice(0, -1)}
+            {translateUI(tab === "broadcasts" ? "Create broadcast" : tab === "accounts" ? "Create account" : "Create location")}
           </button>
         )}
         {tab === "templates" && (
           <p>
-            Use Templates in the meeting builder to create and edit masters.
-            Manage sharing and named insertion slots here. Company use never
-            grants edit access.
-          </p>
+            {translateUI("Use Templates in the meeting builder to create and edit masters. Manage sharing and named insertion slots here. Company use never grants edit access.")}</p>
         )}
         {tab === "libraries" || tab === "items" ? (
           <p>
-            Create content in the existing library screen. Set its location
-            scope here. An empty location selection means company-wide.
-          </p>
+            {translateUI("Create content in the existing library screen. Set its location scope here. An empty location selection means company-wide.")}</p>
         ) : null}
         <Table
           rows={rows}
@@ -551,38 +552,35 @@ function Manager({ close }: { close: () => void }) {
               })
             }
           >
-            Install DTB starter libraries and daily template
-          </button>
+            {translateUI("Install DTB starter libraries and daily template")}</button>
         )}
         {editing && (
           <section className="panel editor">
             <h2>
-              {editing.title ?? editing.name ?? editing.username ?? "Edit"}
+              {editing.title ?? editing.name ?? editing.username ?? translateUI("Edit")}
             </h2>
             {tab === "broadcasts" && (
               <>
-                {admin&&<label className="check"><input type="checkbox" checked={!!editing.announcement} onChange={e=>field("announcement",e.target.checked)}/>Automatic dated announcement after stretches</label>}
-                {editing.announcement&&<label>Announcement date<input type="date" value={editing.announcementDate??""} onChange={e=>field("announcementDate",e.target.value)}/></label>}
+                {admin&&<label className="check"><input type="checkbox" checked={!!editing.announcement} onChange={e=>field("announcement",e.target.checked)}/>{translateUI("Automatic dated announcement after stretches")}</label>}
+                {editing.announcement&&<label>{translateUI("Announcement date")}<input type="date" value={editing.announcementDate??""} onChange={e=>field("announcementDate",e.target.value)}/></label>}
                 <label>
-                  Title
-                  <input
+                  {translateUI("Title")}<input
                     value={editing.title}
                     onChange={(e) => field("title", e.target.value)}
                     required
                   />
                 </label>
                 {editing.announcement&&<>
-                  <label>Upload announcement image<input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingAnnouncement} onChange={async e=>{
+                  <label>{translateUI("Upload announcement image")}<FilePicker aria-label={translateUI("Upload announcement image")} accept="image/jpeg,image/png,image/webp" disabled={uploadingAnnouncement} onChange={async e=>{
                     const file=e.target.files?.[0];if(!file)return;setUploadingAnnouncement(true);setError("");
                     try{field("content",{...await globalThis.MMB.announcementImage(file),description:editing.content?.description??""});}catch(error){setError(String(error));}finally{setUploadingAnnouncement(false);}
                   }}/></label>
-                  <label>Announcement message<textarea value={editing.content?.description??""} onChange={e=>field("content",{...(editing.content??globalThis.MMB.meetingOnly(editing.title||"Announcement","")),type:editing.content?.assetId?"image-text":"text",description:e.target.value})}/></label>
-                  {uploadingAnnouncement&&<p role="status">Uploading image…</p>}
-                  {editing.content?.assetId&&<p>Selected image: {editing.content.title}</p>}
+                  <label>{translateUI("Announcement message")}<textarea value={editing.content?.description??""} onChange={e=>field("content",{...(editing.content??globalThis.MMB.meetingOnly(editing.title||translateUI("Announcement"),"")),type:editing.content?.assetId?"image-text":"text",description:e.target.value})}/></label>
+                  {uploadingAnnouncement&&<p role="status">{translateUI("Uploading image…")}</p>}
+                  {editing.content?.assetId&&<p>{translateUI("Selected image:") + " "}{editing.content.title}</p>}
                 </>}
                 <label>
-                  Content
-                  <select
+                  {translateUI("Content")}<select aria-label={translateUI("Content")}
                     value={editing.content?.id ?? ""}
                     onChange={(e) =>
                       field(
@@ -591,7 +589,7 @@ function Manager({ close }: { close: () => void }) {
                       )
                     }
                   >
-                    <option value="">Select content</option>
+                    <option value="">{translateUI("Select content")}</option>
                     {editing.content?.scope==="meeting-only"&&<option value={editing.content.id}>{editing.content.title}</option>}
                     {state.items
                       .filter((i) => !i.archived)
@@ -603,14 +601,11 @@ function Manager({ close }: { close: () => void }) {
                   </select>
                 </label>
                 <p>
-                  Create text, images, image-and-text, YouTube, or links in
-                  Content library first.
-                </p>
+                  {translateUI("Create text, images, image-and-text, YouTube, or links in Content library first.")}</p>
                 {!editing.announcement&&<>
                 <div className="form-row">
                   <label>
-                    Start (organization timezone)
-                    <input
+                    {translateUI("Start (organization timezone)")}<input
                       type="datetime-local"
                       value={localDate(editing.start)}
                       onChange={(e) =>
@@ -627,8 +622,7 @@ function Manager({ close }: { close: () => void }) {
                     />
                   </label>
                   <label>
-                    End (inclusive, organization timezone)
-                    <input
+                    {translateUI("End (inclusive, organization timezone)")}<input
                       type="datetime-local"
                       value={localDate(editing.end)}
                       onChange={(e) =>
@@ -646,34 +640,28 @@ function Manager({ close }: { close: () => void }) {
                   </label>
                 </div>
                 <p>
-                  For one date, use 00:00 through 23:59 on that date. DTB’s
-                  organization timezone is America/Los_Angeles; check the
-                  browser timezone before scheduling.
-                </p>
+                  {translateUI("For one date, use 00:00 through 23:59 on that date. DTB’s organization timezone is America/Los_Angeles; check the browser timezone before scheduling.")}</p>
                 <label>
-                  Importance
-                  <select
+                  {translateUI("Importance")}<select aria-label={translateUI("Importance")}
                     value={editing.importance}
                     onChange={(e) => field("importance", e.target.value)}
                   >
                     {["available", "suggested", "required"].map((v) => (
-                      <option key={v}>{v}</option>
+                      <option key={v} value={v}>{uiLabel(v)}</option>
                     ))}
                   </select>
                 </label>
                 <label>
-                  Frequency
-                  <select
+                  {translateUI("Frequency")}<select aria-label={translateUI("Frequency")}
                     value={editing.recurrence}
                     onChange={(e) => field("recurrence", e.target.value)}
                   >
-                    <option value="once">Once per location</option>
-                    <option value="every">Every meeting in window</option>
+                    <option value="once">{translateUI("Once per location")}</option>
+                    <option value="every">{translateUI("Every meeting in window")}</option>
                   </select>
                 </label>
                 <label>
-                  Insertion slot
-                  <input
+                  {translateUI("Insertion slot")}<input
                     list="slots"
                     value={editing.slot}
                     onChange={(e) => field("slot", e.target.value)}
@@ -686,39 +674,37 @@ function Manager({ close }: { close: () => void }) {
                       "Recognition",
                       "Closing",
                     ].map((s) => (
-                      <option key={s}>{s}</option>
+                      <option key={s} value={s}>{uiLabel(s)}</option>
                     ))}
                   </datalist>
                 </label>
                 </>}
                 <label>
-                  Priority (higher comes first)
-                  <Numeric
+                  {translateUI("Priority (higher comes first)")}<Numeric
                     value={editing.priority}
                     onChange={(v) => field("priority", v)}
                     max={1000}
                   />
                 </label>
                 <label>
-                  Publication
-                  <select
-                    aria-label="Publication"
+                  {translateUI("Publication")}<select
+                    aria-label={translateUI("Publication")}
                     value={editing.status}
                     onChange={(e) => {
                       field("status", e.target.value);
                       setPreview(true);
                     }}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
+                    <option value="draft">{translateUI("Draft")}</option>
+                    <option value="published">{translateUI("Published")}</option>
                   </select>
                 </label>
                 {editing.announcement?<>
                   <CheckList label="Receiving meeting accounts" selectAll
-                    rows={directory.accounts.filter(a=>a.category==="location"||a.id==="demo").map(a=>({...a,name:`${directory.locations.find(l=>l.id===a.location_id)?.name??"Meeting area"} · ${a.username}`}))}
+                    rows={directory.accounts.filter(a=>a.category==="location"||a.id==="demo").map(a=>({...a,name:`${directory.locations.find(l=>l.id===a.location_id)?.name??translateUI("Meeting area")} · ${a.username}`}))}
                     selected={editing.allAccounts!==false?directory.accounts.filter(a=>a.category==="location"||a.id==="demo").map(a=>a.id):editing.accounts??[]}
                     onChange={accounts=>setEditing({...editing,accounts,allAccounts:accounts.length>0&&accounts.length===directory.accounts.filter(a=>a.category==="location"||a.id==="demo").length})}/>
-                  <p className="muted">Select all includes future meeting accounts. An empty recipient selection cannot be published. Published announcements appear automatically on the selected day. Sync online before presenting.</p>
+                  <p className="muted">{translateUI("Select all includes future meeting accounts. An empty recipient selection cannot be published. Published announcements appear automatically on the selected day. Sync online before presenting.")}</p>
                 </>:<CheckList
                   label="Target locations — none selected means all"
                   rows={directory.locations}
@@ -726,20 +712,19 @@ function Manager({ close }: { close: () => void }) {
                   onChange={(v) => field("locations", v)}
                 />}
                 <button onClick={() => setPreview(!preview)}>
-                  Preview schedule and placement
-                </button>
+                  {translateUI("Preview schedule and placement")}</button>
                 {preview && (
                   <div className="info-note">
                     <p>
-                      {editing.title}: {editing.start} to {editing.end};{" "}
+                      {editing.title}: {editing.start} {translateUI("to") + " "}{editing.end};{" "}
                       {editing.importance};{" "}
                       {editing.recurrence === "once"
-                        ? "once at each location"
-                        : "every meeting"}
+                        ? translateUI("once at each location")
+                        : translateUI("every meeting")}
                       .
                     </p>
                     <p>
-                      Locations:{" "}
+                      {translateUI("Locations:")}{" "}
                       {directory.locations
                         .filter(
                           (l) =>
@@ -757,8 +742,8 @@ function Manager({ close }: { close: () => void }) {
                             (s.slot ?? s.title).toLowerCase() ===
                             editing.slot.toLowerCase(),
                         )
-                          ? `after ${editing.slot}`
-                          : "fallback after Introduction — slot missing"}
+                          ? translateUI("after {arg0}", {arg0: editing.slot})
+                          : translateUI("fallback after Introduction — slot missing")}
                       </p>
                     ))}
                   </div>
@@ -773,9 +758,8 @@ function Manager({ close }: { close: () => void }) {
                     checked={!!editing.company_visible}
                     onChange={(e) => field("company_visible", e.target.checked)}
                   />
-                  Company-wide use
-                </label>
-                <h3>Share use and edit separately</h3>
+                  {translateUI("Company-wide use")}</label>
+                <h3>{translateUI("Share use and edit separately")}</h3>
                 {[
                   ...directory.accounts.map((a) => ({
                     ...a,
@@ -810,19 +794,19 @@ function Manager({ close }: { close: () => void }) {
                               ])
                             }
                           />
-                          {k === "can_use" ? "Use" : "Edit"}
+                          {k === "can_use" ? translateUI("Use") : translateUI("Edit")}
                         </label>
                       ))}
                     </div>
                   );
                 })}
-                <h3>Named insertion slots</h3>
+                <h3>{translateUI("Named insertion slots")}</h3>
                 {editing.slides.map((s: Row, i: number) => (
                   <label key={s.id}>
                     {s.title}
                     <input
                       value={s.slot ?? ""}
-                      placeholder="e.g. Safety"
+                      placeholder={translateUI("e.g. Safety")}
                       onChange={(e) =>
                         field(
                           "slides",
@@ -847,24 +831,21 @@ function Manager({ close }: { close: () => void }) {
             {tab === "accounts" && (
               <>
                 <label>
-                  Username
-                  <input
+                  {translateUI("Username")}<input
                     value={editing.username}
                     onChange={(e) => field("username", e.target.value)}
                     required
                   />
                 </label>
                 <label>
-                  New password (12+ characters; blank keeps existing)
-                  <input
+                  {translateUI("New password (12+ characters; blank keeps existing)")}<input
                     type="password"
                     autoComplete="new-password"
                     onChange={(e) => field("password", e.target.value)}
                   />
                 </label>
                 <label>
-                  Account type
-                  <select
+                  {translateUI("Account type")}<select aria-label={translateUI("Account type")}
                     value={editing.category}
                     onChange={(e) =>
                       setEditing({
@@ -881,14 +862,13 @@ function Manager({ close }: { close: () => void }) {
                       })
                     }
                   >
-                    <option value="location">Location account</option>
-                    <option value="individual">Individual account</option>
+                    <option value="location">{translateUI("Location account")}</option>
+                    <option value="individual">{translateUI("Individual account")}</option>
                   </select>
                 </label>
                 {editing.category === "location" ? (
                   <label>
-                    Fixed location
-                    <select
+                    {translateUI("Fixed location")}<select aria-label={translateUI("Fixed location")}
                       value={editing.location_id}
                       onChange={(e) => field("location_id", e.target.value)}
                     >
@@ -901,8 +881,7 @@ function Manager({ close }: { close: () => void }) {
                   </label>
                 ) : (
                   <label>
-                    Role
-                    <select
+                    {translateUI("Role")}<select aria-label={translateUI("Role")}
                       value={editing.role}
                       onChange={(e) => field("role", e.target.value)}
                     >
@@ -911,7 +890,7 @@ function Manager({ close }: { close: () => void }) {
                         "content_manager",
                         "report_viewer",
                       ].map((r) => (
-                        <option key={r}>{r}</option>
+                        <option key={r} value={r}>{uiLabel(r)}</option>
                       ))}
                     </select>
                   </label>
@@ -924,14 +903,12 @@ function Manager({ close }: { close: () => void }) {
                       field("can_create_templates", e.target.checked)
                     }
                   />
-                  Can create templates
-                </label>
+                  {translateUI("Can create templates")}</label>
               </>
             )}
             {["locations", "devices", "organization"].includes(tab) && (
               <label>
-                Name
-                <input
+                {translateUI("Name")}<input
                   value={editing.name}
                   onChange={(e) => field("name", e.target.value)}
                 />
@@ -939,8 +916,7 @@ function Manager({ close }: { close: () => void }) {
             )}
             {tab === "organization" && (
               <label>
-                Timezone
-                <input
+                {translateUI("Timezone")}<input
                   value={editing.timezone}
                   onChange={(e) => field("timezone", e.target.value)}
                 />
@@ -953,8 +929,7 @@ function Manager({ close }: { close: () => void }) {
                   checked={!!editing.enabled}
                   onChange={(e) => field("enabled", e.target.checked)}
                 />
-                Enabled
-              </label>
+                {translateUI("Enabled")}</label>
             )}
             {tab === "devices" && (
               <label className="check">
@@ -963,8 +938,7 @@ function Manager({ close }: { close: () => void }) {
                   checked={!!editing.revoked}
                   onChange={(e) => field("revoked", e.target.checked)}
                 />
-                Revoke this device and its sessions
-              </label>
+                {translateUI("Revoke this device and its sessions")}</label>
             )}
             {["broadcasts", "templates", "items", "libraries"].includes(
               tab,
@@ -975,8 +949,7 @@ function Manager({ close }: { close: () => void }) {
                   checked={!!editing.archived}
                   onChange={(e) => field("archived", e.target.checked)}
                 />
-                Archived (history retained)
-              </label>
+                {translateUI("Archived (history retained)")}</label>
             )}
             {tab === "storage" ? (
               <>
@@ -990,14 +963,11 @@ function Manager({ close }: { close: () => void }) {
                     )
                   }
                 >
-                  Archive image
-                </button>
+                  {translateUI("Archive image")}</button>
                 <button
                   className="danger"
-                  onClick={() =>
-                    confirm(
-                      "Permanently delete this archived image? Historical references will block deletion.",
-                    ) &&
+                  onClick={async () =>
+                    (await confirmUI(translateUI("Permanently delete this archived image? Historical references will block deletion."))) &&
                     perform(() =>
                       runtime.api("admin/storage", {
                         id: editing.id,
@@ -1006,15 +976,13 @@ function Manager({ close }: { close: () => void }) {
                     )
                   }
                 >
-                  Delete unreferenced image
-                </button>
+                  {translateUI("Delete unreferenced image")}</button>
               </>
             ) : (
               <button className="primary" disabled={uploadingAnnouncement || (!!editing.announcement && !admin)} onClick={() => perform(save)}>
-                Save
-              </button>
+                {translateUI("Save")}</button>
             )}
-            <button onClick={() => setEditing(null)}>Cancel</button>
+            <button onClick={() => setEditing(null)}>{translateUI("Cancel")}</button>
           </section>
         )}
       </div>
@@ -1052,7 +1020,7 @@ function Workspace() {
     } catch (e) { setError(String(e)); }
   }
   async function resetStarterData() {
-    if (!confirm("Reset the default libraries, their content, and the default Morning Meeting template to the GitHub version? Content you added to those default libraries will be removed. Custom libraries, custom templates, saved meetings, history, and local media will stay. Export your data first if you want a copy.")) return;
+    if (!(await confirmUI(translateUI("Reset the default libraries, their content, and the default Morning Meeting template to the GitHub version? Content you added to those default libraries will be removed. Custom libraries, custom templates, saved meetings, history, and local media will stay. Export your data first if you want a copy.")))) return;
     try {
       await runtime.repository.save(resetDefaults(state));
       location.reload();
@@ -1061,28 +1029,28 @@ function Workspace() {
   return (
     <>
       <div className="v2-bar">
+        <LanguageSelector />
         <strong>
           {runtime.hosted
             ? (runtime.session?.account.location_name ??
               runtime.session?.account.username)
-            : "Demo / Local data only"}
+            : translateUI("Demo / Local data only")}
         </strong>
         <span>
-          {runtime.hosted ? runtime.status : "Works offline"}
+          {runtime.hosted ? uiText(runtime.status) : translateUI("Works offline")}
           {runtime.lastSync
-            ? " · " + new Date(runtime.lastSync).toLocaleString()
+            ? " · " + new Date(runtime.lastSync).toLocaleString(getLocale())
             : ""}
         </span>
         {!runtime.hosted && <>
-          <button onClick={exportLocalData}>Export current data</button>
-          <button onClick={resetStarterData}>Reset GitHub defaults</button>
+          <button onClick={exportLocalData}>{translateUI("Export current data")}</button>
+          <button onClick={resetStarterData}>{translateUI("Reset GitHub defaults")}</button>
         </>}
         <button
           onClick={() => runtime.sync().catch((e) => setError(String(e)))}
         >
-          Sync Now
-        </button>
-        <button onClick={() => setOpen(true)}>Company workspace</button>
+          {translateUI("Sync Now")}</button>
+        <button onClick={() => setOpen(true)}>{translateUI("Company workspace")}</button>
         <button
           onClick={() =>
             runtime
@@ -1091,19 +1059,17 @@ function Workspace() {
               .catch((e) => setError(String(e)))
           }
         >
-          Clean old downloads
-        </button>
+          {translateUI("Clean old downloads")}</button>
         {runtime.hosted && role !== "location" && (
           <label>
-            Meeting location
-            <select
+            {translateUI("Meeting location")}<select aria-label={translateUI("Meeting location")}
               defaultValue=""
               onChange={(e) => (
                 (globalThis.MMB.location = e.target.value),
                 db.put("meta", "location", e.target.value)
               )}
             >
-              <option value="">Choose before building</option>
+              <option value="">{translateUI("Choose before building")}</option>
               {(globalThis.MMB.locations ?? []).map((l: Row) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
@@ -1116,13 +1082,12 @@ function Workspace() {
           <button
             onClick={() => runtime.logout().catch((e) => setError(String(e)))}
           >
-            Sign out
-          </button>
+            {translateUI("Sign out")}</button>
         )}
       </div>
       {(error || runtime.error) && (
         <p className="v2-error" role="alert">
-          {error || runtime.error}
+          {uiError(error || runtime.error)}
         </p>
       )}
       <Original />
@@ -1132,6 +1097,7 @@ function Workspace() {
   );
 }
 function App() {
+  React.useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
   useRuntime();
   const [ready, setReady] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -1166,14 +1132,15 @@ function App() {
   if (!ready)
     return (
       <main className="boot">
-        <h1>Opening your meeting workspace…</h1>
+      <LanguageSelector />
+        <h1>{translateUI("Opening your meeting workspace…")}</h1>
         {startupDelayed && (
           <div className="panel" role="alert">
             <p>{databaseBlocked
-              ? "Another Morning Meeting Builder tab is holding an older browser database open. Close other tabs for this site, then try again."
-              : "Local storage is taking longer than expected. Close any other Morning Meeting Builder tabs, then try again."}</p>
-            <p>Your saved meetings and media will stay on this device. Do not clear site data.</p>
-            <button className="primary" onClick={() => location.reload()}>Try again</button>
+              ? translateUI("Another Morning Meeting Builder tab is holding an older browser database open. Close other tabs for this site, then try again.")
+              : translateUI("Local storage is taking longer than expected. Close any other Morning Meeting Builder tabs, then try again.")}</p>
+            <p>{translateUI("Your saved meetings and media will stay on this device. Do not clear site data.")}</p>
+            <button className="primary" onClick={() => location.reload()}>{translateUI("Try again")}</button>
           </div>
         )}
       </main>
@@ -1181,7 +1148,7 @@ function App() {
   if (runtime.hosted && !runtime.session) return <Login />;
   return (
     <>
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{uiError(error)}</p>}
       <Provider>
         <Workspace />
       </Provider>

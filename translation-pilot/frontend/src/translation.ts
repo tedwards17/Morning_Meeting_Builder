@@ -1,3 +1,5 @@
+import { promptUI } from "./dialogs";
+import { t as translateUI } from "./i18n";
 import { translationEnabled } from "./presentation-config";
 
 export type Caption = { text: string; source: "en" | "es" };
@@ -25,17 +27,17 @@ export async function translationApi(action: string, body: unknown, csrf = "", s
   });
   const type = response.headers.get("content-type") || "";
   if (!type.includes("application/json"))
-    throw new Error("Live translation needs the PHP backend. GitHub Pages can preview captions only. Open the private PHP pilot link for a microphone test.");
+    throw new Error(translateUI("Live translation needs the PHP backend. GitHub Pages can preview captions only. Open the private PHP pilot link for a microphone test."));
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Translation connection unavailable. Try again.");
+  if (!response.ok) throw new Error(data.error || translateUI("Translation connection unavailable. Try again."));
   return data;
 }
 
 export async function startTranslation(callbacks: TranslationCallbacks): Promise<{ stop: () => void }> {
-  if (callbacks.translate !== false && !translationEnabled) throw new Error("Live translation is disabled.");
-  if (!navigator.onLine) throw new Error("Connect to the internet to start live translation.");
+  if (callbacks.translate !== false && !translationEnabled) throw new Error(translateUI("Live translation is disabled."));
+  if (!navigator.onLine) throw new Error(translateUI("Connect to the internet to start live translation."));
   if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext || !window.AudioWorkletNode)
-    throw new Error("This browser cannot stream microphone audio here. Use a current browser over HTTPS.");
+    throw new Error(translateUI("This browser cannot stream microphone audio here. Use a current browser over HTTPS."));
   const abort = new AbortController();
   let stopped = false;
   let stream: MediaStream | undefined;
@@ -71,11 +73,11 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   };
   const fail = (message: string) => { if (!stopped) { stop(); callbacks.onError(message); } };
   const checkDeadline = () => {
-    if (deadline && Date.now() >= deadline) { fail("Translation stopped at the 45-minute limit. Start a new session if needed."); return false; }
+    if (deadline && Date.now() >= deadline) { fail(translateUI("Translation stopped at the 45-minute limit. Start a new session if needed.")); return false; }
     return !stopped;
   };
   // Stop on backgrounding as well as exit; mobile timers may otherwise be suspended.
-  const visibility = () => { if (document.hidden) fail("Translation stopped because the page went into the background. Start it again when ready."); };
+  const visibility = () => { if (document.hidden) fail(translateUI("Translation stopped because the page went into the background. Start it again when ready.")); };
   window.addEventListener("pagehide", stop);
   document.addEventListener("visibilitychange", visibility);
   callbacks.signal?.addEventListener("abort", stop, { once: true });
@@ -89,53 +91,53 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
       try {
         const result = await translationApi("text", { ...current, sessionId }, csrf, abort.signal);
         if (checkDeadline() && result.text) callbacks.onCaption({ text: result.text, source: current.source });
-      } catch (error) { if (!stopped) fail(error instanceof Error ? error.message : "Translation unavailable."); }
+      } catch (error) { if (!stopped) fail(error instanceof Error ? error.message : translateUI("Translation unavailable.")); }
     }
     busy = false;
     if (!stopped) callbacks.onStatus("listening");
   };
   try {
-    if (callbacks.signal?.aborted) { stop(); throw new Error("Translation canceled."); }
+    if (callbacks.signal?.aborted) { stop(); throw new Error(translateUI("Translation canceled.")); }
     let auth = await translationApi("status", {}, "", abort.signal);
-    if (!auth.enabled) throw new Error("Translation is disabled on this server.");
+    if (!auth.enabled) throw new Error(translateUI("Translation is disabled on this server."));
     if (!auth.authenticated) {
-      const passphrase = window.prompt("Enter the presenter passphrase to start live captions. This is not an API key.");
-      if (!passphrase) throw new Error("Translation canceled.");
+      const passphrase = (await promptUI(translateUI("Enter the presenter passphrase to start live captions. This is not an API key."), "", true));
+      if (!passphrase) throw new Error(translateUI("Translation canceled."));
       auth = await translationApi("unlock", { passphrase }, "", abort.signal);
     }
     csrf = auth.csrf;
     // Permission first, then mint the short-lived token immediately before connecting.
     stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
-    if (stopped) { stream.getTracks().forEach(track => track.stop()); throw new Error("Translation canceled."); }
-    stream.getAudioTracks().forEach(track => track.addEventListener("ended", () => fail("Microphone disconnected. Start translation again."), { once: true }));
+    if (stopped) { stream.getTracks().forEach(track => track.stop()); throw new Error(translateUI("Translation canceled.")); }
+    stream.getAudioTracks().forEach(track => track.addEventListener("ended", () => fail(translateUI("Microphone disconnected. Start translation again.")), { once: true }));
     context = new AudioContext();
     await context.resume();
-    if (context.state !== "running") throw new Error("Microphone audio could not start. Tap Start Translation again.");
+    if (context.state !== "running") throw new Error(translateUI("Microphone audio could not start. Tap Start Translation again."));
     await context.audioWorklet.addModule("./pcm-worklet.js");
     const grant = await translationApi("session", {}, csrf, abort.signal);
     sessionId = grant.sessionId;
-    if (stopped) throw new Error("Translation canceled.");
+    if (stopped) throw new Error(translateUI("Translation canceled."));
     deadline = Math.min(Date.now() + MAX_SESSION_MS, Number(grant.expiresAt) * 1000);
-    if (!Number.isFinite(deadline)) throw new Error("Translation session configuration unavailable.");
+    if (!Number.isFinite(deadline)) throw new Error(translateUI("Translation session configuration unavailable."));
     maxTimer = setTimeout(() => checkDeadline(), Math.max(0, deadline - Date.now()));
     const params = new URLSearchParams({ model: "nova-3", language: "multi", encoding: "linear16", sample_rate: String(context.sampleRate), channels: "1", punctuate: "true", interim_results: "false", endpointing: "100" });
     socket = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ["bearer", grant.access_token]);
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Speech connection timed out. Try again.")), 15000);
-      const cancel = () => { clearTimeout(timer); reject(new Error("Translation canceled.")); };
+      const timer = setTimeout(() => reject(new Error(translateUI("Speech connection timed out. Try again."))), 15000);
+      const cancel = () => { clearTimeout(timer); reject(new Error(translateUI("Translation canceled."))); };
       abort.signal.addEventListener("abort", cancel, { once: true });
       const done = () => { clearTimeout(timer); abort.signal.removeEventListener("abort", cancel); };
       socket!.onopen = () => { done(); resolve(); };
-      socket!.onerror = socket!.onclose = () => { done(); reject(new Error("Deepgram connection failed. Check configuration and try again.")); };
+      socket!.onerror = socket!.onclose = () => { done(); reject(new Error(translateUI("Deepgram connection failed. Check configuration and try again."))); };
     });
-    if (!checkDeadline()) throw new Error("Translation canceled.");
-    socket.onclose = () => fail("Speech connection ended. Start Translation to reconnect.");
-    socket.onerror = () => fail("Speech connection failed. Check your connection and try again.");
+    if (!checkDeadline()) throw new Error(translateUI("Translation canceled."));
+    socket.onclose = () => fail(translateUI("Speech connection ended. Start Translation to reconnect."));
+    socket.onerror = () => fail(translateUI("Speech connection failed. Check your connection and try again."));
     socket.onmessage = event => {
       if (!checkDeadline()) return;
       try {
         const message = JSON.parse(String(event.data));
-        if (message.type === "Error") { fail("Speech service returned an error. Check Deepgram configuration."); return; }
+        if (message.type === "Error") { fail(translateUI("Speech service returned an error. Check Deepgram configuration.")); return; }
         const alternative = message.channel?.alternatives?.[0];
         if (message.type !== "Results" || !message.is_final || !alternative?.transcript?.trim()) return;
         // Nova-3 reports language on words. Split code-switched phrases into language runs.
@@ -156,17 +158,17 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
           // Save every final recognition phrase before the caption queue can replace it.
           // Pending saves finish even when capture is stopped or the presentation exits.
           if (callbacks.onTranscript) void callbacks.onTranscript(run)
-            .catch(() => fail("Transcript could not be saved. Capture stopped; previously saved text is still available."));
+            .catch(() => fail(translateUI("Transcript could not be saved. Capture stopped; previously saved text is still available.")));
           if (callbacks.translate !== false) void translate(run);
         }
-      } catch { fail("Speech response could not be read. Restart translation."); }
+      } catch { fail(translateUI("Speech response could not be read. Restart translation.")); }
     };
     input = context.createMediaStreamSource(stream);
     worklet = new AudioWorkletNode(context, "microphone-pcm");
     mute = context.createGain(); mute.gain.value = 0;
     worklet.port.onmessage = event => {
       if (!checkDeadline() || socket?.readyState !== WebSocket.OPEN) return;
-      if (socket.bufferedAmount > 2 * 1024 * 1024) { fail("Speech connection is too slow. Reconnect and try again."); return; }
+      if (socket.bufferedAmount > 2 * 1024 * 1024) { fail(translateUI("Speech connection is too slow. Reconnect and try again.")); return; }
       socket.send(event.data);
     };
     input.connect(worklet).connect(mute).connect(context.destination);
@@ -178,7 +180,7 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   } catch (error) {
     stop();
     if (error instanceof DOMException && error.name === "NotAllowedError")
-      throw new Error("Microphone permission was denied. Allow microphone access and try again.");
+      throw new Error(translateUI("Microphone permission was denied. Allow microphone access and try again."));
     throw error;
   }
 }

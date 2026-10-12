@@ -1,0 +1,50 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {spawn}=require('node:child_process');const assert=require('node:assert/strict');
+(async()=>{const server=spawn('python3',['-m','http.server','5191','--bind','127.0.0.1','--directory','build'],{stdio:'ignore'});let browser;const checks=[];
+const ok=(name,value)=>{assert.ok(value,name);checks.push(name);console.log('PASS',name);};
+try{
+ await new Promise(resolve=>setTimeout(resolve,400));browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({serviceWorkers:'block'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const org=crypto.randomUUID(),account=crypto.randomUUID(),device=crypto.randomUUID(),location=crypto.randomUUID();let authenticated=false;
+ const session={csrf:'test-only',organization:{id:org,name:'DTB',timezone:'America/Los_Angeles'},device:{id:device},account:{id:account,organization_id:org,username:'Admin',category:'individual',role:'administrator',enabled:true,can_create_templates:true}};
+ await page.route('**/api/v1/**',async route=>{
+  const pathname=new URL(route.request().url()).pathname.split('/api/v1/')[1];let status=200,data={};
+  if(pathname==='auth/session'){if(authenticated)data=session;else{status=401;data={error:{message:'Sign in required'}};}}
+  else if(pathname==='auth/login'){authenticated=true;data=session;}
+  else if(pathname.startsWith('sync/'))data={reset:false,changes:[],cursor:1,more:false,next:null};
+  else if(pathname==='directory')data={locations:[{id:location,name:'Assembly'}],accounts:[session.account]};
+  else if(pathname==='admin/accounts')data={rows:[session.account]};
+  else if(pathname==='admin/locations')data={rows:[{id:location,name:'Assembly',enabled:true}]};
+  else if(pathname==='admin/devices')data={rows:[{id:device,name:'Tablet',revoked:false}]};
+  else if(pathname==='admin/organization')data=session.organization;
+  else if(pathname==='admin/readiness')data={php:'8.3',pdo_mysql:true,https:true,media_writable:true};
+  else if(pathname==='admin/storage')data={rows:[{id:crypto.randomUUID(),name:'Original image',mime:'image/png',byte_size:200,width:10,height:20,archived:false}]};
+  else if(pathname==='admin/audit')data={rows:[{id:1,action:'login',account_id:account,created_at:new Date().toISOString()}]};
+  else if(pathname.startsWith('admin/reports/'))data={rows:[{id:'test-report',broadcast:'Original announcement',location:'Assembly',presented:1,skipped:0,status:'Presented'}]};
+  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('http://127.0.0.1:5191/hosted/');await page.getByRole('button',{name:'Sign in',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Switch interface language',exact:true}).click();await page.getByRole('button',{name:'Español',exact:true}).click();
+ ok('hosted sign-in fields and heading switch to Spanish',await page.getByLabel('Usuario',{exact:true}).isVisible()&&await page.getByLabel('Contraseña',{exact:true}).isVisible());
+ await page.getByLabel('Usuario',{exact:true}).fill('Admin');await page.getByLabel('Contraseña',{exact:true}).fill('example-test-passphrase');await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();
+ await page.getByRole('button',{name:'Espacio de la empresa',exact:true}).waitFor();await page.getByRole('button',{name:'Espacio de la empresa',exact:true}).click();
+ await page.getByRole('button',{name:'Cuentas',exact:true}).click();await page.getByRole('button',{name:'Administrar',exact:true}).first().waitFor();
+ ok('account table headers, role labels and buttons are Spanish',await page.getByRole('columnheader',{name:'Usuario',exact:true}).isVisible()&&await page.getByRole('cell',{name:'Administrador',exact:true}).isVisible());
+ await page.getByRole('button',{name:'Administrar',exact:true}).first().click();
+ ok('account editor keeps protocol values while translating roles',await page.getByLabel('Rol',{exact:true}).locator('option[value="administrator"]').textContent()==='Administrador');
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+ await page.getByRole('button',{name:'Informes',exact:true}).click();await page.getByRole('columnheader',{name:'Aviso',exact:true}).waitFor();
+ ok('reports translate columns without translating announcement titles',await page.getByRole('cell',{name:'Original announcement',exact:true}).isVisible());
+ await page.getByRole('button',{name:'Ubicaciones',exact:true}).click();await page.getByRole('button',{name:'Crear ubicación',exact:true}).waitFor();
+ ok('location and device pages are Spanish',await page.getByRole('button',{name:'Dispositivos',exact:true}).isVisible());
+ await page.getByRole('button',{name:'Empresa',exact:true}).click();await page.getByLabel('Zona horaria',{exact:true}).waitFor();
+ ok('organization editor is Spanish',await page.getByLabel('Nombre',{exact:true}).isVisible());
+ await page.getByRole('button',{name:'Almacenamiento',exact:true}).click();await page.getByRole('columnheader',{name:'Tamaño del archivo',exact:true}).waitFor();
+ ok('storage columns and archive controls are Spanish',await page.getByRole('columnheader',{name:'Ancho',exact:true}).isVisible());
+ await page.getByRole('button',{name:'Auditoría',exact:true}).click();await page.getByRole('cell',{name:'Inicio de sesión',exact:true}).waitFor();
+ ok('audit actions are Spanish',await page.getByRole('columnheader',{name:'Acción',exact:true}).isVisible());
+ await page.getByRole('button',{name:'Verificación del servidor',exact:true}).click();await page.getByRole('columnheader',{name:'Comprobación',exact:true}).waitFor();
+ ok('server checks and boolean results are Spanish',await page.getByRole('cell',{name:'Sí',exact:true}).count()===3);
+ ok('hosted localization produces no application errors',errors.length===0);
+ console.log(checks.length+' hosted localization browser checks passed; server responses mocked.');
+}finally{await browser?.close();server.kill();}})().catch(error=>{console.error(error);process.exit(1)});

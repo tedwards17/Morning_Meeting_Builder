@@ -256,3 +256,31 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .meeting-agenda .agenda-row.colored-agenda { border-left: 6px solid var(--builder-slide-color); background: color-mix(in srgb, var(--builder-slide-color) 25%, white); }
 .meeting-agenda .agenda-row.colored-agenda.selected { outline: 2px solid #56788f; outline-offset: -2px; }
 .meeting-agenda .agenda-row.colored-agenda .agenda-select { color: #17232e; }
+
+.language-selector { position: relative; flex: 0 0 auto; display: inline-block; }
+.language-button, .language-menu button { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 12px; border: 1px solid #becddd; border-radius: 7px; background: #fff; color: #143650; font-weight: 600; cursor: pointer; }
+.language-selector span, .v2-bar .language-selector span { flex: 0 1 auto; font-size: 14px; }
+.language-flag { display: block; width: 32px; height: 21px; flex: 0 0 32px; border-radius: 2px; box-shadow: 0 0 0 1px #14365022; }
+.language-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 190px; padding: 5px; border: 1px solid #becddd; border-radius: 9px; background: white; color: #143650; box-shadow: 0 5px 20px #001c3c33; z-index: 1000; }
+.language-menu button { width: 100%; border-color: transparent; justify-content: flex-start; }
+.language-menu button:hover, .language-menu button[aria-pressed="true"] { background: #eaf1f8; }
+.language-menu button:focus-visible, .language-button:focus-visible { outline: 3px solid #7dc3f4; outline-offset: 2px; }
+.boot > .language-selector { display: table; margin: 0 0 24px auto; }
+.record-details { white-space: normal; font-size: 13px; max-height: 400px; overflow: auto; }
+.record-details div { padding: 4px; border-bottom: 1px solid #e0e6eb; }
+.record-details dt { font-weight: 600; }
+.record-details dd { margin: 3px 0 8px 12px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .v2-workspace { padding: 18px; } .v2-workspace header { flex-wrap: wrap; } .language-menu { min-width: 175px; } }
+
+.v2-workspace .tabs { flex-direction: row; }
+
+.mmb-ui-dialog { width: min(540px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); border: 1px solid #becddd; border-radius: 12px; padding: 24px; color: #143650; box-shadow: 0 12px 55px #001c3c44; overflow: auto; }
+.mmb-ui-dialog::backdrop { background: #071c36aa; }
+.mmb-ui-dialog h2 { margin-bottom: 14px; }
+.mmb-ui-dialog p { white-space: pre-wrap; margin-bottom: 20px; }
+.mmb-ui-dialog input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid #becddd; border-radius: 7px; margin-bottom: 18px; }
+.mmb-ui-dialog .actions { justify-content: flex-end; }
+
+.localized-file-picker { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
+.localized-file-native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; clip-path: inset(50%); overflow: hidden; }
+.localized-file-name { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }

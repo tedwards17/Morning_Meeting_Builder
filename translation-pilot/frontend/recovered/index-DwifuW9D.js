@@ -1,3 +1,5 @@
+import { confirmUI, promptUI, alertUI } from "../src/dialogs";
+import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
 import { openMediaDatabase } from "../src/media-db";
 import { isMeetingExpired, meetingExpiresAt } from "../src/retention";
 (function () {
@@ -18604,11 +18606,11 @@ function $j({ children: n }) {
     Ms.load()
       .then(r)
       .catch((S) =>
-        c(S instanceof Error ? S.message : "Unable to open local storage."),
+        c(S instanceof Error ? S.message : translateUI("Unable to open local storage.")),
       );
   }, []);
   const v = ae.useCallback(async (S) => {
-      if (!Ms) throw new Error("Storage is not ready.");
+      if (!Ms) throw new Error(translateUI("Storage is not ready."));
       const A = await Ms.update(S);
       return (r(A), A);
     }, []),
@@ -18626,10 +18628,10 @@ function $j({ children: n }) {
         (console.error("[Morning Meeting]", A),
           h(
             A instanceof ax
-              ? `Check ${A.issues[0]?.path.join(" → ") || "the form"}: ${A.issues[0]?.message}`
+              ? translateUI("Check {arg0}: {arg1}", {arg0: A.issues[0]?.path.join(" → ") || translateUI("the form"), arg1: uiError(A.issues[0]?.message)})
               : A instanceof Error
                 ? A.message
-                : "Something went wrong. Your saved data has not been reset.",
+                : translateUI("Something went wrong. Your saved data has not been reset."),
           ));
       } finally {
         g((A) => A - 1);
@@ -18639,7 +18641,7 @@ function $j({ children: n }) {
     ...state, assets: [...state.assets, ...assets],
   }));
   globalThis.MMB.updateMeetingHistory = (id, transform) => v((state) => {
-    if (!state.meetings.some(meeting=>meeting.id===id)) throw new Error("Meeting record unavailable. Stop speech capture and reopen the meeting.");
+    if (!state.meetings.some(meeting=>meeting.id===id)) throw new Error(translateUI("Meeting record unavailable. Stop speech capture and reopen the meeting."));
     return {...state, meetings: state.meetings.map((meeting) => meeting.id === id ? transform(meeting) : meeting)};
   });
   globalThis.MMB.expireSavedMeetings = async () => {
@@ -18655,15 +18657,15 @@ function $j({ children: n }) {
     ? d.jsxs("main", {
         className: "boot",
         children: [
-          d.jsx("h1", { children: "Local storage could not open" }),
+          d.jsx("h1", { children: translateUI("Local storage could not open") }),
           d.jsx("p", { children: s }),
           d.jsx("p", {
             children:
-              "Use a regular browser window with storage enabled, then try again. Existing data has not been reset.",
+              translateUI("Use a regular browser window with storage enabled, then try again. Existing data has not been reset."),
           }),
           d.jsx("button", {
             onClick: () => location.reload(),
-            children: "Try again",
+            children: translateUI("Try again"),
           }),
         ],
       })
@@ -18677,9 +18679,9 @@ function $j({ children: n }) {
                 className: "toast",
                 role: "status",
                 children: [
-                  d.jsx("span", { children: f }),
+                  d.jsx("span", { children: uiText(f) }),
                   d.jsx("button", {
-                    "aria-label": "Dismiss message",
+                    "aria-label": translateUI("Dismiss message"),
                     onClick: () => { clearTimeout(messageTimer.current); h(""); },
                     children: "×",
                   }),
@@ -18691,13 +18693,13 @@ function $j({ children: n }) {
           className: "boot",
           "aria-busy": "true",
           children: d.jsx("h1", {
-            children: "Opening your meeting workspace…",
+            children: translateUI("Opening your meeting workspace…"),
           }),
         });
 }
 function qt() {
   const n = ae.useContext(Jv);
-  if (!n) throw new Error("AppProvider is required.");
+  if (!n) throw new Error(translateUI("AppProvider is required."));
   return n;
 }
 const Fv = (...n) =>
@@ -19244,17 +19246,17 @@ function Ii({ title: n, children: i, onClose: r, wide: s = !1, practice = false 
                 try { await globalThis.MMB.toggleFullscreen(); ownedFullscreen.current = entering; }
                 catch (error) { setFullscreenMessage(error.message); }
               },
-              children: fullscreen ? "Exit fullscreen" : "Fullscreen preview",
+              children: fullscreen ? translateUI("Exit fullscreen") : translateUI("Fullscreen preview"),
             }),
             d.jsx("button", {
               className: "icon-button",
-              "aria-label": "Close",
+              "aria-label": translateUI("Close"),
               onClick: r,
               children: d.jsx(iy, {}),
             }),
           ],
         }),
-        fullscreenMessage && d.jsx("p", { role: "status", children: fullscreenMessage }),
+        fullscreenMessage && d.jsx("p", { role: "status", children: uiText(fullscreenMessage) }),
         i,
       ],
     })
@@ -19264,9 +19266,9 @@ function Ne({ label: n, children: i, hint: r }) {
   return d.jsxs("label", {
     className: "field",
     children: [
-      d.jsx("span", { children: n }),
-      i,
-      r && d.jsx("small", { children: r }),
+      d.jsx("span", { children: uiText(n) }),
+      ae.isValidElement(i) && (["input", "select", "textarea"].includes(i.type) || i.type === globalThis.MMB.FilePicker) ? ae.cloneElement(i, { "aria-label": uiText(n) }) : i,
+      r && d.jsx("small", { children: uiText(r) }),
     ],
   });
 }
@@ -19297,14 +19299,14 @@ function ly({ index: n, length: i, onMove: r }) {
     children: [
       d.jsx("button", {
         className: "icon-button",
-        "aria-label": "Move up",
+        "aria-label": translateUI("Move up"),
         disabled: n === 0,
         onClick: () => r(n - 1),
         children: d.jsx(Wj, { size: 17 }),
       }),
       d.jsx("button", {
         className: "icon-button",
-        "aria-label": "Move down",
+        "aria-label": translateUI("Move down"),
         disabled: n === i - 1,
         onClick: () => r(n + 1),
         children: d.jsx(Kj, { size: 17 }),
@@ -19317,7 +19319,7 @@ const Pt = (n, i = "short") =>
     ? i === "iso"
       ? n.slice(0, 10)
       : new Date(n.length === 10 ? n + "T12:00:00" : n).toLocaleDateString(
-          void 0,
+          getLocale(),
           i === "long"
             ? {
                 weekday: "long",
@@ -19327,7 +19329,7 @@ const Pt = (n, i = "short") =>
               }
             : { month: "short", day: "numeric", year: "numeric" },
         )
-    : "Never used";
+    : translateUI("Never used");
 class aE extends ae.Component {
   state = { error: "" };
   static getDerivedStateFromError(i) {
@@ -19341,14 +19343,14 @@ class aE extends ae.Component {
       ? d.jsxs("main", {
           className: "boot",
           children: [
-            d.jsx("h1", { children: "This screen could not open" }),
+            d.jsx("h1", { children: translateUI("This screen could not open") }),
             d.jsx("p", {
-              children: "Your saved data is still on this device.",
+              children: translateUI("Your saved data is still on this device."),
             }),
-            d.jsx("p", { children: this.state.error }),
+            d.jsx("p", { children: uiError(this.state.error) }),
             d.jsx("button", {
               onClick: () => location.reload(),
-              children: "Reload app",
+              children: translateUI("Reload app"),
             }),
           ],
         })
@@ -19356,26 +19358,21 @@ class aE extends ae.Component {
   }
 }
 function au(n) {
+  const bypass = ae.useRef(false);
   ae.useEffect(() => {
     if (!n) return;
-    const i = (s) => {
-        (s.preventDefault(), (s.returnValue = ""));
-      },
-      r = (s) => {
-        s.target?.closest?.("[data-leaves-editor]") &&
-          !confirm(
-            "You have unsaved changes. Leave this screen without saving?",
-          ) &&
-          (s.preventDefault(), s.stopImmediatePropagation());
-      };
-    return (
-      window.addEventListener("beforeunload", i),
-      document.addEventListener("click", r, !0),
-      () => {
-        (window.removeEventListener("beforeunload", i),
-          document.removeEventListener("click", r, !0));
+    const unloading = (event) => { event.preventDefault(); event.returnValue = ""; };
+    const leaving = async (event) => {
+      const target = event.target?.closest?.("[data-leaves-editor]");
+      if (!target || bypass.current) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (await confirmUI(translateUI("You have unsaved changes. Leave this screen without saving?"))) {
+        bypass.current = true; target.click(); bypass.current = false;
       }
-    );
+    };
+    window.addEventListener("beforeunload", unloading);
+    document.addEventListener("click", leaving, true);
+    return () => { window.removeEventListener("beforeunload", unloading); document.removeEventListener("click", leaving, true); };
   }, [n]);
 }
 const ir = (n, i) => (n < i ? -1 : n > i ? 1 : 0);
@@ -19525,12 +19522,12 @@ function rE(n) {
               return (f, h, m) => {
                 const g = n.Capacitor.Plugins[r];
                 if (g === void 0) {
-                  m(new Error(`Capacitor plugin ${r} not found`));
+                  m(new Error(translateUI("Capacitor plugin {arg0} not found", {arg0: r})));
                   return;
                 }
                 if (typeof g[c] != "function") {
                   m(
-                    new Error(`Method ${c} not found in Capacitor plugin ${r}`),
+                    new Error(translateUI("Method {arg0} not found in Capacitor plugin {arg1}", {arg0: c, arg1: r})),
                   );
                   return;
                 }
@@ -19659,7 +19656,7 @@ const Ji = Mn.isNativePlatform() ? new fE() : new oE();
 async function oy(n, i) {
   if (globalThis.MMB.hosted) return globalThis.MMB.upload(n);
   if (!n.size || n.size > cE)
-    throw new Error("Choose an image or video smaller than 150 MB.");
+    throw new Error(translateUI("Choose an image or video smaller than 150 MB."));
   const r = await Mf(n),
     s = i.find((f) => f.hash === r);
   if (s) return (await Ji.write(r, n), { asset: s, duplicate: !0 });
@@ -19792,7 +19789,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
                     children: [
                       d.jsx(ty, { size: 44 }),
                       d.jsx("span", { children: n.title }),
-                      d.jsx("small", { children: "Local video" }),
+                      d.jsx("small", { children: translateUI("Local video") }),
                     ],
                   }),
         })
@@ -19803,8 +19800,8 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
             d.jsx("span", {
               children:
                 s === null || s === c || !n.assetId
-                  ? "Media unavailable or unsupported. Reimport a compatible file."
-                  : "Loading media…",
+                  ? translateUI("Media unavailable or unsupported. Reimport a compatible file.")
+                  : translateUI("Loading media…"),
             }),
           ],
         })
@@ -19830,15 +19827,15 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
                   rel: "noopener noreferrer",
                   tabIndex: i ? 0 : -1,
                   children: [
-                    n.type === "link" ? "Open web page" : "Open online video",
+                    n.type === "link" ? translateUI("Open web page") : translateUI("Open online video"),
                     " ",
                     d.jsx(sw, { size: 18 }),
                   ],
                 })
               : d.jsx("p", {
                   children: Vs(n.url)
-                    ? "Open online content when presenting"
-                    : "Add a valid web link in the content library.",
+                    ? translateUI("Open online content when presenting")
+                    : translateUI("Add a valid web link in the content library."),
                 }),
           ],
         })
@@ -19848,7 +19845,7 @@ function Fi({
   slide: n,
   theme: i,
   groups: r,
-  presenter: s = "Presenter name",
+  presenter: s = translateUI("Presenter name"),
   date: c,
   interactive: f = !1,
   activeItem: h,
@@ -19882,7 +19879,7 @@ function Fi({
           className: "slide-brand",
           children: [
             M
-              ? d.jsx("img", { src: M, alt: "Company logo" })
+              ? d.jsx("img", { src: M, alt: translateUI("Company logo") })
               : d.jsx("span", { children: g.settings.company }),
             d.jsx("span", { children: _?.title ?? "Morning meeting" }),
           ],
@@ -19906,11 +19903,11 @@ function Fi({
                   d.jsxs("div", {
                     className: "presenter-line",
                     children: [
-                      d.jsx("strong", { children: s || "Presenter name" }),
+                      d.jsx("strong", { children: s || translateUI("Presenter name") }),
                       d.jsx("span", {
                         children: c
                           ? Pt(c, g.settings.dateFormat)
-                          : "Meeting date",
+                          : translateUI("Meeting date"),
                       }),
                     ],
                   }),
@@ -19975,8 +19972,8 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
     children: [
       d.jsx(ka, {
         eyebrow: Pt(new Date().toISOString(), "long"),
-        title: "Good morning.",
-        description: "Your meeting starts here.",
+        title: translateUI("Good morning."),
+        description: translateUI("Your meeting starts here."),
         actions: d.jsxs("span", {
           className: "status-chip",
           children: [d.jsx(Rw, { size: 16 }), s.device.name],
@@ -19990,35 +19987,35 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
             children: [
               d.jsx("span", {
                 className: "eyebrow",
-                children: "TODAY’S MEETING",
+                children: translateUI("TODAY’S MEETING"),
               }),
               d.jsxs("h2", {
                 children: [
-                  "A little preparation.",
+                  translateUI("A little preparation."),
                   d.jsx("br", {}),
-                  "A better start.",
+                  translateUI("A better start."),
                 ],
               }),
               d.jsx("p", {
                 children:
-                  "Choose your presenter, review the content, and bring the team together.",
+                  translateUI("Choose your presenter, review the content, and bring the team together."),
               }),
               d.jsxs("button", {
                 className: "primary large",
                 onClick: () => n(f),
-                children: ["Build a meeting ", d.jsx(Nn, { size: 21 })],
+                children: [translateUI("Build a meeting "), d.jsx(Nn, { size: 21 })],
               }),
               h &&
                 d.jsxs("button", {
                   className: "text-button",
                   onClick: () => n(h),
-                  children: ["Use last template: ", h.name],
+                  children: [translateUI("Use last template: "), h.name],
                 }),
               d.jsxs("div", {
                 className: "prep-note",
                 children: [
                   d.jsx(nf, { size: 16 }),
-                  " Aim for 10 minutes or less to prepare",
+                  translateUI(" Aim for 10 minutes or less to prepare"),
                 ],
               }),
             ],
@@ -20045,14 +20042,14 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
                           d.jsxs("span", {
                             children: [
                               f.slides.length,
-                              " slides · Ready to customize",
+                              translateUI(" slides · Ready to customize"),
                             ],
                           }),
                         ],
                       }),
                       d.jsx("span", {
                         className: "status-chip green",
-                        children: "Ready",
+                        children: translateUI("Ready"),
                       }),
                     ],
                   }),
@@ -20064,7 +20061,7 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
       d.jsxs("div", {
         className: "section-heading",
         children: [
-          d.jsx("h2", { children: "Your workspace" }),
+          d.jsx("h2", { children: translateUI("Your workspace") }),
         ],
       }),
       d.jsxs("div", {
@@ -20076,11 +20073,11 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
               d.jsx(ey, {}),
               d.jsxs("span", {
                 children: [
-                  d.jsx("strong", { children: "Templates" }),
+                  d.jsx("strong", { children: translateUI("Templates") }),
                   d.jsxs("small", {
                     children: [
                       c.length,
-                      " reusable meeting format",
+                      translateUI(" reusable meeting format"),
                       c.length === 1 ? "" : "s",
                     ],
                   }),
@@ -20095,11 +20092,11 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
               d.jsx(Pv, {}),
               d.jsxs("span", {
                 children: [
-                  d.jsx("strong", { children: "Content library" }),
+                  d.jsx("strong", { children: translateUI("Content library") }),
                   d.jsxs("small", {
                     children: [
                       s.items.filter((v) => !v.archived).length,
-                      " items in rotation",
+                      translateUI(" items in rotation"),
                     ],
                   }),
                 ],
@@ -20113,11 +20110,11 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
               d.jsx(tu, {}),
               d.jsxs("span", {
                 children: [
-                  d.jsx("strong", { children: "Backup & restore" }),
+                  d.jsx("strong", { children: translateUI("Backup & restore") }),
                   d.jsx("small", {
                     children: s.settings.lastBackupAt
-                      ? "Last export " + Pt(s.settings.lastBackupAt)
-                      : "Protect and share your content",
+                      ? translateUI("Last export ") + Pt(s.settings.lastBackupAt)
+                      : translateUI("Protect and share your content"),
                   }),
                 ],
               }),
@@ -20129,11 +20126,11 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
       d.jsxs("div", {
         className: "section-heading",
         children: [
-          d.jsx("h2", { children: "Saved presentations" }),
+          d.jsx("h2", { children: translateUI("Saved presentations") }),
           d.jsxs("button", {
             className: "text-button",
             onClick: () => n(),
-            children: [d.jsx(ai, { size: 16 }), " New meeting"],
+            children: [d.jsx(ai, { size: 16 }), translateUI(" New meeting")],
           }),
         ],
       }),
@@ -20158,7 +20155,7 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
                         d.jsx("strong", { children: v.templateName }),
                         d.jsxs("small", {
                           children: [
-                            v.presenter || "Presenter not set",
+                            v.presenter || translateUI("Presenter not set"),
                             " · ",
                             Pt(v.date),
                           ],
@@ -20169,12 +20166,12 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
                       className: "status-chip",
                       children:
                         isMeetingExpired(v)
-                          ? "Expired"
+                          ? translateUI("Expired")
                           : v.status === "completed"
-                          ? "Completed"
+                          ? translateUI("Completed")
                           : v.status === "presenting"
-                            ? "Resume"
-                            : "Ready to present",
+                            ? translateUI("Resume")
+                            : translateUI("Ready to present"),
                     }),
                     d.jsx(Nn, { size: 18 }),
                   ],
@@ -20184,13 +20181,13 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
             ),
           })
         : d.jsx(fr, {
-            title: "A fresh start",
-            text: "Your saved drafts and presented meetings will appear here.",
+            title: translateUI("A fresh start"),
+            text: translateUI("Your saved drafts and presented meetings will appear here."),
           }),
       d.jsx("p", {
         className: "sample-note",
         children:
-          "Pilot starter content is labeled SAMPLE. Replace it with your approved lessons, photos, videos, and stretches.",
+          translateUI("Pilot starter content is labeled SAMPLE. Replace it with your approved lessons, photos, videos, and stretches."),
       }),
     ],
   });
@@ -20224,10 +20221,10 @@ function Bg({ theme: n, onChange: i }) {
             {
               label:
                 c === "foreground"
-                  ? "Text color"
+                  ? translateUI("Text color")
                   : c === "accent"
-                    ? "Accent color"
-                    : "Background",
+                    ? translateUI("Accent color")
+                    : translateUI("Background"),
               children: d.jsx("input", {
                 type: "color",
                 value: n[c],
@@ -20242,13 +20239,13 @@ function Bg({ theme: n, onChange: i }) {
         className: "form-row",
         children: [
           d.jsx(Ne, {
-            label: "Background image",
+            label: translateUI("Background image"),
             children: d.jsxs("select", {
               value: n.backgroundAssetId ?? "",
               onChange: (c) =>
                 i({ ...n, backgroundAssetId: c.target.value || void 0 }),
               children: [
-                d.jsx("option", { value: "", children: "Solid color" }),
+                d.jsx("option", { value: "", children: translateUI("Solid color") }),
                 s.map((c) =>
                   d.jsx(
                     "option",
@@ -20260,13 +20257,13 @@ function Bg({ theme: n, onChange: i }) {
             }),
           }),
           d.jsx(Ne, {
-            label: "Logo image",
+            label: translateUI("Logo image"),
             children: d.jsxs("select", {
               value: n.logoAssetId ?? "",
               onChange: (c) =>
                 i({ ...n, logoAssetId: c.target.value || void 0 }),
               children: [
-                d.jsx("option", { value: "", children: "Company name" }),
+                d.jsx("option", { value: "", children: translateUI("Company name") }),
                 s.map((c) =>
                   d.jsx(
                     "option",
@@ -20297,9 +20294,9 @@ function mE({ onUse: n }) {
   return d.jsxs(d.Fragment, {
     children: [
       d.jsx(ka, {
-        eyebrow: "YOUR MEETING FORMATS",
-        title: "Templates",
-        description: "Set the rhythm once. Make each morning your own.",
+        eyebrow: translateUI("YOUR MEETING FORMATS"),
+        title: translateUI("Templates"),
+        description: translateUI("Set the rhythm once. Make each morning your own."),
         actions: d.jsxs("button", {
           className: "primary",
           onClick: () =>
@@ -20314,7 +20311,7 @@ function mE({ onUse: n }) {
               createdAt: gt(),
               updatedAt: gt(),
             }),
-          children: [d.jsx(ai, { size: 18 }), " Create template"],
+          children: [d.jsx(ai, { size: 18 }), translateUI(" Create template")],
         }),
       }),
       d.jsx("div", {
@@ -20328,7 +20325,7 @@ function mE({ onUse: n }) {
               onChange: (S) => v(S.target.checked),
             }),
             " ",
-            "Show archived templates",
+            translateUI("Show archived templates"),
           ],
         }),
       }),
@@ -20343,7 +20340,7 @@ function mE({ onUse: n }) {
               children: [
                 d.jsx("button", {
                   className: "template-preview",
-                  "aria-label": `Edit ${S.name}`,
+                  "aria-label": translateUI("Edit {arg0}", {arg0: S.name}),
                   onClick: () => m(structuredClone(S)),
                   children: d.jsx(Fi, {
                     slide: A.slides[0],
@@ -20362,19 +20359,19 @@ function mE({ onUse: n }) {
                         i.settings.defaultTemplateId === S.id &&
                           d.jsxs("span", {
                             className: "status-chip blue",
-                            children: [d.jsx(Ug, { size: 14 }), " Default"],
+                            children: [d.jsx(Ug, { size: 14 }), translateUI(" Default")],
                           }),
                       ],
                     }),
                     d.jsx("p", {
                       children:
-                        S.description || "A reusable morning meeting format.",
+                        S.description || translateUI("A reusable morning meeting format."),
                     }),
                     d.jsxs("small", {
                       children: [
                         S.slides.length,
-                        " slides · Updated ",
-                        new Date(S.updatedAt).toLocaleDateString(),
+                        translateUI(" slides · Updated "),
+                        new Date(S.updatedAt).toLocaleDateString(getLocale()),
                       ],
                     }),
                     d.jsxs("div", {
@@ -20384,11 +20381,11 @@ function mE({ onUse: n }) {
                           className: "primary",
                           disabled: S.archived,
                           onClick: () => n(S),
-                          children: "Use template",
+                          children: translateUI("Use template"),
                         }),
                         d.jsx("button", {
                           onClick: () => m(structuredClone(S)),
-                          children: "Edit",
+                          children: translateUI("Edit"),
                         }),
                       ],
                     }),
@@ -20396,7 +20393,7 @@ function mE({ onUse: n }) {
                       className: "template-tools",
                       children: [
                         d.jsxs("button", {
-                          title: "Duplicate template",
+                          title: translateUI("Duplicate template"),
                           onClick: () => {
                             s(async () => {
                               const M = new Map(
@@ -20425,10 +20422,10 @@ function mE({ onUse: n }) {
                                 ...O,
                                 templates: [...O.templates, L],
                               })),
-                                c("Template duplicated."));
+                                c(translateUI("Template duplicated.")));
                             });
                           },
-                          children: [d.jsx(Wv, { size: 16 }), " Duplicate"],
+                          children: [d.jsx(Wv, { size: 16 }), translateUI(" Duplicate")],
                         }),
                         d.jsxs("button", {
                           disabled:
@@ -20444,7 +20441,7 @@ function mE({ onUse: n }) {
                               }));
                             });
                           },
-                          children: [d.jsx(Ug, { size: 16 }), " Default"],
+                          children: [d.jsx(Ug, { size: 16 }), translateUI(" Default")],
                         }),
                         d.jsxs("button", {
                           onClick: () => {
@@ -20458,18 +20455,16 @@ function mE({ onUse: n }) {
                           },
                           children: [
                             d.jsx(tu, { size: 16 }),
-                            S.archived ? "Restore" : "Archive",
+                            S.archived ? translateUI("Restore") : translateUI("Archive"),
                           ],
                         }),
                         d.jsxs("button", {
                           className: "danger-text",
                           disabled: f,
                           disabled:globalThis.MMB.hosted,
-                          title:globalThis.MMB.hosted?"Archive hosted records instead":"Delete",
-                          onClick: () => {
-                            confirm(
-                              `Delete “${S.name}”? Past meetings will remain available.`,
-                            ) &&
+                          title:globalThis.MMB.hosted?translateUI("Archive hosted records instead"):translateUI("Delete"),
+                          onClick: async () => {
+                            (await confirmUI(translateUI("Delete “{arg0}”? Past meetings will remain available.", {arg0: S.name}))) &&
                               s(async () => {
                                 await r((M) => ({
                                   ...M,
@@ -20490,7 +20485,7 @@ function mE({ onUse: n }) {
                                 }));
                               });
                           },
-                          children: [d.jsx(Nf, { size: 16 }), " Delete"],
+                          children: [d.jsx(Nf, { size: 16 }), translateUI(" Delete")],
                         }),
                       ],
                     }),
@@ -20504,8 +20499,8 @@ function mE({ onUse: n }) {
       }),
       !b.length &&
         d.jsx(fr, {
-          title: g ? "No archived templates" : "Create your first template",
-          text: "Start with an introduction, then add the slides your team needs.",
+          title: g ? translateUI("No archived templates") : translateUI("Create your first template"),
+          text: translateUI("Start with an introduction, then add the slides your team needs."),
         }),
     ],
   });
@@ -20526,8 +20521,8 @@ function pE({ template: n, onClose: i }) {
         ...m,
         slides: m.slides.map((G, x) => (x === v ? { ...G, ...C } : G)),
       }),
-    ne = () => {
-      (!b || confirm("Leave without saving your template changes?")) && i();
+    ne = async () => {
+      (!b || (await confirmUI(translateUI("Leave without saving your template changes?")))) && i();
     },
     H = iu(m, r.items).slides[v],
     ie = (C, G) => {
@@ -20543,25 +20538,25 @@ function pE({ template: n, onClose: i }) {
             : [...G.templates, C],
         })),
           S(!1),
-          f("Template saved on this device."));
+          f(translateUI("Template saved on this device.")));
       });
     };
   return d.jsxs(d.Fragment, {
     children: [
       d.jsx(ka, {
-        eyebrow: "TEMPLATE BUILDER",
+        eyebrow: translateUI("TEMPLATE BUILDER"),
         title: m.name,
         actions: d.jsxs(d.Fragment, {
           children: [
             d.jsxs("button", {
               onClick: ne,
-              children: [d.jsx(Af, { size: 17 }), " Templates"],
+              children: [d.jsx(Af, { size: 17 }), translateUI(" Templates")],
             }),
             d.jsxs("button", {
               className: "primary",
               disabled: h,
               onClick: le,
-              children: [d.jsx(Of, { size: 17 }), " Save template"],
+              children: [d.jsx(Of, { size: 17 }), translateUI(" Save template")],
             }),
           ],
         }),
@@ -20571,11 +20566,11 @@ function pE({ template: n, onClose: i }) {
         children: [
           d.jsxs("summary", {
             children: [
-              "Template name, theme & groups ",
+              translateUI("Template name, theme & groups "),
               b &&
                 d.jsx("span", {
                   className: "muted",
-                  children: "· Unsaved changes",
+                  children: translateUI("· Unsaved changes"),
                 }),
             ],
           }),
@@ -20585,7 +20580,7 @@ function pE({ template: n, onClose: i }) {
               d.jsxs("section", {
                 children: [
                   d.jsx(Ne, {
-                    label: "Template name",
+                    label: translateUI("Template name"),
                     children: d.jsx("input", {
                       value: m.name,
                       maxLength: 300,
@@ -20593,13 +20588,13 @@ function pE({ template: n, onClose: i }) {
                     }),
                   }),
                   d.jsx(Ne, {
-                    label: "Description",
+                    label: translateUI("Description"),
                     children: d.jsx("textarea", {
                       value: m.description,
                       onChange: (C) => L({ ...m, description: C.target.value }),
                     }),
                   }),
-                  d.jsx("h3", { children: "Template theme" }),
+                  d.jsx("h3", { children: translateUI("Template theme") }),
                   d.jsx(Bg, {
                     theme: m.theme,
                     onChange: (C) => L({ ...m, theme: C }),
@@ -20611,7 +20606,7 @@ function pE({ template: n, onClose: i }) {
                   d.jsxs("div", {
                     className: "section-heading",
                     children: [
-                      d.jsx("h3", { children: "Slide groups" }),
+                      d.jsx("h3", { children: translateUI("Slide groups") }),
                       d.jsxs("button", {
                         onClick: () =>
                           L({
@@ -20625,7 +20620,7 @@ function pE({ template: n, onClose: i }) {
                               },
                             ],
                           }),
-                        children: [d.jsx(ai, { size: 16 }), " Add group"],
+                        children: [d.jsx(ai, { size: 16 }), translateUI(" Add group")],
                       }),
                     ],
                   }),
@@ -20637,7 +20632,7 @@ function pE({ template: n, onClose: i }) {
                         children: [
                           d.jsx("summary", { children: C.title }),
                           d.jsx(Ne, {
-                            label: "Group title",
+                            label: translateUI("Group title"),
                             children: d.jsx("input", {
                               value: C.title,
                               onChange: (G) =>
@@ -20663,10 +20658,8 @@ function pE({ template: n, onClose: i }) {
                           }),
                           d.jsx("button", {
                             className: "danger-text",
-                            onClick: () => {
-                              confirm(
-                                "Remove this group? Its slides will use the template theme.",
-                              ) &&
+                            onClick: async () => {
+                              (await confirmUI(translateUI("Remove this group? Its slides will use the template theme."))) &&
                                 L({
                                   ...m,
                                   groups: m.groups.filter((G) => G.id !== C.id),
@@ -20677,7 +20670,7 @@ function pE({ template: n, onClose: i }) {
                                   ),
                                 });
                             },
-                            children: "Remove group",
+                            children: translateUI("Remove group"),
                           }),
                         ],
                       },
@@ -20699,7 +20692,7 @@ function pE({ template: n, onClose: i }) {
               d.jsxs("div", {
                 className: "section-heading",
                 children: [
-                  d.jsx("h3", { children: "Slides" }),
+                  d.jsx("h3", { children: translateUI("Slides") }),
                   d.jsx("span", { children: m.slides.length }),
                 ],
               }),
@@ -20727,7 +20720,7 @@ function pE({ template: n, onClose: i }) {
                           d.jsxs("span", {
                             children: [
                               C.title,
-                              d.jsx("small", { children: Zg[C.type] }),
+                              d.jsx("small", { children: uiText(Zg[C.type]) }),
                             ],
                           }),
                         ],
@@ -20748,7 +20741,7 @@ function pE({ template: n, onClose: i }) {
                   (L({ ...m, slides: [...m.slides, zf()] }),
                     _(m.slides.length));
                 },
-                children: [d.jsx(ai, { size: 18 }), " Add slide"],
+                children: [d.jsx(ai, { size: 18 }), translateUI(" Add slide")],
               }),
             ],
           }),
@@ -20765,7 +20758,7 @@ function pE({ template: n, onClose: i }) {
                 className: "preview-caption",
                 children: [
                   d.jsxs("span", {
-                    children: ["Audience preview · Slide ", v + 1],
+                    children: [translateUI("Audience preview · Slide "), v + 1],
                   }),
                   d.jsxs("div", {
                     className: "actions",
@@ -20782,20 +20775,20 @@ function pE({ template: n, onClose: i }) {
                             L({ ...m, slides: G }),
                             _(v + 1));
                         },
-                        children: [d.jsx(Wv, { size: 16 }), " Duplicate"],
+                        children: [d.jsx(Wv, { size: 16 }), translateUI(" Duplicate")],
                       }),
                       d.jsxs("button", {
                         className: "danger-text",
                         disabled: m.slides.length === 1,
-                        onClick: () => {
-                          confirm(`Remove slide “${O.title}”?`) &&
+                        onClick: async () => {
+                          (await confirmUI(translateUI("Remove slide “{arg0}”?", {arg0: O.title}))) &&
                             (L({
                               ...m,
                               slides: m.slides.filter((C, G) => G !== v),
                             }),
                             _(Math.max(0, v - 1)));
                         },
-                        children: [d.jsx(Nf, { size: 16 }), " Remove"],
+                        children: [d.jsx(Nf, { size: 16 }), translateUI(" Remove")],
                       }),
                     ],
                   }),
@@ -20804,12 +20797,12 @@ function pE({ template: n, onClose: i }) {
               d.jsxs("div", {
                 className: "panel",
                 children: [
-                  d.jsx("h3", { children: "Slide settings" }),
+                  d.jsx("h3", { children: translateUI("Slide settings") }),
                   d.jsxs("div", {
                     className: "form-row",
                     children: [
                       d.jsx(Ne, {
-                        label: "Title",
+                        label: translateUI("Title"),
                         children: d.jsx("input", {
                           value: O.title,
                           maxLength: 300,
@@ -20817,12 +20810,12 @@ function pE({ template: n, onClose: i }) {
                         }),
                       }),
                       d.jsx(Ne, {
-                        label: "Slide type",
+                        label: translateUI("Slide type"),
                         children: d.jsx("select", {
                           value: O.type,
                           onChange: (C) => V({ type: C.target.value }),
                           children: Hv.map((C) =>
-                            d.jsx("option", { value: C, children: Zg[C] }, C),
+                            d.jsx("option", { value: C, children: uiText(Zg[C]) }, C),
                           ),
                         }),
                       }),
@@ -20832,7 +20825,7 @@ function pE({ template: n, onClose: i }) {
                     className: "form-row",
                     children: [
                       d.jsx(Ne, {
-                        label: "Layout",
+                        label: translateUI("Layout"),
                         children: d.jsx("select", {
                           value: O.layout,
                           onChange: (C) => V({ layout: C.target.value }),
@@ -20843,12 +20836,12 @@ function pE({ template: n, onClose: i }) {
                                 value: C,
                                 children:
                                   C === "center"
-                                    ? "Centered"
+                                    ? translateUI("Centered")
                                     : C === "media-left"
-                                      ? "Media left, text right"
+                                      ? translateUI("Media left, text right")
                                       : C === "media-right"
-                                        ? "Media right, text left"
-                                        : "Large media",
+                                        ? translateUI("Media right, text left")
+                                        : translateUI("Large media"),
                               },
                               C,
                             ),
@@ -20856,7 +20849,7 @@ function pE({ template: n, onClose: i }) {
                         }),
                       }),
                       d.jsx(Ne, {
-                        label: "Visual group",
+                        label: translateUI("Visual group"),
                         children: d.jsxs("select", {
                           value: O.groupId ?? "",
                           onChange: (C) =>
@@ -20864,7 +20857,7 @@ function pE({ template: n, onClose: i }) {
                           children: [
                             d.jsx("option", {
                               value: "",
-                              children: "Template theme",
+                              children: translateUI("Template theme"),
                             }),
                             m.groups.map((C) =>
                               d.jsx(
@@ -20879,8 +20872,8 @@ function pE({ template: n, onClose: i }) {
                     ],
                   }),
                   d.jsx(Ne, {
-                    label: "Slide text",
-                    hint: "Keep text brief so it reads well on the TV.",
+                    label: translateUI("Slide text"),
+                    hint: translateUI("Keep text brief so it reads well on the TV."),
                     children: d.jsx("textarea", {
                       rows: 4,
                       value: O.text,
@@ -20891,7 +20884,7 @@ function pE({ template: n, onClose: i }) {
                     className: "form-row",
                     children: [
                       d.jsx(Ne, {
-                        label: "Content library",
+                        label: translateUI("Content library"),
                         children: d.jsxs("select", {
                           disabled: O.type === "intro",
                           value: O.libraryId ?? "",
@@ -20903,7 +20896,7 @@ function pE({ template: n, onClose: i }) {
                           children: [
                             d.jsx("option", {
                               value: "",
-                              children: "No automatic content",
+                              children: translateUI("No automatic content"),
                             }),
                             r.libraries
                               .filter((C) => !C.archived)
@@ -20918,7 +20911,7 @@ function pE({ template: n, onClose: i }) {
                         }),
                       }),
                       d.jsx(Ne, {
-                        label: "Selection rule",
+                        label: translateUI("Selection rule"),
                         children: d.jsxs("select", {
                           disabled: O.type === "intro",
                           value: O.selection,
@@ -20926,15 +20919,15 @@ function pE({ template: n, onClose: i }) {
                           children: [
                             d.jsx("option", {
                               value: "oldest",
-                              children: "Never used, then oldest used",
+                              children: translateUI("Never used, then oldest used"),
                             }),
                             d.jsx("option", {
                               value: "latest",
-                              children: "Newest added",
+                              children: translateUI("Newest added"),
                             }),
                             d.jsx("option", {
                               value: "manual",
-                              children: "Fixed content selection",
+                              children: translateUI("Fixed content selection"),
                             }),
                           ],
                         }),
@@ -20944,7 +20937,7 @@ function pE({ template: n, onClose: i }) {
                   O.selection === "manual" &&
                     d.jsxs("fieldset", {
                       children: [
-                        d.jsx("legend", { children: "Fixed content" }),
+                        d.jsx("legend", { children: translateUI("Fixed content") }),
                         d.jsx("div", {
                           className: "selection-checks",
                           children: Cf(O, r.items).map((C) =>
@@ -20978,7 +20971,7 @@ function pE({ template: n, onClose: i }) {
                     className: "form-row",
                     children: [
                       d.jsx(Ne, {
-                        label: "Items to select",
+                        label: translateUI("Items to select"),
                         children: d.jsx(NumericInput, {
                           min: 1,
                           max: 12,
@@ -20989,8 +20982,8 @@ function pE({ template: n, onClose: i }) {
                       d.jsx(Ne, {
                         label:
                           O.type === "stretch"
-                            ? "Seconds per stretch"
-                            : "Countdown seconds (0 = off)",
+                            ? translateUI("Seconds per stretch")
+                            : translateUI("Countdown seconds (0 = off)"),
                         children: d.jsx(NumericInput, {
                           min: 0,
                           max: 3600,
@@ -21013,7 +21006,7 @@ function pE({ template: n, onClose: i }) {
                             onChange: (C) => V({ optional: C.target.checked, defaultSkipped: C.target.checked ? O.defaultSkipped : false }),
                           }),
                           " ",
-                          globalThis.MMB.isPersonalShare(O) ? "Personal share is always included; media is optional" : "Presenter can skip this slide",
+                          globalThis.MMB.isPersonalShare(O) ? translateUI("Personal share is always included; media is optional") : translateUI("Presenter can skip this slide"),
                         ],
                       }),
                       d.jsxs("label", {
@@ -21022,7 +21015,7 @@ function pE({ template: n, onClose: i }) {
                           type: "checkbox", checked: Boolean(O.optional && O.defaultSkipped),
                           disabled: !O.optional || globalThis.MMB.isPersonalShare(O),
                           onChange: (C) => V({defaultSkipped:C.target.checked}),
-                        }), "Skipped by default in new meetings"],
+                        }), translateUI("Skipped by default in new meetings")],
                       }),
                       d.jsxs("label", {
                         className: "check",
@@ -21034,32 +21027,32 @@ function pE({ template: n, onClose: i }) {
                               V({ allowRepeat: C.target.checked }),
                           }),
                           " ",
-                          "Allow repeated content in this slide",
+                          translateUI("Allow repeated content in this slide"),
                         ],
                       }),
                     ],
                   }),
                   d.jsx(Ne, {
-                    label: "Builder slide color",
-                    hint: "A subtle highlight in the meeting builder’s slide list only.",
+                    label: translateUI("Builder slide color"),
+                    hint: translateUI("A subtle highlight in the meeting builder’s slide list only."),
                     children: d.jsxs("select", {
-                      "aria-label": "Builder slide color",
+                      "aria-label": translateUI("Builder slide color"),
                       value: O.builderColor ?? "",
                       onChange: (C) => V({builderColor:C.target.value || undefined}),
-                      children: [d.jsx("option", {value:"",children:"No highlight"}),
-                        ...globalThis.MMB.builderColors.map(color=>d.jsx("option",{value:color.value,children:color.label},color.value))],
+                      children: [d.jsx("option", {value:"",children:translateUI("No highlight")}),
+                        ...globalThis.MMB.builderColors.map(color=>d.jsx("option",{value:color.value,children:translateUI(color.label)},color.value))],
                     }),
                   }),
                   d.jsxs("details", {
                     children: [
                       d.jsx("summary", {
-                        children: "Background override & presenter notes",
+                        children: translateUI("Background override & presenter notes"),
                       }),
                       d.jsxs("div", {
                         className: "form-row",
                         children: [
                           d.jsx(Ne, {
-                            label: "Slide background",
+                            label: translateUI("Slide background"),
                             children: d.jsx("input", {
                               type: "color",
                               value: O.background ?? m.theme.background,
@@ -21073,12 +21066,12 @@ function pE({ template: n, onClose: i }) {
                                 background: void 0,
                                 backgroundAssetId: void 0,
                               }),
-                            children: "Use theme background",
+                            children: translateUI("Use theme background"),
                           }),
                         ],
                       }),
                       d.jsx(Ne, {
-                        label: "Background image",
+                        label: translateUI("Background image"),
                         children: d.jsxs("select", {
                           value: O.backgroundAssetId ?? "",
                           onChange: (C) =>
@@ -21086,7 +21079,7 @@ function pE({ template: n, onClose: i }) {
                           children: [
                             d.jsx("option", {
                               value: "",
-                              children: "Use theme image / color",
+                              children: translateUI("Use theme image / color"),
                             }),
                             r.items
                               .filter((C) => C.type === "image" && C.assetId)
@@ -21101,8 +21094,8 @@ function pE({ template: n, onClose: i }) {
                         }),
                       }),
                       d.jsx(Ne, {
-                        label: "Presenter notes",
-                        hint: "Visible in the builder. Hidden from the audience.",
+                        label: translateUI("Presenter notes"),
+                        hint: translateUI("Visible in the builder. Hidden from the audience."),
                         children: d.jsx("textarea", {
                           rows: 3,
                           value: O.notes,
@@ -22279,24 +22272,24 @@ function _E(n, i, r) {
     transformHeader: (h) => h.trim().toLowerCase(),
   });
   if (s.errors.length)
-    throw new Error(`CSV could not be read: ${s.errors[0].message}`);
+    throw new Error(translateUI("CSV could not be read: {arg0}", {arg0: s.errors[0].message}));
   if (!s.meta.fields?.includes("title"))
     throw new Error(
-      "CSV needs a title column. Optional columns: url, tags, description, type, source.",
+      translateUI("CSV needs a title column. Optional columns: url, tags, description, type, source."),
     );
   if (s.data.length > 1e3)
-    throw new Error("Import up to 1,000 rows at a time.");
+    throw new Error(translateUI("Import up to 1,000 rows at a time."));
   const c = [],
     f = [];
   for (const [h, m] of s.data.entries()) {
     const g = m.title?.trim(),
       v = m.url?.trim() ?? "";
     if (!g) {
-      f.push(`Row ${h + 2}: missing title.`);
+      f.push(translateUI("Row {arg0}: missing title.", {arg0: h + 2}));
       continue;
     }
     if (v && !Vs(v)) {
-      f.push(`Row ${h + 2}: invalid web link.`);
+      f.push(translateUI("Row {arg0}: invalid web link.", {arg0: h + 2}));
       continue;
     }
     if (
@@ -22306,7 +22299,7 @@ function _E(n, i, r) {
           ((v && b.url === v) || b.title.toLowerCase() === g.toLowerCase()),
       )
     ) {
-      f.push(`Row ${h + 2}: duplicate title or link skipped (${g}).`);
+      f.push(translateUI("Row {arg0}: duplicate title or link skipped ({arg1}).", {arg0: h + 2, arg1: g}));
       continue;
     }
     const _ = eu.safeParse({
@@ -22322,11 +22315,11 @@ function _E(n, i, r) {
       source: m.source ?? "CSV import",
     });
     if (!_.success) {
-      f.push(`Row ${h + 2}: invalid type or field length.`);
+      f.push(translateUI("Row {arg0}: invalid type or field length.", {arg0: h + 2}));
       continue;
     }
     if (["image", "image-text", "video"].includes(_.data.type)) {
-      f.push(`Row ${h + 2}: use media import for local images and videos.`);
+      f.push(translateUI("Row {arg0}: use media import for local images and videos.", {arg0: h + 2}));
       continue;
     }
     c.push(_.data);
@@ -22375,7 +22368,7 @@ function SE() {
     q = ae.useRef(null),
     J = () => {
       r(async () => {
-        (ie(await Uo(n.assets)), s("Media availability checked."));
+        (ie(await Uo(n.assets)), s(translateUI("Media availability checked.")));
       });
     };
   ae.useEffect(() => {
@@ -22409,7 +22402,7 @@ function SE() {
       if (!w) return;
       const $ = Array.from(w);
       r(async () => {
-        if (!N) throw new Error("Create a content library first.");
+        if (!N) throw new Error(translateUI("Create a content library first."));
         let W = 0,
           F = 0;
         const ge = [];
@@ -22440,43 +22433,43 @@ function SE() {
               W++);
           } catch (B) {
             ge.push(
-              `${D.name}: ${B instanceof Error ? B.message : "import failed"}`,
+              `${D.name}: ${B instanceof Error ? B.message : translateUI("import failed")}`,
             );
           }
         (ie(await Uo(j.assets)),
           s(
-            `${W} files imported. ${F} duplicates skipped.${ge.length ? " " + ge.join(" ") : ""}`,
+            translateUI("{arg0} files imported. {arg1} duplicates skipped.{arg2}", {arg0: W, arg1: F, arg2: ge.length ? " " + ge.join(" ") : ""}),
           ));
       });
     };
   return d.jsxs(d.Fragment, {
     children: [
       d.jsx(ka, {
-        eyebrow: "KEEP THE CONTENT FRESH",
-        title: "Content library",
-        description: `${n.items.filter((w) => !w.archived).length} active items · Never used and oldest used appear first.`,
+        eyebrow: translateUI("KEEP THE CONTENT FRESH"),
+        title: translateUI("Content library"),
+        description: translateUI("{arg0} active items · Never used and oldest used appear first.", {arg0: n.items.filter((w) => !w.archived).length}),
         actions: d.jsxs(d.Fragment, {
           children: [
             d.jsx("button", {
               disabled: c || !N,
               onClick: () => q.current?.click(),
-              children: "Import CSV",
+              children: translateUI("Import CSV"),
             }),
             d.jsxs("button", {
               disabled: c || !N,
               onClick: () => E.current?.click(),
-              children: [d.jsx(af, { size: 18 }), " Import media"],
+              children: [d.jsx(af, { size: 18 }), translateUI(" Import media")],
             }),
             d.jsxs("button", {
               className: "primary",
               disabled: !N,
               onClick: () => ne(Xs(N)),
-              children: [d.jsx(ai, { size: 18 }), " Add content"],
+              children: [d.jsx(ai, { size: 18 }), translateUI(" Add content")],
             }),
           ],
         }),
       }),
-      d.jsx("input", {
+      d.jsx(globalThis.MMB.FilePicker, {
         ref: E,
         hidden: !0,
         type: "file",
@@ -22487,7 +22480,7 @@ function SE() {
           (fe(w.target.files), (w.target.value = ""));
         },
       }),
-      d.jsx("input", {
+      d.jsx(globalThis.MMB.FilePicker, {
         ref: q,
         hidden: !0,
         type: "file",
@@ -22498,7 +22491,7 @@ function SE() {
             $ &&
               r(async () => {
                 if ($.size > 5 * 1024 * 1024)
-                  throw new Error("Choose a CSV smaller than 5 MB.");
+                  throw new Error(translateUI("Choose a CSV smaller than 5 MB."));
                 C(_E(await $.text(), N, n.items));
               }));
         },
@@ -22509,7 +22502,7 @@ function SE() {
           d.jsx("button", {
             className: f ? "" : "active",
             onClick: () => h(""),
-            children: "All content",
+            children: translateUI("All content"),
           }),
           n.libraries
             .filter((w) => !w.archived)
@@ -22526,7 +22519,7 @@ function SE() {
             ),
           d.jsxs("button", {
             onClick: () => x(!0),
-            children: [d.jsx(ai, { size: 16 }), " Libraries"],
+            children: [d.jsx(ai, { size: 16 }), translateUI(" Libraries")],
           }),
         ],
       }),
@@ -22538,28 +22531,28 @@ function SE() {
             children: [
               d.jsx(ay, { size: 18 }),
               d.jsx("input", {
-                "aria-label": "Search content",
+                "aria-label": translateUI("Search content"),
                 value: m,
                 onChange: (w) => g(w.target.value),
-                placeholder: "Search title, description, or tag…",
+                placeholder: translateUI("Search title, description, or tag…"),
               }),
             ],
           }),
           d.jsxs("select", {
-            "aria-label": "Filter content type",
+            "aria-label": translateUI("Filter content type"),
             value: v,
             onChange: (w) => _(w.target.value),
             children: [
-              d.jsx("option", { value: "", children: "All content types" }),
-              wf.map((w) => d.jsx("option", { value: w, children: Zs[w] }, w)),
+              d.jsx("option", { value: "", children: translateUI("All content types") }),
+              wf.map((w) => d.jsx("option", { value: w, children: uiText(Zs[w]) }, w)),
             ],
           }),
           d.jsxs("select", {
-            "aria-label": "Filter tag",
+            "aria-label": translateUI("Filter tag"),
             value: b,
             onChange: (w) => S(w.target.value),
             children: [
-              d.jsx("option", { value: "", children: "All tags" }),
+              d.jsx("option", { value: "", children: translateUI("All tags") }),
               ue.map((w) => d.jsx("option", { children: w }, w)),
             ],
           }),
@@ -22567,13 +22560,13 @@ function SE() {
             className: "segmented",
             children: [
               d.jsx("button", {
-                "aria-label": "List view",
+                "aria-label": translateUI("List view"),
                 "aria-pressed": L === "list",
                 onClick: () => O("list"),
                 children: d.jsx(Tw, { size: 19 }),
               }),
               d.jsx("button", {
-                "aria-label": "Grid view",
+                "aria-label": translateUI("Grid view"),
                 "aria-pressed": L === "grid",
                 onClick: () => O("grid"),
                 children: d.jsx(ww, { size: 19 }),
@@ -22594,14 +22587,14 @@ function SE() {
                 onChange: (w) => M(w.target.checked),
               }),
               " ",
-              "Show archived content",
+              translateUI("Show archived content"),
             ],
           }),
           d.jsxs("button", {
             className: "text-button",
             disabled: c,
             onClick: J,
-            children: [d.jsx(ny, { size: 15 }), " Check local media"],
+            children: [d.jsx(ny, { size: 15 }), translateUI(" Check local media")],
           }),
         ],
       }),
@@ -22613,10 +22606,10 @@ function SE() {
                 d.jsxs("div", {
                   className: "content-table-head",
                   children: [
-                    d.jsx("span", { children: "CONTENT" }),
-                    d.jsx("span", { children: "TAGS" }),
-                    d.jsx("span", { children: "LAST USED" }),
-                    d.jsx("span", { children: "USES" }),
+                    d.jsx("span", { children: translateUI("CONTENT") }),
+                    d.jsx("span", { children: translateUI("TAGS") }),
+                    d.jsx("span", { children: translateUI("LAST USED") }),
+                    d.jsx("span", { children: translateUI("USES") }),
                   ],
                 }),
               te.map((w) =>
@@ -22636,7 +22629,7 @@ function SE() {
                               d.jsx("strong", { children: w.title }),
                               d.jsxs("small", {
                                 children: [
-                                  Zs[w.type],
+                                  uiText(Zs[w.type]),
                                   " ·",
                                   " ",
                                   n.libraries.find(($) => $.id === w.libraryId)
@@ -22650,11 +22643,11 @@ function SE() {
                                     : "",
                                 children: w.assetId
                                   ? H.has(w.assetId)
-                                    ? "Missing local media"
-                                    : "Available offline"
+                                    ? translateUI("Missing local media")
+                                    : translateUI("Available offline")
                                   : w.url
-                                    ? "Internet required"
-                                    : "Available offline",
+                                    ? translateUI("Internet required")
+                                    : translateUI("Available offline"),
                               }),
                             ],
                           }),
@@ -22681,28 +22674,28 @@ function SE() {
             ],
           })
         : d.jsx(fr, {
-            title: "No matching content",
-            text: "Change the filters or add a lesson, link, image, or video.",
+            title: translateUI("No matching content"),
+            text: translateUI("Change the filters or add a lesson, link, image, or video."),
           }),
       d.jsxs("p", {
         className: "sample-note",
         children: [
-          "Media imports go into",
+          translateUI("Media imports go into"),
           " ",
-          n.libraries.find((w) => w.id === N)?.name ?? "your selected library",
+          n.libraries.find((w) => w.id === N)?.name ?? translateUI("your selected library"),
           ". Images and videos are copied into this app. Maximum 150 MB per file.",
         ],
       }),
       V && d.jsx(xE, { item: V, onClose: () => ne(null) }),
       le &&
         d.jsxs(Ii, {
-          title: "Review CSV import",
+          title: translateUI("Review CSV import"),
           onClose: () => C(null),
           children: [
             d.jsxs("p", {
               children: [
                 le.items.length,
-                " new items will be added to",
+                translateUI(" new items will be added to"),
                 " ",
                 n.libraries.find((w) => w.id === N)?.name,
                 ".",
@@ -22718,7 +22711,7 @@ function SE() {
                       children: [
                         w.title,
                         " ",
-                        d.jsxs("small", { children: ["(", Zs[w.type], ")"] }),
+                        d.jsxs("small", { children: ["(", uiText(Zs[w.type]), ")"] }),
                       ],
                     },
                     w.id,
@@ -22732,7 +22725,7 @@ function SE() {
             d.jsxs("div", {
               className: "modal-actions",
               children: [
-                d.jsx("button", { onClick: () => C(null), children: "Cancel" }),
+                d.jsx("button", { onClick: () => C(null), children: translateUI("Cancel") }),
                 d.jsxs("button", {
                   className: "primary",
                   disabled: c || !le.items.length,
@@ -22742,11 +22735,11 @@ function SE() {
                         ...w,
                         items: [...w.items, ...le.items],
                       })),
-                        s(`${le.items.length} items imported.`),
+                        s(translateUI("{arg0} items imported.", {arg0: le.items.length})),
                         C(null));
                     });
                   },
-                  children: ["Import ", le.items.length, " items"],
+                  children: [translateUI("Import "), le.items.length, translateUI(" items")],
                 }),
               ],
             }),
@@ -22754,7 +22747,7 @@ function SE() {
         }),
       G &&
         d.jsxs(Ii, {
-          title: "Manage content libraries",
+          title: translateUI("Manage content libraries"),
           onClose: () => x(!1),
           children: [
             d.jsx("div", {
@@ -22766,11 +22759,11 @@ function SE() {
                     className: "library-manage-row",
                     children: [
                       d.jsxs("strong", {
-                        children: [w.name, w.archived ? " (archived)" : ""],
+                        children: [w.name, w.archived ? translateUI(" (archived)") : ""],
                       }),
                       d.jsx("button", {
-                        onClick: () => {
-                          const $ = prompt("Library name", w.name)?.trim();
+                        onClick: async () => {
+                          const $ = (await promptUI(translateUI("Library name"), w.name))?.trim();
                           $ &&
                             r(async () => {
                               await i((W) => ({
@@ -22781,11 +22774,11 @@ function SE() {
                               }));
                             });
                         },
-                        children: "Rename",
+                        children: translateUI("Rename"),
                       }),
                       d.jsx("button", {
                         disabled: [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)),
-                        title: [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)) ? "Default libraries remain available" : undefined,
+                        title: [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)) ? translateUI("Default libraries remain available") : undefined,
                         onClick: () => {
                           r(async () => {
                             await i(($) => ({
@@ -22798,28 +22791,26 @@ function SE() {
                             }));
                           });
                         },
-                        children: w.archived ? "Restore" : "Archive",
+                        children: w.archived ? translateUI("Restore") : translateUI("Archive"),
                       }),
                       ![2, 3, 5, 6, 8].some((number) => w.id === Fl(number)) &&
                         d.jsx("button", {
                           className: "danger-text",
                           disabled: globalThis.MMB.hosted,
-                          title: globalThis.MMB.hosted ? "Archive hosted libraries" : "Delete this custom library",
-                          onClick: () => {
+                          title: globalThis.MMB.hosted ? translateUI("Archive hosted libraries") : translateUI("Delete this custom library"),
+                          onClick: async () => {
                             const contained = n.items.filter((item) => item.libraryId === w.id);
                             const targets = n.libraries.filter((lib) => lib.id !== w.id && !lib.archived);
                             let destination = null;
                             if (contained.length) {
-                              const answer = prompt(
-                                `“${w.name}” contains ${contained.length} item(s). Enter a destination number to move them, or leave blank to delete them with this library. Cancel keeps everything.\n${targets.map((lib, index) => `${index + 1}. ${lib.name}`).join("\n")}`,
-                              );
+                              const answer = (await promptUI(translateUI("“{arg0}” contains {arg1} item(s). Enter a destination number to move them, or leave blank to delete them with this library. Cancel keeps everything.\n{arg2}", {arg0: w.name, arg1: contained.length, arg2: targets.map((lib, index) => `${index + 1}. ${lib.name}`).join("\n")})));
                               if (answer === null) return;
                               if (answer.trim()) {
                                 const index = Number(answer.trim()) - 1;
-                                if (!Number.isInteger(index) || !targets[index]) { alert("Choose a listed destination number."); return; }
+                                if (!Number.isInteger(index) || !targets[index]) { (await alertUI(translateUI("Choose a listed destination number."))); return; }
                                 destination = targets[index].id;
-                              } else if (!confirm(`Delete “${w.name}” and its ${contained.length} content item(s)? Saved meeting history will stay.`)) return;
-                            } else if (!confirm(`Delete the empty library “${w.name}”?`)) return;
+                              } else if (!(await confirmUI(translateUI("Delete “{arg0}” and its {arg1} content item(s)? Saved meeting history will stay.", {arg0: w.name, arg1: contained.length})))) return;
+                            } else if (!(await confirmUI(translateUI("Delete the empty library “{arg0}”?", {arg0: w.name})))) return;
                             r(async () => {
                               await i((state) => ({
                                 ...state,
@@ -22836,7 +22827,7 @@ function SE() {
                               }));
                             });
                           },
-                          children: "Delete",
+                          children: translateUI("Delete"),
                         }),
                     ],
                   },
@@ -22846,8 +22837,8 @@ function SE() {
             }),
             d.jsxs("button", {
               className: "primary",
-              onClick: () => {
-                const w = prompt("Name your content library")?.trim();
+              onClick: async () => {
+                const w = (await promptUI(translateUI("Name your content library")))?.trim();
                 w &&
                   r(async () => {
                     const $ = Bt();
@@ -22861,7 +22852,7 @@ function SE() {
                       h($));
                   });
               },
-              children: [d.jsx(ai, { size: 18 }), " Create library"],
+              children: [d.jsx(ai, { size: 18 }), translateUI(" Create library")],
             }),
           ],
         }),
@@ -22877,13 +22868,13 @@ function xE({ item: n, onClose: i }) {
     M = (O) => {
       (g((V) => ({ ...V, ...O })), S(!0));
     },
-    L = () => {
-      (!b || confirm("Discard these unsaved content changes?")) && i();
+    L = async () => {
+      (!b || (await confirmUI(translateUI("Discard these unsaved content changes?")))) && i();
     };
   return (
     au(b),
     d.jsx(Ii, {
-      title: A ? "Edit content" : "Add content",
+      title: A ? translateUI("Edit content") : translateUI("Add content"),
       onClose: L,
       wide: !0,
       children: d.jsxs("form", {
@@ -22898,16 +22889,16 @@ function xE({ item: n, onClose: i }) {
                   .filter(Boolean),
                 updatedAt: gt(),
               });
-              if (!V.description.trim()) throw new Error("Description is required.");
+              if (!V.description.trim()) throw new Error(translateUI("Description is required."));
               if (
                 ["image", "image-text", "video"].includes(V.type) &&
                 !V.assetId
               )
                 throw new Error(
-                  "Import a media file for image or local video content.",
+                  translateUI("Import a media file for image or local video content."),
                 );
               if (["link", "external-video"].includes(V.type) && !V.url)
-                throw new Error("Add a complete web link.");
+                throw new Error(translateUI("Add a complete web link."));
               (r.items.find(
                 (H) =>
                   H.id !== V.id &&
@@ -22915,16 +22906,14 @@ function xE({ item: n, onClose: i }) {
                   ((V.url && H.url === V.url) ||
                     H.title.toLowerCase() === V.title.toLowerCase()),
               ) &&
-                !confirm(
-                  "This title or link already exists in this library. Save another item?",
-                )) ||
+                !(await confirmUI(translateUI("This title or link already exists in this library. Save another item?")))) ||
                 (await s((H) => ({
                   ...H,
                   items: A
                     ? H.items.map((ie) => (ie.id === V.id ? V : ie))
                     : [...H.items, V],
                 })),
-                h("Content saved."),
+                h(translateUI("Content saved.")),
                 i());
             }));
         },
@@ -22933,7 +22922,7 @@ function xE({ item: n, onClose: i }) {
             className: "form-row",
             children: [
               d.jsx(Ne, {
-                label: "Title *",
+                label: translateUI("Title *"),
                 children: d.jsx("input", {
                   autoFocus: !0,
                   required: !0,
@@ -22943,21 +22932,21 @@ function xE({ item: n, onClose: i }) {
                 }),
               }),
               d.jsx(Ne, {
-                label: "Type *",
+                label: translateUI("Type *"),
                 children: d.jsx("select", {
                   value: m.type,
                   onChange: (O) => M({ type: O.target.value }),
                   children: wf
                     .filter((O) => !globalThis.MMB.hosted || O !== "video")
                     .map((O) =>
-                      d.jsx("option", { value: O, children: Zs[O] }, O),
+                      d.jsx("option", { value: O, children: uiText(Zs[O]) }, O),
                     ),
                 }),
               }),
             ],
           }),
           d.jsx(Ne, {
-            label: "Library *",
+            label: translateUI("Library *"),
             children: d.jsx("select", {
               required: !0,
               value: m.libraryId,
@@ -22968,7 +22957,7 @@ function xE({ item: n, onClose: i }) {
             }),
           }),
           d.jsx(Ne, {
-            label: "Description *",
+            label: translateUI("Description *"),
             children: d.jsx("textarea", {
               required: !0,
               rows: 6,
@@ -22979,8 +22968,8 @@ function xE({ item: n, onClose: i }) {
           }),
           ["link", "external-video"].includes(m.type) &&
             d.jsx(Ne, {
-              label: "Web link",
-              hint: "Online links need an internet connection.",
+              label: translateUI("Web link"),
+              hint: translateUI("Online links need an internet connection."),
               children: d.jsx("input", {
                 type: "url",
                 required: !0,
@@ -22991,11 +22980,11 @@ function xE({ item: n, onClose: i }) {
             }),
           ["image", "image-text", "video"].includes(m.type) &&
             d.jsx(Ne, {
-              label: "Local media file",
+              label: translateUI("Local media file"),
               hint: m.assetId
                 ? r.assets.find((O) => O.id === m.assetId)?.name
-                : "Select an image or video to copy into this app.",
-              children: d.jsx("input", {
+                : translateUI("Select an image or video to copy into this app."),
+              children: d.jsx(globalThis.MMB.FilePicker, {
                 type: "file",
                 accept:
                   m.type !== "video"
@@ -23021,7 +23010,7 @@ function xE({ item: n, onClose: i }) {
             className: "form-row",
             children: [
               d.jsx(Ne, {
-                label: "Tags (separated by commas)",
+                label: translateUI("Tags (separated by commas)"),
                 children: d.jsx("input", {
                   value: v,
                   onChange: (O) => {
@@ -23030,7 +23019,7 @@ function xE({ item: n, onClose: i }) {
                 }),
               }),
               d.jsx(Ne, {
-                label: "Source / credit",
+                label: translateUI("Source / credit"),
                 children: d.jsx("input", {
                   value: m.source,
                   maxLength: 300,
@@ -23043,18 +23032,18 @@ function xE({ item: n, onClose: i }) {
             d.jsxs("p", {
               className: "muted",
               children: [
-                "Used ",
+                translateUI("Used "),
                 n.useCount,
-                " times ·",
+                translateUI(" times ·"),
                 " ",
-                n.lastUsedAt ? "Last shown " + Pt(n.lastUsedAt) : "Never used",
+                n.lastUsedAt ? translateUI("Last shown ") + Pt(n.lastUsedAt) : translateUI("Never used"),
               ],
             }),
           d.jsxs("details", {
             children: [
               d.jsxs("summary", {
                 children: [
-                  "Usage history (",
+                  translateUI("Usage history ("),
                   r.usage.filter((O) => O.contentId === n.id).length,
                   ")",
                 ],
@@ -23073,11 +23062,11 @@ function xE({ item: n, onClose: i }) {
                           " ·",
                           " ",
                           r.meetings.find((V) => V.id === O.meetingId)
-                            ?.presenter || "Presenter",
+                            ?.presenter || translateUI("Presenter"),
                           " ·",
                           " ",
                           r.meetings.find((V) => V.id === O.meetingId)
-                            ?.templateName || "Meeting",
+                            ?.templateName || translateUI("Meeting"),
                         ],
                       },
                       O.id,
@@ -23113,18 +23102,16 @@ function xE({ item: n, onClose: i }) {
                       },
                       children: [
                         d.jsx(tu, { size: 16 }),
-                        n.archived ? "Restore" : "Archive",
+                        n.archived ? translateUI("Restore") : translateUI("Archive"),
                       ],
                     }),
                     d.jsxs("button", {
                       type: "button",
                       className: "danger-text",
                       disabled:globalThis.MMB.hosted,
-                      title:globalThis.MMB.hosted?"Archive hosted records instead":"Delete",
-                      onClick: () => {
-                        confirm(
-                          `Delete “${n.title}”? It will be removed from fixed template selections. Past meeting records stay available.`,
-                        ) &&
+                      title:globalThis.MMB.hosted?translateUI("Archive hosted records instead"):translateUI("Delete"),
+                      onClick: async () => {
+                        (await confirmUI(translateUI("Delete “{arg0}”? It will be removed from fixed template selections. Past meeting records stay available.", {arg0: n.title}))) &&
                           c(async () => {
                             (await s((O) => ({
                               ...O,
@@ -23142,20 +23129,20 @@ function xE({ item: n, onClose: i }) {
                               i());
                           });
                       },
-                      children: [d.jsx(Nf, { size: 16 }), " Delete"],
+                      children: [d.jsx(Nf, { size: 16 }), translateUI(" Delete")],
                     }),
                   ],
                 }),
               d.jsx("button", {
                 type: "button",
                 onClick: L,
-                children: "Cancel",
+                children: translateUI("Cancel"),
               }),
               d.jsx("button", {
                 className: "primary",
                 disabled: f,
                 type: "submit",
-                children: "Save content",
+                children: translateUI("Save content"),
               }),
             ],
           }),
@@ -23185,12 +23172,12 @@ function NumericInput({ value, min, max, onChange }) {
   });
 }
 function MeetingReadiness({ meeting }) {
-  const [status, set] = ae.useState("Checking offline images…");
+  const [status, set] = ae.useState(translateUI("Checking offline images…"));
   ae.useEffect(() => {
     const update = () =>
       globalThis.MMB.readiness(meeting)
         .then(set)
-        .catch(() => set("Missing"));
+        .catch(() => set(translateUI("Missing")));
     update();
     window.addEventListener("mmb-readiness", update);
     return () => window.removeEventListener("mmb-readiness", update);
@@ -23198,7 +23185,7 @@ function MeetingReadiness({ meeting }) {
   return d.jsx("p", {
     className: "status-chip",
     role: "status",
-    children: status,
+    children: uiText(status),
   });
 }
 function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false }) {
@@ -23222,7 +23209,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         meetings: state.meetings.some((meeting) => meeting.id === snapshot.id)
           ? state.meetings.map((meeting) => meeting.id === snapshot.id ? snapshot : meeting)
           : [...state.meetings, snapshot],
-      })).then(() => V(false)).catch((error) => h(error instanceof Error ? error.message : "Could not save this meeting."));
+      })).then(() => V(false)).catch((error) => h(error instanceof Error ? error.message : translateUI("Could not save this meeting.")));
     }, 650);
     autosaveTimer.current = timer;
     return () => clearTimeout(timer);
@@ -23239,10 +23226,10 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
     return d.jsxs(d.Fragment, {
       children: [
         d.jsx(ka, {
-          eyebrow: "STEP 1 OF 3",
-          title: "Choose a meeting template",
+          eyebrow: translateUI("STEP 1 OF 3"),
+          title: translateUI("Choose a meeting template"),
           description:
-            "The content will be selected for you. You can change it before presenting.",
+            translateUI("The content will be selected for you. You can change it before presenting."),
         }),
         d.jsx("div", {
           className: "template-grid",
@@ -23255,13 +23242,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 children: [
                   d.jsxs("span", {
                     className: "eyebrow",
-                    children: [N.slides.length, " SLIDES"],
+                    children: [N.slides.length, translateUI(" SLIDES")],
                   }),
                   d.jsx("h2", { children: N.name }),
                   d.jsx("p", { children: N.description }),
                   d.jsxs("span", {
                     className: "button primary",
-                    children: ["Use template ", d.jsx(Nn, { size: 18 })],
+                    children: [translateUI("Use template "), d.jsx(Nn, { size: 18 })],
                   }),
                 ],
               },
@@ -23271,8 +23258,8 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         }),
         !ne.length &&
           d.jsx(fr, {
-            title: "A template comes first",
-            text: "Open Templates to create a meeting format.",
+            title: translateUI("A template comes first"),
+            text: translateUI("Open Templates to create a meeting format."),
           }),
       ],
     });
@@ -23284,7 +23271,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       ...lE(H),
       ...H.slides.filter((slide) => !slide.skipped &&
         ["gallery", "image", "image-text", "video"].includes(slide.definition.type) &&
-        !slide.definition.mediaOptional && !globalThis.MMB.isPersonalShare(slide.definition) && !slide.items.length).map((slide) => `Add media to “${slide.definition.title}” or skip/delete the slide.`),
+        !slide.definition.mediaOptional && !globalThis.MMB.isPersonalShare(slide.definition) && !slide.items.length).map((slide) => translateUI("Add media to “{arg0}” or skip/delete the slide.", {arg0: slide.definition.title})),
     ],
     x = (N) => {
       (v(N.date !== H.date ? globalThis.MMB.refreshMeetingAnnouncements(N,s) : N), V(!0));
@@ -23295,7 +23282,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         slides: H.slides.map((ue, fe) => (fe === N ? { ...ue, ...te } : ue)),
       }),
     q = async () => {
-      if (isMeetingExpired(H)) throw new Error("This presentation has passed its scheduled replay window.");
+      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation has passed its scheduled replay window."));
       const te = {
         ...H,
         presenter: H.presenter.trim(),
@@ -23314,14 +23301,14 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       })),
         v(te),
         V(!1),
-        h("Presentation saved for future use.", 3000),
+        h(translateUI("Presentation saved for future use."), 3000),
         onSaved?.(te));
     },
     start = async () => {
-      if (isMeetingExpired(H)) throw new Error("This presentation has passed its scheduled replay window.");
-      if (!H.presenter.trim()) throw new Error("Enter the presenter’s name before starting.");
+      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation has passed its scheduled replay window."));
+      if (!H.presenter.trim()) throw new Error(translateUI("Enter the presenter’s name before starting."));
       if (G.length) throw new Error(G.join(" "));
-      if (!C.length) throw new Error("Choose at least one slide to present.");
+      if (!C.length) throw new Error(translateUI("Choose at least one slide to present."));
       starting.current = true; clearTimeout(autosaveTimer.current);
       try {
       const source = H.status === "completed" ? { ...H, id: Bt(), date: Qv(), createdAt: gt(),
@@ -23372,11 +23359,11 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
   return d.jsxs(d.Fragment, {
     children: [
       d.jsx(ka, {
-        eyebrow: ie ? "MEETING RECORD" : H.status === "completed" ? "EDIT PRESENTATION" : "BUILD YOUR MEETING",
+        eyebrow: ie ? translateUI("MEETING RECORD") : H.status === "completed" ? translateUI("EDIT PRESENTATION") : translateUI("BUILD YOUR MEETING"),
         title: H.templateName,
         description: ie
-          ? `${H.presenter} · ${Pt(H.date)} · ${s.usage.filter((N) => N.meetingId === H.id).length} content uses recorded`
-          : "Enter the presenter, review the selections, and you’re ready.",
+          ? translateUI("{arg0} · {arg1} · {arg2} content uses recorded", {arg0: H.presenter, arg1: Pt(H.date), arg2: s.usage.filter((N) => N.meetingId === H.id).length})
+          : translateUI("Enter the presenter, review the selections, and you’re ready."),
         actions: d.jsxs(d.Fragment, {
           children: [
             !ie &&
@@ -23385,18 +23372,18 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 onClick: () => {
                   f(() => q());
                 },
-                children: [d.jsx(Of, { size: 17 }), "Save presentation"],
+                children: [d.jsx(Of, { size: 17 }), translateUI("Save presentation")],
               }),
             d.jsxs("button", {
               onClick: () => L(0),
-              children: [d.jsx(cw, { size: 18 }), " Preview"],
+              children: [d.jsx(cw, { size: 18 }), translateUI(" Preview")],
             }),
             !ie && H.status === "presenting" &&
               d.jsx("button", {
                 className: "primary",
                 disabled: m || !H.presenter.trim(),
                 onClick: () => f(start),
-                children: "Resume presentation",
+                children: translateUI("Resume presentation"),
               }),
             !ie && H.status !== "presenting" &&
               d.jsxs("button", {
@@ -23405,9 +23392,9 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 onClick: () => {
                   f(start);
                 },
-                children: [d.jsx(nu, { size: 18 }), H.status === "completed" ? " Present again" : canPresent ? " Present saved meeting" : " Present meeting"],
+                children: [d.jsx(nu, { size: 18 }), H.status === "completed" ? translateUI(" Present again") : canPresent ? translateUI(" Present saved meeting") : translateUI(" Present meeting")],
               }),
-            ie && d.jsx("span", { className: "status-chip", children: "Replay window ended · meeting media removed" }),
+            ie && d.jsx("span", { className: "status-chip", children: translateUI("Replay window ended · meeting media removed") }),
           ],
         }),
       }),
@@ -23416,11 +23403,11 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
           className: "meeting-details panel",
           children: [
             d.jsxs(Ne, {
-              label: "Presenter name",
+              label: translateUI("Presenter name"),
               children: [
                 d.jsx("input", {
                   list: "presenter-names",
-                  placeholder: "Who is leading today?",
+                  placeholder: translateUI("Who is leading today?"),
                   maxLength: 300,
                   value: H.presenter,
                   onChange: (N) => x({ ...H, presenter: N.target.value }),
@@ -23436,7 +23423,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
               ],
             }),
             d.jsx(Ne, {
-              label: "Meeting date",
+              label: translateUI("Meeting date"),
               children: d.jsx("input", {
                 type: "date",
                 value: H.date,
@@ -23454,13 +23441,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     d.jsx(ew, { size: 16 }),
                     " ",
                     C.length,
-                    " slides included",
+                    translateUI(" slides included"),
                   ],
                 }),
                 d.jsxs("small", {
                   children: [
-                    O ? "Unsaved changes" : "Local draft",
-                    " · Preview does not record use",
+                    O ? translateUI("Unsaved changes") : translateUI("Local draft"),
+                    translateUI(" · Preview does not record use"),
                   ],
                 }),
               ],
@@ -23472,7 +23459,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         d.jsxs("section", {
           className: "panel",
           children: [
-            d.jsx("h3", { children: "Available company broadcasts" }),
+            d.jsx("h3", { children: translateUI("Available company broadcasts") }),
             ...H.broadcast_choices.map((b) =>
               d.jsxs(
                 "div",
@@ -23483,7 +23470,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     d.jsx("button", {
                       disabled: H.slides.some((s) => s.broadcast_id === b.id),
                       onClick: () => x(globalThis.MMB.addBroadcast(H, b)),
-                      children: "Include in this meeting",
+                      children: translateUI("Include in this meeting"),
                     }),
                   ],
                 },
@@ -23498,7 +23485,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         !ie &&
         d.jsxs("div", {
           className: "warning",
-          children: [G.join(" "), " Choose content below before starting."],
+          children: [G.join(" "), translateUI(" Choose content below before starting.")],
         }),
       d.jsxs("div", {
         className: "meeting-layout",
@@ -23509,7 +23496,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
               d.jsxs("div", {
                 className: "section-heading",
                 children: [
-                  d.jsx("h3", { children: "Meeting agenda" }),
+                  d.jsx("h3", { children: translateUI("Meeting agenda") }),
                   d.jsx("span", { children: H.slides.length }),
                 ],
               }),
@@ -23533,12 +23520,12 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                               d.jsx("strong", { children: N.definition.title }),
                               d.jsx("small", {
                                 children: N.skipped
-                                  ? "Skipped"
+                                  ? translateUI("Skipped")
                                   : N.items.length
-                                    ? `${N.items.length} item${N.items.length > 1 ? "s" : ""} selected`
+                                    ? translateUI("{arg0} item{arg1} selected", {arg0: N.items.length, arg1: N.items.length > 1 ? "s" : ""})
                                     : N.definition.type === "intro"
-                                      ? "Name & date"
-                                      : "Template content",
+                                      ? translateUI("Name & date")
+                                      : translateUI("Template content"),
                               }),
                             ],
                           }),
@@ -23569,13 +23556,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     children: [
                       d.jsxs("span", {
                         className: "eyebrow",
-                        children: ["SLIDE ", _ + 1, " OF ", H.slides.length],
+                        children: [translateUI("SLIDE "), _ + 1, translateUI(" OF "), H.slides.length],
                       }),
                       d.jsx("h2", { children: le.definition.title }),
                       le.required &&
                         d.jsx("span", {
                           className: "status-chip",
-                          children: "Required broadcast",
+                          children: translateUI("Required broadcast"),
                         }),
                     ],
                   }),
@@ -23591,7 +23578,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           onChange: (N) => E(_, { skipped: N.target.checked }),
                         }),
                         " ",
-                        "Skip this slide",
+                        translateUI("Skip this slide"),
                       ],
                     }),
                 ],
@@ -23609,8 +23596,8 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
               isMedia(le) && !ie && d.jsxs("div", {
                 className: "panel media-organizer",
                 children: [
-                  d.jsx("h3", { children: "Meeting media" }),
-                  d.jsx("p", { className: "muted", children: "Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Media is optional for Personal share; other included media slides need an item." }),
+                  d.jsx("h3", { children: translateUI("Meeting media") }),
+                  d.jsx("p", { className: "muted", children: translateUI("Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Media is optional for Personal share; other included media slides need an item.") }),
                   d.jsxs("div", { className: "actions", children: [
                     d.jsx("button", {
                       disabled: le.items.length >= 12,
@@ -23618,7 +23605,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         const items = await globalThis.MMB.meetingMedia(12 - le.items.length);
                         if (items.length) E(_, { items: [...le.items, ...items] });
                       }),
-                      children: "Upload images / videos",
+                      children: translateUI("Upload images / videos"),
                     }),
                     d.jsx("button", {
                       onClick: () => {
@@ -23628,7 +23615,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         const slides = [...H.slides]; slides.splice(_ + 1, 0, copy);
                         x({ ...H, slides }); b(_ + 1);
                       },
-                      children: "Add media slide",
+                      children: translateUI("Add media slide"),
                     }),
                   ] }),
                   d.jsx("div", { className: "media-slide-grid", children: mediaSlides.map(({ slide, index }) =>
@@ -23643,10 +23630,10 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                       children: [
                         d.jsxs("div", { className: "actions", children: [
                           d.jsx("button", { onClick: () => b(index), children: slide.definition.title }),
-                          slide.mediaAdded && d.jsx("button", { className: "danger-text", onClick: () => {
-                            if (!confirm(`Remove “${slide.definition.title}” from this meeting?`)) return;
+                          slide.mediaAdded && d.jsx("button", { className: "danger-text", onClick: async () => {
+                            if (!(await confirmUI(translateUI("Remove “{arg0}” from this meeting?", {arg0: slide.definition.title})))) return;
                             x({ ...H, slides: H.slides.filter((_, idx) => idx !== index) }); b(Math.max(0, Math.min(_, index - 1)));
-                          }, children: "Delete slide" }),
+                          }, children: translateUI("Delete slide") }),
                         ] }),
                         slide.items.length ? slide.items.map((item) => d.jsxs("div", {
                           className: "media-drag-item", draggable: slide.items.length > 1,
@@ -23656,13 +23643,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                             d.jsx("span", { className: "media-item-title", children: item.title }),
                             slide.items.length > 1 && mediaSlides.some(({ slide: target, index: targetIndex }) => targetIndex !== index && target.items.length < 12) &&
                               d.jsxs("label", { className: "media-move", children: [
-                                "Move to slide",
+                                translateUI("Move to slide"),
                                 d.jsxs("select", {
-                                  "aria-label": `Move ${item.title} to another media slide`,
+                                  "aria-label": translateUI("Move {arg0} to another media slide", {arg0: item.title}),
                                   value: "",
                                   onChange: (event) => moveMedia(index, item.id, Number(event.target.value)),
                                   children: [
-                                    d.jsx("option", { value: "", children: "Choose slide…" }),
+                                    d.jsx("option", { value: "", children: translateUI("Choose slide…") }),
                                     mediaSlides.filter(({ slide: target, index: targetIndex }) => targetIndex !== index && target.items.length < 12)
                                       .map(({ slide: target, index: targetIndex }) => d.jsx("option", {
                                         value: targetIndex, children: target.definition.title,
@@ -23671,7 +23658,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                                 }),
                               ] }),
                           ],
-                        }, item.id)) : d.jsx("p", { className: globalThis.MMB.isPersonalShare(slide.definition) ? "muted" : "warning", children: globalThis.MMB.isPersonalShare(slide.definition) ? "Media is optional. Share a personal update with the team." : "Drop an image or video here, or delete this slide." }),
+                        }, item.id)) : d.jsx("p", { className: globalThis.MMB.isPersonalShare(slide.definition) ? "muted" : "warning", children: globalThis.MMB.isPersonalShare(slide.definition) ? translateUI("Media is optional. Share a personal update with the team.") : translateUI("Drop an image or video here, or delete this slide.") }),
                       ],
                     }, slide.id),
                   ) }),
@@ -23685,8 +23672,8 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     children: [
                       d.jsx("h3", {
                         children: le.items.length
-                          ? "Selected content"
-                          : "Slide content",
+                          ? translateUI("Selected content")
+                          : translateUI("Slide content"),
                       }),
                       !ie &&
                         !le.required &&
@@ -23698,16 +23685,16 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                               onClick: () => J(_),
                               children: [
                                 d.jsx(ny, { size: 16 }),
-                                " Auto-select",
+                                translateUI(" Auto-select"),
                               ],
                             }),
                             d.jsx("button", {
                               onClick: () => A(_),
-                              children: "Change content",
+                              children: translateUI("Change content"),
                             }),
                             d.jsx("button", {
                               onClick: () => E(_, { items: [] }),
-                              children: "Remove content",
+                              children: translateUI("Remove content"),
                             }),
                           ],
                         }),
@@ -23726,12 +23713,12 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                               d.jsxs("small", {
                                 children: [
                                   N.lastUsedAt
-                                    ? "Last used " + Pt(N.lastUsedAt)
-                                    : "Never used",
+                                    ? translateUI("Last used ") + Pt(N.lastUsedAt)
+                                    : translateUI("Never used"),
                                   " ·",
                                   " ",
                                   N.useCount,
-                                  " uses",
+                                  translateUI(" uses"),
                                 ],
                               }),
                             ],
@@ -23740,12 +23727,12 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                             className: "status-chip",
                             children:
                               N.scope === "meeting-only"
-                                ? "Meeting-only"
+                                ? translateUI("Meeting-only")
                                 : N.tags.includes("sample")
-                                  ? "Sample"
+                                  ? translateUI("Sample")
                                   : N.url
-                                    ? "Online"
-                                    : "Offline",
+                                    ? translateUI("Online")
+                                    : translateUI("Offline"),
                           }),
                         ],
                       },
@@ -23757,7 +23744,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                       className: "muted",
                       children:
                         le.definition.text ||
-                        "This slide uses the template’s title and layout.",
+                        translateUI("This slide uses the template’s title and layout."),
                     }),
                   !ie &&
                     !le.required &&
@@ -23765,10 +23752,10 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                       open: le.definition.type === "intro" ? true : undefined,
                       children: [
                         le.definition.type === "intro"
-                          ? d.jsx("h4", { children: "Title and text" })
-                          : d.jsx("summary", { children: "Edit text for this meeting" }),
+                          ? d.jsx("h4", { children: translateUI("Title and text") })
+                          : d.jsx("summary", { children: translateUI("Edit text for this meeting") }),
                         d.jsx(Ne, {
-                          label: "Slide title",
+                          label: translateUI("Slide title"),
                           children: d.jsx("input", {
                             value: le.definition.title,
                             onChange: (N) =>
@@ -23781,7 +23768,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           }),
                         }),
                         d.jsx(Ne, {
-                          label: "Slide text",
+                          label: translateUI("Slide text"),
                           children: d.jsx("textarea", {
                             rows: 3,
                             value: le.definition.text,
@@ -23805,7 +23792,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     d.jsx(nf, { size: 18 }),
                     d.jsxs("div", {
                       children: [
-                        d.jsx("strong", { children: "Presenter notes" }),
+                        d.jsx("strong", { children: translateUI("Presenter notes") }),
                         d.jsx("p", { children: le.definition.notes }),
                       ],
                     }),
@@ -23817,12 +23804,12 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   d.jsxs("button", {
                     disabled: _ === 0,
                     onClick: () => b((N) => N - 1),
-                    children: [d.jsx(Af, { size: 18 }), " Previous slide"],
+                    children: [d.jsx(Af, { size: 18 }), translateUI(" Previous slide")],
                   }),
                   d.jsxs("button", {
                     disabled: _ === H.slides.length - 1 || (isMedia(le) && !le.items.length && !le.skipped),
                     onClick: () => b((N) => N + 1),
-                    children: ["Next slide ", d.jsx(Nn, { size: 18 })],
+                    children: [translateUI("Next slide "), d.jsx(Nn, { size: 18 })],
                   }),
                 ],
               }),
@@ -23845,7 +23832,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         }),
       M !== null &&
         d.jsxs(Ii, {
-          title: `Meeting preview · ${M + 1} of ${C.length}`,
+          title: translateUI("Meeting preview · {arg0} of {arg1}", {arg0: M + 1, arg1: C.length}),
           practice: true,
           onClose: () => L(null),
           wide: !0,
@@ -23859,28 +23846,28 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   date: H.date,
                   interactive: !0,
                 })
-              : d.jsx("p", { children: "No slides included." }),
+              : d.jsx("p", { children: translateUI("No slides included.") }),
             d.jsxs("div", {
               className: "modal-actions",
               children: [
                 d.jsx("span", {
                   className: "muted",
-                  children: "Preview only · Usage is unchanged",
+                  children: translateUI("Preview only · Usage is unchanged"),
                 }),
                 d.jsx("button", {
                   disabled: M === 0,
                   onClick: () => L((N) => Math.max(0, (N ?? 0) - 1)),
-                  children: "Previous",
+                  children: translateUI("Previous"),
                 }),
                 d.jsx("button", {
                   disabled: M >= C.length - 1,
                   onClick: () => L((N) => (N ?? 0) + 1),
-                  children: "Next",
+                  children: translateUI("Next"),
                 }),
                 d.jsx("button", {
                   className: "primary",
                   onClick: () => L(null),
-                  children: "Done",
+                  children: translateUI("Done"),
                 }),
               ],
             }),
@@ -23917,7 +23904,7 @@ function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
           Number(v.includes(b.id)) - Number(v.includes(a.id)) || kf(a, b),
       );
   return d.jsxs(Ii, {
-    title: `Choose content · ${n.definition.title}`,
+    title: translateUI("Choose content · {arg0}", {arg0: n.definition.title}),
     onClose: r,
     wide: !0,
     children: [
@@ -23930,8 +23917,8 @@ function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
               d.jsx(ay, { size: 18 }),
               d.jsx("input", {
                 autoFocus: !0,
-                "aria-label": "Search replacement content",
-                placeholder: "Search content…",
+                "aria-label": translateUI("Search replacement content"),
+                placeholder: translateUI("Search content…"),
                 value: f,
                 onChange: (S) => { h(S.target.value); setVisible(50); },
               }),
@@ -23942,17 +23929,17 @@ function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
       d.jsxs("p", {
         className: "muted",
         children: [
-          "Select up to ",
+          translateUI("Select up to "),
           n.definition.count,
-          " item",
+          translateUI(" item"),
           n.definition.count === 1 ? "" : "s",
           ". Browse unused suggestions first, then the least recently used.",
         ],
       }),
       d.jsxs("div", { className: "actions suggestion-actions", children: [
-        d.jsx("button", { disabled: history.index === 0, onClick: () => stepSuggestion(-1), children: "← Back" }),
-        d.jsx("button", { disabled: !canAdvance, onClick: () => stepSuggestion(1), children: "Next suggestion →" }),
-        d.jsx("span", { className: "muted", children: `${history.index} of ${suggestions.length} suggestions` }),
+        d.jsx("button", { disabled: history.index === 0, onClick: () => stepSuggestion(-1), children: translateUI("← Back") }),
+        d.jsx("button", { disabled: !canAdvance, onClick: () => stepSuggestion(1), children: translateUI("Next suggestion →") }),
+        d.jsx("span", { className: "muted", children: translateUI("{arg0} of {arg1} suggestions", {arg0: history.index, arg1: suggestions.length}) }),
       ] }),
       d.jsxs("div", {
         className: "picker-list",
@@ -23984,10 +23971,10 @@ function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
                       d.jsx("strong", { children: S.title }),
                       d.jsx("small", {
                         children: A
-                          ? "Already selected elsewhere"
+                          ? translateUI("Already selected elsewhere")
                           : S.lastUsedAt
-                            ? "Last used " + Pt(S.lastUsedAt)
-                            : "Never used",
+                            ? translateUI("Last used ") + Pt(S.lastUsedAt)
+                            : translateUI("Never used"),
                       }),
                     ],
                   }),
@@ -23998,25 +23985,25 @@ function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
           }),
           !b.length &&
             d.jsx(fr, {
-              title: "No matching items",
-              text: "Add matching content to the connected library in Content Library.",
+              title: translateUI("No matching items"),
+              text: translateUI("Add matching content to the connected library in Content Library."),
             }),
           b.length > visible && d.jsx("button", {
             className: "full-width",
             onClick: () => setVisible((count) => count + 50),
-            children: `Show more content (${visible} of ${b.length} shown)`,
+            children: translateUI("Show more content ({arg0} of {arg1} shown)", {arg0: visible, arg1: b.length}),
           }),
         ],
       }),
       d.jsxs("div", {
         className: "modal-actions",
         children: [
-          d.jsx("button", { onClick: r, children: "Cancel" }),
+          d.jsx("button", { onClick: r, children: translateUI("Cancel") }),
           d.jsxs("button", {
             className: "primary",
             onClick: () =>
               s(v.flatMap((S) => c.items.find((A) => A.id === S) ?? [])),
-            children: ["Use ", v.length, " selected"],
+            children: [translateUI("Use "), v.length, translateUI(" selected")],
           }),
         ],
       }),
@@ -24044,10 +24031,8 @@ function EE({ meeting: n, onExit: i }) {
     S = n.slides.filter((V) => !V.skipped),
     A = S[f],
     currentSlide = ae.useRef(A),
-    M = ae.useCallback(() => {
-      confirm(
-        "Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded.",
-      ) && i("paused");
+    M = ae.useCallback(async () => {
+      (await confirmUI(translateUI("Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded."))) && i("paused");
     }, [i]),
     L = ae.useCallback(
       (V, reveal = true) => {
@@ -24121,7 +24106,7 @@ function EE({ meeting: n, onExit: i }) {
       } catch (error) {
         if (translationGeneration.current === generation) {
           setTranslationStatus("unavailable");
-          setTranslationError(error instanceof Error ? error.message : "Translation unavailable. Try again.");
+          setTranslationError(error instanceof Error ? error.message : translateUI("Translation unavailable. Try again."));
         }
       }
     }, [n.id]);
@@ -24222,21 +24207,21 @@ function EE({ meeting: n, onExit: i }) {
         d.jsx("time", {
           className: "presentation-clock",
           dateTime: clock.toISOString(),
-          "aria-label": "Current time",
-          children: clock.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          "aria-label": translateUI("Current time"),
+          children: clock.toLocaleTimeString(getLocale(), { hour: "numeric", minute: "2-digit" }),
         }),
-        fullscreenMessage && d.jsx("div", { className: "fullscreen-message", role: "status", children: fullscreenMessage }),
+        fullscreenMessage && d.jsx("div", { className: "fullscreen-message", role: "status", children: uiText(fullscreenMessage) }),
         (translationStatus !== "off" || translationError) && d.jsx("div", {
           className: `translation-state ${translationStatus === "unavailable" ? "error" : ""}`,
           role: "status",
-          children: translationError || ({ connecting: "Connecting microphone…", listening: captureMode === "transcript" ? "Transcript ON · Saving speech text…" : "Translation ON · Saving transcript…", translating: "Translating · Saving transcript…", unavailable: "Speech capture unavailable" })[translationStatus],
+          children: uiError(translationError) || ({ connecting: translateUI("Connecting microphone…"), listening: captureMode === "transcript" ? translateUI("Transcript ON · Saving speech text…") : translateUI("Translation ON · Saving transcript…"), translating: translateUI("Translating · Saving transcript…"), unavailable: translateUI("Speech capture unavailable") })[translationStatus],
         }),
         caption && d.jsxs("div", {
           className: "translation-caption",
           role: "status",
           "aria-live": "polite",
           children: [
-            d.jsx("span", { children: caption.source === "es" ? "ES → EN" : "EN → ES" }),
+            d.jsx("span", { children: caption.source === "es" ? translateUI("ES → EN") : translateUI("EN → ES") }),
             d.jsx("p", { children: caption.text }),
           ],
         }),
@@ -24246,8 +24231,8 @@ function EE({ meeting: n, onExit: i }) {
           children: [
             d.jsx("button", {
               className: "control-icon",
-              "aria-label": "Pause and exit presentation",
-              title: "Pause and exit presentation",
+              "aria-label": translateUI("Pause and exit presentation"),
+              title: translateUI("Pause and exit presentation"),
               onClick: M,
               children: d.jsx(Nw, { size: 21 }),
             }),
@@ -24259,19 +24244,19 @@ function EE({ meeting: n, onExit: i }) {
                 try { await globalThis.MMB.toggleFullscreen(); }
                 catch (error) { setFullscreenMessage(error.message); }
               },
-              children: fullscreen ? "Exit fullscreen" : "Fullscreen",
+              children: fullscreen ? translateUI("Exit fullscreen") : translateUI("Fullscreen"),
             }),
             globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-toggle",
               disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "translation",
               onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("translation"),
-              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "translation" ? "Stop Translation" : "Start Translation",
+              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "translation" ? translateUI("Stop Translation") : translateUI("Start Translation"),
             }),
             d.jsx("button", {
               disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "transcript",
               onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("transcript"),
-              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "transcript" ? "Stop transcript" : "Start transcript",
-              title: "Save speech text with this meeting without using Azure translation",
+              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "transcript" ? translateUI("Stop transcript") : translateUI("Start transcript"),
+              title: translateUI("Save speech text with this meeting without using Azure translation"),
             }),
             globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-preview",
@@ -24280,28 +24265,26 @@ function EE({ meeting: n, onExit: i }) {
                 clearTimeout(captionTimer.current);
                 captionTimer.current = setTimeout(() => setCaption(null), 5500);
               },
-              children: "Preview captions",
+              children: translateUI("Preview captions"),
             }),
             A.required &&
               d.jsx("button", {
                 onClick: () =>
                   c(async () => {
-                    const reason = prompt(
-                      "Reason for skipping this required broadcast:",
-                    );
+                    const reason = (await promptUI(translateUI("Reason for skipping this required broadcast:")));
                     if (!reason?.trim()) return;
                     await globalThis.MMB.skip(n, A, reason.trim());
                     f === S.length - 1 ? i("finished") : L(1);
                   }),
-                children: "Skip required slide with reason",
+                children: translateUI("Skip required slide with reason"),
               }),
             d.jsxs("div", {
               className: "actions",
               children: [
                 d.jsx("button", {
                   className: "control-icon",
-                  "aria-label": "Previous slide",
-                  title: "Previous slide",
+                  "aria-label": translateUI("Previous slide"),
+                  title: translateUI("Previous slide"),
                   disabled: f === 0,
                   onClick: () => L(-1),
                   children: d.jsx(Af, { size: 24 }),
@@ -24309,15 +24292,15 @@ function EE({ meeting: n, onExit: i }) {
                 f === S.length - 1
                   ? d.jsx("button", {
                       className: "primary control-icon",
-                      "aria-label": "Finish meeting",
-                      title: "Finish meeting",
+                      "aria-label": translateUI("Finish meeting"),
+                      title: translateUI("Finish meeting"),
                       onClick: () => i("finished"),
                       children: d.jsx(ew, { size: 24 }),
                     })
                   : d.jsx("button", {
                       className: "primary control-icon",
-                      "aria-label": "Next slide",
-                      title: "Next slide",
+                      "aria-label": translateUI("Next slide"),
+                      title: translateUI("Next slide"),
                       onClick: () => L(1),
                       children: d.jsx(Nn, { size: 24 }),
                     }),
@@ -24393,8 +24376,8 @@ function zE({ meeting: n, slide: i, onShown: r }) {
                 children: [
                   d.jsx("small", {
                     children: v
-                      ? i.items.length ? `Movement ${s + 1} of ${i.items.length}` : "Morning movement"
-                      : "Countdown",
+                      ? i.items.length ? translateUI("Movement {arg0} of {arg1}", {arg0: s + 1, arg1: i.items.length}) : translateUI("Morning movement")
+                      : translateUI("Countdown"),
                   }),
                   d.jsxs("strong", {
                     role: "timer",
@@ -24407,12 +24390,12 @@ function zE({ meeting: n, slide: i, onShown: r }) {
                 ],
               }),
               d.jsx("button", {
-                "aria-label": m ? "Start countdown" : "Pause countdown",
+                "aria-label": m ? translateUI("Start countdown") : translateUI("Pause countdown"),
                 onClick: () => g((S) => !S),
                 children: m ? d.jsx(nu, {}) : d.jsx(Lw, {}),
               }),
               d.jsx("button", {
-                "aria-label": "Restart countdown",
+                "aria-label": translateUI("Restart countdown"),
                 onClick: () => {
                   h(_);
                   g(!0);
@@ -24425,7 +24408,7 @@ function zE({ meeting: n, slide: i, onShown: r }) {
                   onClick: () => {
                     (c((S) => S + 1), h(_));
                   },
-                  children: "Next movement",
+                  children: translateUI("Next movement"),
                 }),
             ],
           }),
@@ -25311,33 +25294,33 @@ function Zf(n) {
     n.usage,
   ])
     if (new Set(m.map((g) => g.id)).size !== m.length)
-      throw new Error("The backup contains duplicate record IDs.");
+      throw new Error(translateUI("The backup contains duplicate record IDs."));
   const i = new Set(n.assets.map((m) => m.id)),
     r = new Set(n.libraries.map((m) => m.id)),
     s = new Set(n.items.map((m) => m.id)),
     c = (m) => {
       if (m && !i.has(m))
-        throw new Error("The backup references a missing media asset.");
+        throw new Error(translateUI("The backup references a missing media asset."));
     },
     f = (m) => {
       (c(m.backgroundAssetId), c(m.logoAssetId));
     };
   (n.items.forEach((m) => {
-    if (!r.has(m.libraryId)) throw new Error("A content library is missing.");
+    if (!r.has(m.libraryId)) throw new Error(translateUI("A content library is missing."));
     (c(m.assetId), c(m.thumbnailAssetId));
   }),
     n.templates.forEach((m) => {
       (f(m.theme), m.groups.forEach((v) => f(v.theme)));
       const g = new Set(m.groups.map((v) => v.id));
       if (new Set(m.slides.map((v) => v.id)).size !== m.slides.length)
-        throw new Error("Duplicate slides found.");
+        throw new Error(translateUI("Duplicate slides found."));
       m.slides.forEach((v) => {
         if ((c(v.backgroundAssetId), v.libraryId && !r.has(v.libraryId)))
-          throw new Error("A template library is missing.");
+          throw new Error(translateUI("A template library is missing."));
         if (v.contentIds.some((_) => !s.has(_)))
-          throw new Error("A fixed selection is missing.");
+          throw new Error(translateUI("A fixed selection is missing."));
         if (v.groupId && !g.has(v.groupId))
-          throw new Error("A slide group is missing.");
+          throw new Error(translateUI("A slide group is missing."));
       });
     }),
     n.meetings.forEach((m) => {
@@ -25353,12 +25336,12 @@ function Zf(n) {
   for (const m of ["defaultTemplateId", "lastTemplateId"]) {
     const g = n.settings[m];
     if (g && !n.templates.some((v) => v.id === g))
-      throw new Error("A saved template preference is missing.");
+      throw new Error(translateUI("A saved template preference is missing."));
   }
   const h = new Set();
   for (const m of n.usage) {
     const g = `${m.meetingId}:${m.meetingSlideId}:${m.contentId}`;
-    if (h.has(g)) throw new Error("Duplicate usage entries found.");
+    if (h.has(g)) throw new Error(translateUI("Duplicate usage entries found."));
     if (
       (h.add(g),
       !n.meetings
@@ -25366,14 +25349,14 @@ function Zf(n) {
         ?.slides.find((_) => _.id === m.meetingSlideId)
         ?.items.some((_) => _.id === m.contentId))
     )
-      throw new Error("Usage history refers to missing meeting content.");
+      throw new Error(translateUI("Usage history refers to missing meeting content."));
   }
 }
 async function JE(n) {
   Zf(n);
   const i = ii.parse(n);
   if (n.assets.reduce((f, h) => f + h.size, 0) > cr - 8 * 1024 * 1024)
-    throw new Error("This pilot supports backup packages up to 400 MB.");
+    throw new Error(translateUI("This pilot supports backup packages up to 400 MB."));
   const s = {
     "manifest.json": of(
       JSON.stringify({
@@ -25391,20 +25374,20 @@ async function JE(n) {
     const m = await Ji.read(f.hash, f.mime);
     if (!m || m.size !== f.size || (await Mf(m)) !== f.hash)
       throw new Error(
-        `Cannot back up missing or damaged media: ${f.name}. Reimport the original file first.`,
+        translateUI("Cannot back up missing or damaged media: {arg0}. Reimport the original file first.", {arg0: f.name}),
       );
     s[h] = new Uint8Array(await m.arrayBuffer());
   }
   if (s["manifest.json"].byteLength > 8 * 1024 * 1024)
-    throw new Error("Meeting metadata exceeds the 8 MB pilot backup limit.");
+    throw new Error(translateUI("Meeting metadata exceeds the 8 MB pilot backup limit."));
   const c = QE(s, { level: 0 });
   if (c.byteLength > cr)
-    throw new Error("The completed backup exceeds 400 MB.");
+    throw new Error(translateUI("The completed backup exceeds 400 MB."));
   return new Blob([c], { type: "application/zip" });
 }
 function FE(n) {
   if (n.length > cr)
-    throw new Error("Backup is larger than the 400 MB pilot limit.");
+    throw new Error(translateUI("Backup is larger than the 400 MB pilot limit."));
   const i = new DataView(n.buffer, n.byteOffset, n.byteLength);
   let r = -1;
   for (let m = n.length - 22; m >= Math.max(0, n.length - 65557); m--)
@@ -25415,52 +25398,52 @@ function FE(n) {
       r = m;
       break;
     }
-  if (r < 0) throw new Error("This is not a complete ZIP backup.");
+  if (r < 0) throw new Error(translateUI("This is not a complete ZIP backup."));
   if (i.getUint16(r + 4, !0) || i.getUint16(r + 6, !0))
-    throw new Error("Split ZIP files are not supported.");
+    throw new Error(translateUI("Split ZIP files are not supported."));
   const s = i.getUint16(r + 10, !0);
   if (s > 10001 || s === 65535)
-    throw new Error("Too many files in this backup.");
+    throw new Error(translateUI("Too many files in this backup."));
   let c = i.getUint32(r + 16, !0),
     f = 0;
   const h = new Set();
   for (let m = 0; m < s; m++) {
     if (c + 46 > r || i.getUint32(c, !0) !== 33639248)
-      throw new Error("Invalid ZIP directory.");
+      throw new Error(translateUI("Invalid ZIP directory."));
     const g = i.getUint32(c + 24, !0),
       v = i.getUint16(c + 28, !0),
       _ = c + 46 + v + i.getUint16(c + 30, !0) + i.getUint16(c + 32, !0);
-    if (_ > r) throw new Error("Invalid ZIP entry.");
+    if (_ > r) throw new Error(translateUI("Invalid ZIP entry."));
     const b = Lf(n.subarray(c + 46, c + 46 + v));
     if (!/^(manifest\.json|assets\/[a-f0-9]{64})$/.test(b) || h.has(b))
-      throw new Error("Unexpected or duplicate file in backup.");
+      throw new Error(translateUI("Unexpected or duplicate file in backup."));
     if (
       (h.add(b),
       g > (b === "manifest.json" ? 8 * 1024 * 1024 : 150 * 1024 * 1024))
     )
-      throw new Error("A backup entry exceeds the size limit.");
+      throw new Error(translateUI("A backup entry exceeds the size limit."));
     ((f += g), (c = _));
   }
-  if (f > cr) throw new Error("The expanded backup exceeds 400 MB.");
+  if (f > cr) throw new Error(translateUI("The expanded backup exceeds 400 MB."));
 }
 async function WE(n) {
-  if (n.size > cr) throw new Error("Backup is larger than 400 MB.");
+  if (n.size > cr) throw new Error(translateUI("Backup is larger than 400 MB."));
   const i = new Uint8Array(await n.arrayBuffer());
   FE(i);
   const r = KE(i);
-  if (!r["manifest.json"]) throw new Error("The backup manifest is missing.");
+  if (!r["manifest.json"]) throw new Error(translateUI("The backup manifest is missing."));
   const s = IE.parse(JSON.parse(Lf(r["manifest.json"]))),
     c = s.state;
   Zf(c);
   const f = new Set(c.assets.map((h) => `assets/${h.hash}`));
   for (const h of Object.keys(r))
     if (h !== "manifest.json" && !f.has(h))
-      throw new Error("The backup contains unlisted media.");
+      throw new Error(translateUI("The backup contains unlisted media."));
   for (const h of c.assets) {
     const m = r[`assets/${h.hash}`];
     if (!m || m.length !== h.size || (await Mf(new Blob([m]))) !== h.hash)
       throw new Error(
-        `Media validation failed: ${h.name}. Nothing was imported.`,
+        translateUI("Media validation failed: {arg0}. Nothing was imported.", {arg0: h.name}),
       );
   }
   return {
@@ -25483,7 +25466,7 @@ function Xg(n, i, r) {
   for (const c of i.assets) {
     const f = n.assets.find((h) => h.id === c.id);
     if (f && f.hash !== c.hash)
-      throw new Error("Conflicting asset IDs. Import cancelled.");
+      throw new Error(translateUI("Conflicting asset IDs. Import cancelled."));
   }
   const s = sy({
     ...n,
@@ -25503,7 +25486,7 @@ async function PE(n) {
 function ez(n, i) {
   return i.some((r) => n.some((s) => r.id === s.id && r.hash !== s.hash));
 }
-const tz = or("Share", {
+const tz = or(translateUI("Share"), {
   web: () =>
     Ks(() => import("./web-g5t7OFMZ.js"), [], import.meta.url).then(
       (n) => new n.ShareWeb(),
@@ -25541,10 +25524,10 @@ function az() {
   return d.jsxs(d.Fragment, {
     children: [
       d.jsx(ka, {
-        eyebrow: "CONTENT FOR EVERY LOCATION",
-        title: "Backup & restore",
+        eyebrow: translateUI("CONTENT FOR EVERY LOCATION"),
+        title: translateUI("Backup & restore"),
         description:
-          "Move your templates and media between tablets, or keep a recovery copy.",
+          translateUI("Move your templates and media between tablets, or keep a recovery copy."),
       }),
       d.jsxs("div", {
         className: "backup-grid",
@@ -25556,36 +25539,36 @@ function az() {
                 className: "large-icon",
                 children: d.jsx(Rg, {}),
               }),
-              d.jsx("h2", { children: "Export this device" }),
+              d.jsx("h2", { children: translateUI("Export this device") }),
               d.jsx("p", {
                 children:
-                  "One ZIP contains your templates, libraries, media, settings, and meeting history.",
+                  translateUI("One ZIP contains your templates, libraries, media, settings, and meeting history."),
               }),
               d.jsxs("dl", {
                 className: "stat-list",
                 children: [
                   d.jsxs("div", {
                     children: [
-                      d.jsx("dt", { children: "Location" }),
+                      d.jsx("dt", { children: translateUI("Location") }),
                       d.jsx("dd", { children: n.device.name }),
                     ],
                   }),
                   d.jsxs("div", {
                     children: [
-                      d.jsx("dt", { children: "Content" }),
+                      d.jsx("dt", { children: translateUI("Content") }),
                       d.jsxs("dd", {
                         children: [
                           n.items.length,
-                          " items · ",
+                          translateUI(" items · "),
                           n.assets.length,
-                          " media files",
+                          translateUI(" media files"),
                         ],
                       }),
                     ],
                   }),
                   d.jsxs("div", {
                     children: [
-                      d.jsx("dt", { children: "Local media size" }),
+                      d.jsx("dt", { children: translateUI("Local media size") }),
                       d.jsxs("dd", {
                         children: [
                           (
@@ -25593,18 +25576,18 @@ function az() {
                             1024 /
                             1024
                           ).toFixed(1),
-                          " MB",
+                          translateUI(" MB"),
                         ],
                       }),
                     ],
                   }),
                   d.jsxs("div", {
                     children: [
-                      d.jsx("dt", { children: "Last export" }),
+                      d.jsx("dt", { children: translateUI("Last export") }),
                       d.jsx("dd", {
                         children: n.settings.lastBackupAt
                           ? Pt(n.settings.lastBackupAt)
-                          : "No backup exported yet",
+                          : translateUI("No backup exported yet"),
                       }),
                     ],
                   }),
@@ -25621,12 +25604,12 @@ function az() {
                         ...A,
                         settings: { ...A.settings, lastBackupAt: gt() },
                       })),
-                      s("Backup exported. Keep a copy outside this device."));
+                      s(translateUI("Backup exported. Keep a copy outside this device.")));
                   });
                 },
                 children: [
                   d.jsx(Rg, { size: 18 }),
-                  c ? "Working…" : "Export complete backup",
+                  c ? translateUI("Working…") : translateUI("Export complete backup"),
                 ],
               }),
             ],
@@ -25638,10 +25621,10 @@ function az() {
                 className: "large-icon",
                 children: d.jsx(af, {}),
               }),
-              d.jsx("h2", { children: "Bring in a backup" }),
+              d.jsx("h2", { children: translateUI("Bring in a backup") }),
               d.jsx("p", {
                 children:
-                  "Choose a backup ZIP. You’ll see what it contains before anything changes.",
+                  translateUI("Choose a backup ZIP. You’ll see what it contains before anything changes."),
               }),
               d.jsxs("div", {
                 className: "import-method",
@@ -25649,14 +25632,14 @@ function az() {
                   d.jsx(Kw, {}),
                   d.jsxs("div", {
                     children: [
-                      d.jsx("h3", { children: "Merge content" }),
+                      d.jsx("h3", { children: translateUI("Merge content") }),
                       d.jsx("span", {
                         className: "status-chip green",
-                        children: "Recommended for location updates",
+                        children: translateUI("Recommended for location updates"),
                       }),
                       d.jsx("p", {
                         children:
-                          "Add or update templates and content. Keep this tablet’s name, settings, meetings, and usage history.",
+                          translateUI("Add or update templates and content. Keep this tablet’s name, settings, meetings, and usage history."),
                       }),
                     ],
                   }),
@@ -25668,16 +25651,16 @@ function az() {
                   d.jsx(Tf, {}),
                   d.jsxs("div", {
                     children: [
-                      d.jsx("h3", { children: "Full replacement" }),
+                      d.jsx("h3", { children: translateUI("Full replacement") }),
                       d.jsx("p", {
                         children:
-                          "Restore the complete backup, including its location identity, settings, and history.",
+                          translateUI("Restore the complete backup, including its location identity, settings, and history."),
                       }),
                     ],
                   }),
                 ],
               }),
-              d.jsx("input", {
+              d.jsx(globalThis.MMB.FilePicker, {
                 ref: f,
                 hidden: !0,
                 type: "file",
@@ -25694,7 +25677,7 @@ function az() {
               d.jsxs("button", {
                 disabled: c,
                 onClick: () => f.current?.click(),
-                children: [d.jsx(af, { size: 18 }), " Choose backup ZIP"],
+                children: [d.jsx(af, { size: 18 }), translateUI(" Choose backup ZIP")],
               }),
             ],
           }),
@@ -25703,21 +25686,21 @@ function az() {
       d.jsxs("div", {
         className: "distribution-note",
         children: [
-          d.jsx("span", { children: "Master tablet" }),
+          d.jsx("span", { children: translateUI("Master tablet") }),
           d.jsx(Nn, {}),
-          d.jsx("span", { children: "Export one backup" }),
+          d.jsx("span", { children: translateUI("Export one backup") }),
           d.jsx(Nn, {}),
-          d.jsx("span", { children: "Merge at each location" }),
+          d.jsx("span", { children: translateUI("Merge at each location") }),
         ],
       }),
       d.jsx("p", {
         className: "sample-note",
         children:
-          "Keep a backup before device changes or app removal. This pilot supports ZIP packages up to 400 MB. Browser data belongs to this browser and address.",
+          translateUI("Keep a backup before device changes or app removal. This pilot supports ZIP packages up to 400 MB. Browser data belongs to this browser and address."),
       }),
       h &&
         d.jsxs(Ii, {
-          title: "Review backup before import",
+          title: translateUI("Review backup before import"),
           onClose: () => {
             c || m(null);
           },
@@ -25725,9 +25708,9 @@ function az() {
           children: [
             d.jsxs("p", {
               children: [
-                "Exported ",
+                translateUI("Exported "),
                 Pt(h.manifest.exportedAt),
-                " from",
+                translateUI(" from"),
                 " ",
                 d.jsx("strong", { children: h.summary.location }),
                 ".",
@@ -25744,7 +25727,7 @@ function az() {
                       children: [
                         d.jsx("strong", { children: A }),
                         d.jsx("span", {
-                          children: S === "events" ? "usage events" : S,
+                          children: S === "events" ? translateUI("usage events") : S,
                         }),
                       ],
                     },
@@ -25753,7 +25736,7 @@ function az() {
                 ),
             }),
             d.jsx(Ne, {
-              label: "Import mode",
+              label: translateUI("Import mode"),
               children: d.jsxs("select", {
                 value: g,
                 disabled: c,
@@ -25761,12 +25744,12 @@ function az() {
                 children: [
                   d.jsx("option", {
                     value: "merge",
-                    children: "Merge content — keep this tablet’s history",
+                    children: translateUI("Merge content — keep this tablet’s history"),
                   }),
                   d.jsx("option", {
                     value: "replace",
                     disabled: globalThis.MMB.hosted,
-                    children: "Full replacement — restore all backup data",
+                    children: translateUI("Full replacement — restore all backup data"),
                   }),
                 ],
               }),
@@ -25775,14 +25758,14 @@ function az() {
               ? d.jsxs("div", {
                   className: "info-note",
                   children: [
-                    "Your location remains “",
+                    translateUI("Your location remains “"),
                     n.device.name,
-                    "”. Its ",
+                    translateUI("”. Its "),
                     n.usage.length,
-                    " usage events and",
+                    translateUI(" usage events and"),
                     " ",
                     n.meetings.length,
-                    " meetings remain. Matching content and templates are updated by ID. Incoming history is not imported.",
+                    translateUI(" meetings remain. Matching content and templates are updated by ID. Incoming history is not imported."),
                   ],
                 })
               : d.jsxs(d.Fragment, {
@@ -25790,10 +25773,10 @@ function az() {
                     d.jsx("div", {
                       className: "warning",
                       children:
-                        "All current templates, content, settings, and history will be replaced. The device will take the backup’s location identity. Export this device first if you need to keep its data.",
+                        translateUI("All current templates, content, settings, and history will be replaced. The device will take the backup’s location identity. Export this device first if you need to keep its data."),
                     }),
                     d.jsx(Ne, {
-                      label: "Type REPLACE to confirm",
+                      label: translateUI("Type REPLACE to confirm"),
                       children: d.jsx("input", {
                         value: _,
                         disabled: c,
@@ -25809,17 +25792,17 @@ function az() {
                 d.jsx("button", {
                   disabled: c,
                   onClick: () => m(null),
-                  children: "Cancel",
+                  children: translateUI("Cancel"),
                 }),
                 d.jsx("button", {
                   className: g === "replace" ? "danger" : "primary",
                   disabled: c || (g === "replace" && _ !== "REPLACE"),
                   onClick: () => {
                     r(async () => {
-                      if (globalThis.MMB.hosted && g !== "merge") throw new Error("Hosted restores support Merge only. Server history and account identity cannot be replaced.");
+                      if (globalThis.MMB.hosted && g !== "merge") throw new Error(translateUI("Hosted restores support Merge only. Server history and account identity cannot be replaced."));
                       if (ez(n.assets, h.manifest.state.assets))
                         throw new Error(
-                          "Conflicting asset IDs. Import cancelled.",
+                          translateUI("Conflicting asset IDs. Import cancelled."),
                         );
                       (Xg(n, h.manifest.state, g),
                         await PE(h),
@@ -25827,16 +25810,16 @@ function az() {
                         m(null),
                         s(
                           g === "merge"
-                            ? "Content merged. Local history and location preserved."
-                            : "Backup restored, including its history and location.",
+                            ? translateUI("Content merged. Local history and location preserved.")
+                            : translateUI("Backup restored, including its history and location."),
                         ));
                     });
                   },
                   children: c
-                    ? "Importing…"
+                    ? translateUI("Importing…")
                     : g === "merge"
-                      ? "Merge content"
-                      : "Replace this device",
+                      ? translateUI("Merge content")
+                      : translateUI("Replace this device"),
                 }),
               ],
             }),
@@ -25855,9 +25838,9 @@ function iz() {
     d.jsxs(d.Fragment, {
       children: [
         d.jsx(ka, {
-          eyebrow: "MAKE IT YOURS",
-          title: "Settings",
-          description: "These preferences apply to this device.",
+          eyebrow: translateUI("MAKE IT YOURS"),
+          title: translateUI("Settings"),
+          description: translateUI("These preferences apply to this device."),
         }),
         d.jsxs("form", {
           className: "settings-form",
@@ -25869,19 +25852,19 @@ function iz() {
                   settings: { ...f, remoteKeys: S.settings.remoteKeys, company: f.company.trim() },
                   device: { ...S.device, name: m.trim() },
                 })),
-                  s("Settings saved."));
+                  s(translateUI("Settings saved.")));
               }));
           },
           children: [
             d.jsxs("section", {
               className: "panel",
               children: [
-                d.jsx("h2", { children: "Company & location" }),
+                d.jsx("h2", { children: translateUI("Company & location") }),
                 d.jsxs("div", {
                   className: "form-row",
                   children: [
                     d.jsx(Ne, {
-                      label: "Company name",
+                      label: translateUI("Company name"),
                       children: d.jsx("input", {
                         required: !0,
                         maxLength: 300,
@@ -25890,7 +25873,7 @@ function iz() {
                       }),
                     }),
                     d.jsx(Ne, {
-                      label: "Location / device name",
+                      label: translateUI("Location / device name"),
                       children: d.jsx("input", {
                         required: !0,
                         maxLength: 300,
@@ -25904,7 +25887,7 @@ function iz() {
                   className: "form-row",
                   children: [
                     d.jsx(Ne, {
-                      label: "Default template",
+                      label: translateUI("Default template"),
                       children: d.jsxs("select", {
                         value: f.defaultTemplateId ?? "",
                         onChange: (b) =>
@@ -25915,7 +25898,7 @@ function iz() {
                         children: [
                           d.jsx("option", {
                             value: "",
-                            children: "First available template",
+                            children: translateUI("First available template"),
                           }),
                           n.templates
                             .filter((b) => !b.archived)
@@ -25930,7 +25913,7 @@ function iz() {
                       }),
                     }),
                     d.jsx(Ne, {
-                      label: "Meeting date format",
+                      label: translateUI("Meeting date format"),
                       children: d.jsxs("select", {
                         value: f.dateFormat,
                         onChange: (b) =>
@@ -25938,11 +25921,11 @@ function iz() {
                         children: [
                           d.jsx("option", {
                             value: "long",
-                            children: "Wednesday, September 9, 2026",
+                            children: translateUI("Wednesday, September 9, 2026"),
                           }),
                           d.jsx("option", {
                             value: "short",
-                            children: "Sep 9, 2026",
+                            children: translateUI("Sep 9, 2026"),
                           }),
                           d.jsx("option", {
                             value: "iso",
@@ -25958,7 +25941,7 @@ function iz() {
             d.jsxs("section", {
               className: "panel",
               children: [
-                d.jsx("h2", { children: "Presentation behavior" }),
+                d.jsx("h2", { children: translateUI("Presentation behavior") }),
                 d.jsxs("label", {
                   className: "check setting-toggle",
                   children: [
@@ -25971,11 +25954,11 @@ function iz() {
                     d.jsxs("span", {
                       children: [
                         d.jsx("strong", {
-                          children: "Hide controls while presenting",
+                          children: translateUI("Hide controls while presenting"),
                         }),
                         d.jsx("small", {
                           children:
-                            "Touch the screen or move the pointer to bring them back.",
+                            translateUI("Touch the screen or move the pointer to bring them back."),
                         }),
                       ],
                     }),
@@ -25991,10 +25974,10 @@ function iz() {
                     }),
                     d.jsxs("span", {
                       children: [
-                        d.jsx("strong", { children: "Keep the screen awake" }),
+                        d.jsx("strong", { children: translateUI("Keep the screen awake") }),
                         d.jsx("small", {
                           children:
-                            "Requests a screen wake lock where the device supports it.",
+                            translateUI("Requests a screen wake lock where the device supports it."),
                         }),
                       ],
                     }),
@@ -26004,7 +25987,7 @@ function iz() {
                   className: "primary",
                   disabled: c,
                   type: "submit",
-                  children: [d.jsx(Of, { size: 18 }), " Save settings"],
+                  children: [d.jsx(Of, { size: 18 }), translateUI(" Save settings")],
                 }),
               ],
             }),
@@ -26015,28 +25998,28 @@ function iz() {
           className: "panel settings-form",
           children: [
             d.jsxs("h2", {
-              children: [d.jsx(Tf, { size: 22 }), " Local data"],
+              children: [d.jsx(Tf, { size: 22 }), translateUI(" Local data")],
             }),
             d.jsxs("p", {
               children: [
-                "App ",
+                translateUI("App "),
                 `v${globalThis.MMB.appVersion}`,
-                " · Database ",
+                translateUI(" · Database "),
                 Vi,
                 " ·",
                 " ",
                 Mn.isNativePlatform()
-                  ? "Native SQLite + managed files"
-                  : "Browser IndexedDB",
+                  ? translateUI("Native SQLite + managed files")
+                  : translateUI("Browser IndexedDB"),
               ],
             }),
             d.jsxs("p", {
               children: [
-                "Last export:",
+                translateUI("Last export:"),
                 " ",
                 n.settings.lastBackupAt
                   ? Pt(n.settings.lastBackupAt)
-                  : "No backup exported yet",
+                  : translateUI("No backup exported yet"),
               ],
             }),
             !Mn.isNativePlatform() &&
@@ -26049,17 +26032,17 @@ function iz() {
                         const b = await navigator.storage?.persist?.(),
                           S = await navigator.storage?.estimate?.();
                         _(
-                          `${b ? "Persistent storage granted." : "Your browser manages storage retention."} ${S?.usage ? `${(S.usage / 1024 / 1024).toFixed(1)} MB used.` : ""}`,
+                          `${b ? translateUI("Persistent storage granted.") : translateUI("Your browser manages storage retention.")} ${S?.usage ? translateUI("{arg0} MB used.", {arg0: (S.usage / 1024 / 1024).toFixed(1)}) : ""}`,
                         );
                       });
                     },
-                    children: "Request persistent browser storage",
+                    children: translateUI("Request persistent browser storage"),
                   }),
                   d.jsx("p", {
                     className: "muted",
                     children:
                       v ||
-                      "Keep using the same browser and address to access this device’s data.",
+                      translateUI("Keep using the same browser and address to access this device’s data."),
                   }),
                 ],
               }),
@@ -26071,12 +26054,12 @@ function iz() {
   );
 }
 const lz = [
-  { id: "home", label: "Home", icon: vw },
-  { id: "meetings", label: "Meetings", icon: nu },
-  { id: "templates", label: "Templates", icon: ey },
-  { id: "library", label: "Content library", icon: Pv },
-  { id: "backup", label: "Backup & restore", icon: tu },
-  { id: "settings", label: "Settings", icon: Xw },
+  { id: "home", label: translateUI("Home"), icon: vw },
+  { id: "meetings", label: translateUI("Meetings"), icon: nu },
+  { id: "templates", label: translateUI("Templates"), icon: ey },
+  { id: "library", label: translateUI("Content library"), icon: Pv },
+  { id: "backup", label: translateUI("Backup & restore"), icon: tu },
+  { id: "settings", label: translateUI("Settings"), icon: Xw },
 ];
 function rz() {
   const { state: n, update: i, run: r } = qt(),
@@ -26151,7 +26134,7 @@ function rz() {
         children: [
           d.jsx("button", {
             className: "mobile-menu icon-button",
-            "aria-label": "Open navigation",
+            "aria-label": translateUI("Open navigation"),
             onClick: () => _((H) => !H),
             children: v ? d.jsx(iy, {}) : d.jsx(Cw, {}),
           }),
@@ -26164,8 +26147,8 @@ function rz() {
                   d.jsx("div", { children: d.jsx(ty, { size: 25 }) }),
                   d.jsxs("span", {
                     children: [
-                      "Morning Meeting",
-                      d.jsx("strong", { children: "BUILDER" }),
+                      translateUI("Morning Meeting"),
+                      d.jsx("strong", { children: translateUI("BUILDER") }),
                     ],
                   }),
                 ],
@@ -26175,7 +26158,7 @@ function rz() {
                 children: n.settings.company,
               }),
               d.jsx("nav", {
-                "aria-label": "Main navigation",
+                "aria-label": translateUI("Main navigation"),
                 "data-leaves-editor": !0,
                 children: lz.map((H) =>
                   d.jsxs(
@@ -26185,7 +26168,7 @@ function rz() {
                       "aria-current": s === H.id || (s === "meeting" && H.id === "meetings") ? "page" : void 0,
                       disabled: !globalThis.MMB.canNavigate(H.id),
                       onClick: () => L(H.id),
-                      children: [d.jsx(H.icon, { size: 20 }), H.label],
+                      children: [d.jsx(H.icon, { size: 20 }), uiText(H.label)],
                     },
                     H.id,
                   ),
@@ -26199,9 +26182,9 @@ function rz() {
                       d.jsx(Tf, { size: 18 }),
                       d.jsxs("span", {
                         children: [
-                          "Stored on this device",
+                          translateUI("Stored on this device"),
                           d.jsx("small", {
-                            children: b ? "Works offline" : "You’re offline",
+                            children: b ? translateUI("Works offline") : translateUI("You’re offline"),
                           }),
                         ],
                       }),

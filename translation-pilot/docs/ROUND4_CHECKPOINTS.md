@@ -50,3 +50,9 @@ Item 10: typecheck/lint, all 45 frontend checks and two real Chromium quick-star
 ## Final delivery checkpoint
 
 All ten items complete at v0.4.10. Final verification: 45 frontend unit checks; 19 PHP syntax files; 53 PHP history/gateway/origin checks; 62 real Chromium browser checks (24 follow-up + 3 quick/template/replay + 35 desktop/mobile/capture). Demo and hosted builds passed. A completed meeting replay now creates a separate record to preserve its transcript; missing history records stop capture with a clear error. Production packages and root static development build are refreshed. See ROUND4_FOLLOWUP_HANDOFF.md and ROUND4_FOLLOWUP_VERIFICATION.md. Next work is the real tablet/remote and PHP/MySQL two-account staging trial, not another unfinished numbered item.
+
+## Interface-language checkpoint — v0.4.11
+
+English / Mexican Spanish selector, reusable catalogs, translated interface/dialogs/admin reports, language persistence and build-time localization checks. Content-library seed files and saved presentation/transcript values are unchanged. See LOCALIZATION.md for the maintenance pattern and verification boundaries.
+
+Validation: 49 frontend tests, 21 localization browser checks, 10 hosted-interface checks with mocked server responses, 24 follow-up workflow checks, and 4 quick-start/template/replay/mobile-preview checks passed. TypeScript, lint, demo/hosted builds, localization catalog/placeholder audit and package path checks passed. All starter content JSON files are byte-identical to v0.4.10. New live provider calls, physical devices and real MySQL staging were not exercised.

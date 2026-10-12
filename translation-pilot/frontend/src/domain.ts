@@ -1,3 +1,4 @@
+import { t as translateUI } from "./i18n";
 import type { Account, Broadcast, Row, Usage } from "./types";
 export function canTemplate(
   account: Account,
@@ -82,7 +83,7 @@ export function insertBroadcasts(
     if (idx < 0) {
       idx = result.slides.findIndex((s: Row) => s.definition.type === "intro");
       result.warnings.push(
-        `“${b.title}”: slot “${b.slot}” missing; inserted after Introduction (or first when no Introduction exists).`,
+        translateUI("“{arg0}”: slot “{arg1}” missing; inserted after Introduction (or first when no Introduction exists).", {arg0: b.title, arg1: b.slot}),
       );
     }
     const slide = {
@@ -184,7 +185,7 @@ export function zonedInput(iso: string, zone: string) {
 }
 export function zonedUtc(input: string, zone: string) {
   const requested = Date.parse(input + "Z");
-  if (!Number.isFinite(requested)) throw new Error("Invalid schedule time");
+  if (!Number.isFinite(requested)) throw new Error(translateUI("Invalid schedule time"));
   let candidate = requested;
   for (let i = 0; i < 4; i++) {
     const rendered = Date.parse(
@@ -195,7 +196,7 @@ export function zonedUtc(input: string, zone: string) {
   const iso = new Date(candidate).toISOString();
   if (zonedInput(iso, zone) !== input)
     throw new Error(
-      "This local time does not exist because of daylight saving time. Choose another time.",
+      translateUI("This local time does not exist because of daylight saving time. Choose another time."),
     );
   return iso;
 }

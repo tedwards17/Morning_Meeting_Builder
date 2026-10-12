@@ -1,6 +1,6 @@
 {
   "name": "morning-meeting-builder",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,11 +9,12 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint frontend/src tests/frontend",
     "test": "vitest run --config vitest.config.ts",
-    "build:demo": "python3 scripts/clean-build.py demo && vite build --mode demo && python3 scripts/sw.py build/demo",
-    "build:hosted": "python3 scripts/clean-build.py hosted && vite build --mode hosted && python3 scripts/sw.py build/hosted",
+    "build:demo": "node scripts/check-i18n.mjs && python3 scripts/clean-build.py demo && vite build --mode demo && python3 scripts/sw.py build/demo",
+    "build:hosted": "node scripts/check-i18n.mjs && python3 scripts/clean-build.py hosted && vite build --mode hosted && python3 scripts/sw.py build/hosted",
     "package": "python3 scripts/package.py",
     "check:php": "python3 scripts/check_php.py",
-    "pilot:php": "php -S 0.0.0.0:8081 -t build/demo scripts/php-pilot-router.php"
+    "pilot:php": "php -S 0.0.0.0:8081 -t build/demo scripts/php-pilot-router.php",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "fflate": "0.8.3",

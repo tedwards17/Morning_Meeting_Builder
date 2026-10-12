@@ -78,8 +78,8 @@ const {spawn}=require('node:child_process');
     await page.getByRole('button',{name:'Next slide',exact:true}).click();
     await page.evaluate(()=>testSocket.onmessage({data:JSON.stringify({type:'Results',is_final:true,channel:{alternatives:[{transcript:'Safety matters.',words:[{word:'Safety',language:'en'},{word:'matters.',language:'en'}]}]}})}));
     await page.waitForFunction(async()=>(await MMB.repository.load()).meetings[0].transcript?.length===2);
-    page.once('dialog',dialog=>dialog.accept());
-    await page.getByRole('button',{name:'Pause and exit presentation',exact:true}).click();
+
+    await page.getByRole('button',{name:'Pause and exit presentation',exact:true}).click();await page.getByRole('dialog',{name:'Confirm action',exact:true}).getByRole('button',{name:'Confirm',exact:true}).click();
     await page.getByPlaceholder('Who is leading today?').waitFor();
     state=await page.evaluate(()=>MMB.repository.load());
     ok('presentation exit preserves both phrases and presenter/topic context',state.meetings[0].transcript.length===2&&state.meetings[0].transcript.every(entry=>entry.presenter==='Checkpoint presenter')&&state.meetings[0].transcript[1].slideTitle==='Safety Moment');
