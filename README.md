@@ -1,4 +1,6 @@
-# Morning Meeting Builder — Round 4 (v0.4.12)
+# Morning Meeting Builder — Round 4 (v0.4.13)
+
+Meeting transcripts now open in a compact reading view with topic headings, search, full-text copy/download, and optional detailed timestamps. Existing saved recordings are preserved. Speaker diarization is not enabled.
 
 Development branch: **Round-4-Development**, based on approved Round 3 commit `b99ef562`. The repository root is the static GitHub Pages test build. It preserves existing content and YouTube presentation embedding. No PHP or private configuration is deployed by GitHub Pages.
 

@@ -6,7 +6,7 @@ import { APP_VERSION, defaults, upgradeDefaults } from "./defaults";
 import { expireSavedMedia, isMeetingExpired } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
-import { withTranscript, withPresentedTopic, transcriptText, canReadMeeting } from "./meeting-history";
+import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, canReadMeeting } from "./meeting-history";
 import { translationEnabled, captionGap, toggleFullscreen } from "./presentation-config";
 import * as db from "./db";
 import {
@@ -698,10 +698,10 @@ globalThis.MMB = {
   startTranslation,
   captureTranscript: (meetingId: string, slide: Row, phrase: {text: string; source: "en" | "es"}) =>
     globalThis.MMB.updateMeetingHistory(meetingId, (current: Row) => withTranscript(current, slide, phrase)),
-  exportTranscript: (meeting: Row) => {
-    const url = URL.createObjectURL(new Blob([transcriptText(meeting)], {type:"text/plain;charset=utf-8"}));
+  exportTranscript: (meeting: Row, format: "notes" | "readable" = "notes") => {
+    const url = URL.createObjectURL(new Blob([format === "readable" ? readableTranscriptText(meeting) : transcriptText(meeting)], {type:"text/plain;charset=utf-8"}));
     const link = document.createElement("a"); link.href = url;
-    link.download = `Meeting-${meeting.date}-${meeting.id}.txt`; link.click();
+    link.download = `${format === "readable" ? "Transcript" : "Meeting"}-${meeting.date}-${meeting.id}.txt`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
   translationEnabled,

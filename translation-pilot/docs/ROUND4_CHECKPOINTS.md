@@ -60,3 +60,11 @@ Validation: 49 frontend tests, 21 localization browser checks, 10 hosted-interfa
 ## Interface corrections — v0.4.12
 
 Wrapped sidebar navigation text stays left-aligned. The application name and sidebar logo remain Morning Meeting Builder in both interface languages; Spanish references to the application retain that name.
+
+## Compact transcript reader — v0.4.13
+
+Meeting detail opens with the transcript above metadata and agenda. Original fragments join into readable paragraphs under chronological slide/topic headings; long topics get paragraph breaks after roughly 120 words. No sentence numbering in the default view. A small start time appears once per paragraph; Detailed timestamps restores every original entry with tighter spacing. Search filters passages, while Copy entire transcript and Download transcript (.txt) always export the full clean text, including original spoken English/Spanish. Download meeting notes retains the detailed metadata export. Clipboard denial offers a selectable full-text fallback. All new interface labels are available in English and Mexican Spanish.
+
+Existing saved meetings use the new view without rewriting their fragments. Capture, provider settings, account permissions, retention, and transcript storage are unchanged. Receipt timestamps are not interpreted as silence; speaker identities are not guessed. Paid Deepgram streaming diarization remains disabled. Enabling it later requires retaining speaker labels on new capture; past recordings lack speaker/audio data for retroactive identification.
+
+Validation: TypeScript, lint, localization audit, all 53 frontend tests, both demo/hosted builds, and 11 Chromium transcript-reader checks passed. Browser checks cover a 180-fragment recording, partial sentence joining, topic boundaries, search, full copy/download despite filtering, detailed timestamps, Spanish controls, clipboard fallback, mobile width, and unchanged saved fragments. No new paid provider requests were made.

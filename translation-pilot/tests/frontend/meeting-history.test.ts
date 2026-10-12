@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { withTranscript, withPresentedTopic, transcriptText, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
+import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
 import { defaults } from "../../frontend/src/defaults";
 import { expireSavedMedia } from "../../frontend/src/retention";
 const slide = {id:crypto.randomUUID(),definition:{title:"Safety Moment"},items:[{id:crypto.randomUUID(),title:"Safe lifting",type:"lesson"}]};
@@ -34,4 +34,35 @@ test("unpresented meetings sort first and past presentations sort newest first",
     {...meeting,id:'recent',startedAt:'2026-10-09T12:00:00Z'}];
   expect(groupMeetings(rows).saved.map(row=>row.id)).toEqual(['future']);
   expect(groupMeetings(rows).presented.map(row=>row.id)).toEqual(['recent','older']);
+});
+test("joins partial sentences and mixed languages without changing saved fragments or inventing speaker changes",()=>{
+  let saved=withTranscript(meeting,slide,{source:"en",text:"Keep the"},"2026-10-12T12:00:00Z");
+  saved=withTranscript(saved,slide,{source:"en",text:"aisle clear."},"2026-10-12T12:00:04Z");
+  saved=withTranscript(saved,slide,{source:"es",text:"El pasillo está libre."},"2026-10-12T12:01:00Z");
+  const original=JSON.stringify(saved);
+  expect(transcriptParagraphs(saved)).toHaveLength(1);
+  expect(transcriptParagraphs(saved)[0].text).toBe("Keep the aisle clear. El pasillo está libre.");
+  expect(readableTranscriptText(saved)).toContain("Keep the aisle clear. El pasillo está libre.");
+  expect(readableTranscriptText(saved)).not.toContain("2026-10-12T12:");
+  expect(JSON.stringify(saved)).toBe(original);
+});
+test("separates slide transitions in chronological order including returning to the same topic",()=>{
+  const other={...slide,id:crypto.randomUUID(),definition:{title:"Improvements"}};
+  let saved=withTranscript(meeting,slide,{source:"en",text:"Safety first."});
+  saved=withTranscript(saved,other,{source:"en",text:"Move the tools."});
+  saved=withTranscript(saved,slide,{source:"en",text:"Wear safety glasses."});
+  expect(transcriptParagraphs(saved).map(row=>row.slideTitle)).toEqual(["Safety Moment","Improvements","Safety Moment"]);
+  expect(readableTranscriptText(saved).indexOf("Move the tools.")).toBeLessThan(readableTranscriptText(saved).indexOf("Wear safety glasses."));
+});
+test("keeps long topics readable without dropping text and preserves the detailed export",()=>{
+  let saved: typeof meeting & {transcript?: any[]}=meeting;
+  for(let i=0;i<130;i++) saved=withTranscript(saved,slide,{source:"en",text:`word${i}`});
+  const paragraphs=transcriptParagraphs(saved);
+  expect(paragraphs).toHaveLength(2);
+  expect(paragraphs.map(row=>row.text).join(" ")).toBe(Array.from({length:130},(_,i)=>`word${i}`).join(" "));
+  expect(transcriptText(saved)).toContain(`[${saved.transcript![0].at}] Safety Moment (EN): word0`);
+});
+test("handles meetings without captured speech",()=>{
+  expect(transcriptParagraphs(meeting)).toEqual([]);
+  expect(readableTranscriptText(meeting)).toContain("No transcript captured.");
 });

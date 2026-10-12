@@ -18,6 +18,7 @@ import { defaults, resetDefaults } from "./defaults";
 import { csv, normalizeNumber, zonedInput, zonedUtc } from "./domain";
 import type { Row, State } from "./types";
 import { canReadMeeting, groupMeetings } from "./meeting-history";
+import { TranscriptReader } from "./transcript-reader";
 import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
 import { learnableKey } from "./remote";
@@ -85,6 +86,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
         <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
           {editable&&<button className="primary" onClick={()=>onOpen(meeting)}>{translateUI("Open saved presentation")}</button>}
           <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
+      <TranscriptReader key={meeting.id} meeting={meeting} />
       <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
         <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{meeting.date}</dd>
         <dt>{translateUI("Status")}</dt><dd>{meeting.status==="presenting"?translateUI("Paused / in progress"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved for presentation")}</dd>
@@ -98,11 +100,6 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
           :<ol>{meeting.slides.filter((slide:Row)=>!slide.skipped).map((slide:Row)=><li key={slide.id}>{slide.definition.title}
             {slide.items.length>0&&<span> — {slide.items.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>}
         {meeting.mediaExpiredAt&&<p className="muted">{translateUI("Temporary presentation media expired. Saved topic titles and transcript remain available.")}</p>}
-      </div>
-      <div className="panel meeting-transcript"><h2>{translateUI("Transcript")}</h2>
-        {(meeting.transcript??[]).length?<ol>{meeting.transcript.map((entry:Row)=><li key={entry.id}>
-          <small><time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(getLocale())}</time> · {entry.slideTitle} · {entry.language.toUpperCase()}</small>
-          <p>{entry.text}</p></li>)}</ol>:<p>{translateUI("No transcript was captured. During presentation, choose Start transcript or Start Translation to save speech text.")}</p>}
       </div>
     </section>;
   }

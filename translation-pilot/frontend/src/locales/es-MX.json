@@ -1017,5 +1017,16 @@
   "Presenter passphrase": "Frase de acceso del presentador",
   "Choose file": "Elegir archivo",
   "Choose files": "Elegir archivos",
-  "No file selected": "Ningún archivo seleccionado"
+  "No file selected": "Ningún archivo seleccionado",
+  "No transcript captured.": "No se capturó ninguna transcripción.",
+  "Entire transcript copied.": "Se copió la transcripción completa.",
+  "Select the text below to copy the entire transcript.": "Selecciona el texto de abajo para copiar la transcripción completa.",
+  "Copy entire transcript": "Copiar toda la transcripción",
+  "Download transcript (.txt)": "Descargar transcripción (.txt)",
+  "Search transcript": "Buscar en la transcripción",
+  "Readable view": "Vista de lectura",
+  "Detailed timestamps": "Marcas de tiempo detalladas",
+  "Showing matching text. Copy and download include the entire transcript.": "Se muestra el texto que coincide con la búsqueda. Al copiar o descargar, se incluye toda la transcripción.",
+  "Entire transcript": "Transcripción completa",
+  "No matching transcript text.": "No se encontró texto que coincida con la búsqueda."
 }

@@ -243,8 +243,17 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .meeting-list-row small { display:block; font-weight:normal; margin-top:.25rem; }
 .meeting-metadata { display:grid; grid-template-columns:max-content 1fr; gap:.5rem 1.5rem; }
 .meeting-metadata dd { margin:0; overflow-wrap:anywhere; }
-.meeting-transcript li { margin-bottom:1rem; }
+.meeting-transcript li { margin-bottom:.35rem; }
 .meeting-transcript p { margin:.3rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.transcript-heading, .transcript-tools { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
+.transcript-heading h2 { margin:0; }
+.transcript-tools { margin:.7rem 0; }
+.transcript-tools input { flex:1; min-width:12rem; }
+.transcript-paragraph h3 { margin:.8rem 0 .2rem; font-size:1rem; }
+.transcript-paragraph p { margin:.4rem 0; line-height:1.5; }
+.transcript-time { color:#64748b; font-size:.8rem; margin-right:.35rem; white-space:nowrap; }
+.transcript-details { padding-left:1.4rem; }
+.transcript-copy { width:100%; min-height:12rem; }
 @media(max-width:600px) { .meeting-list-row { flex-direction:column; } .meeting-metadata { grid-template-columns:1fr; gap:.3rem; } }
 
 :fullscreen .modal.practice-preview { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }

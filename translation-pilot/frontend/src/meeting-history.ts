@@ -1,5 +1,6 @@
 import type { Row, Account } from "./types";
 import type { Caption } from "./translation";
+import { t as translateUI } from "./i18n";
 
 export function canReadMeeting(account: Account, meeting: Row): boolean {
   return account.organization_id === meeting.organization_id &&
@@ -43,4 +44,42 @@ export function transcriptText(meeting: Row): string {
   const lines = (meeting.transcript ?? []).map((entry: Row) =>
     `[${entry.at}] ${entry.slideTitle} (${entry.language.toUpperCase()}): ${entry.text}`).join("\n");
   return `${title}\n\nPresented topics\n${topics || "No slides logged."}\n\nTranscript\n${lines || "No transcript captured."}\n`;
+}
+
+export type TranscriptParagraph = {
+  id: string; at: string; slideId: string; slideTitle: string; text: string;
+};
+
+// Keep the original fragments intact. Receipt timestamps are not silence measurements:
+// older recordings can be compacted without inventing pauses or speaker identities.
+export function transcriptParagraphs(meeting: Row): TranscriptParagraph[] {
+  const paragraphs: TranscriptParagraph[] = [];
+  let words = 0;
+  for (const entry of meeting.transcript ?? []) {
+    const text = String(entry.text ?? "").trim();
+    if (!text) continue;
+    const previous = paragraphs.at(-1);
+    if (!previous || previous.slideId !== entry.slideId || previous.slideTitle !== entry.slideTitle || words >= 120) {
+      paragraphs.push({id: entry.id, at: entry.at, slideId: entry.slideId,
+        slideTitle: entry.slideTitle, text});
+      words = text.split(/\s+/).length;
+    } else {
+      previous.text += " " + text;
+      words += text.split(/\s+/).length;
+    }
+  }
+  return paragraphs;
+}
+
+export function readableTranscriptText(meeting: Row): string {
+  const paragraphs = transcriptParagraphs(meeting);
+  const parts = [`${meeting.templateName}\n${translateUI("Presenter")}: ${meeting.presenter || translateUI("Not entered")}\n${translateUI("Meeting date")}: ${meeting.date}`, translateUI("Transcript")];
+  paragraphs.forEach((paragraph, index) => {
+    const previous = paragraphs[index - 1];
+    if (!previous || previous.slideId !== paragraph.slideId || previous.slideTitle !== paragraph.slideTitle)
+      parts.push(paragraph.slideTitle);
+    parts.push(paragraph.text);
+  });
+  if (!paragraphs.length) parts.push(translateUI("No transcript captured."));
+  return parts.join("\n\n") + "\n";
 }
