@@ -68,3 +68,9 @@ Meeting detail opens with the transcript above metadata and agenda. Original fra
 Existing saved meetings use the new view without rewriting their fragments. Capture, provider settings, account permissions, retention, and transcript storage are unchanged. Receipt timestamps are not interpreted as silence; speaker identities are not guessed. Paid Deepgram streaming diarization remains disabled. Enabling it later requires retaining speaker labels on new capture; past recordings lack speaker/audio data for retroactive identification.
 
 Validation: TypeScript, lint, localization audit, all 53 frontend tests, both demo/hosted builds, and 11 Chromium transcript-reader checks passed. Browser checks cover a 180-fragment recording, partial sentence joining, topic boundaries, search, full copy/download despite filtering, detailed timestamps, Spanish controls, clipboard fallback, mobile width, and unchanged saved fragments. No new paid provider requests were made.
+
+## Smaller bottom subtitles — v0.4.14
+
+Subtitles use smaller semibold white text with a dark outline/shadow near the bottom safe area. Removed the background card, border and visible language-direction badge; the language label stays available to assistive technology. Desktop text scales from 18–36px (about 25px at 1366px); mobile portrait uses 17–22px. Captions remain centered with a two-line limit, and presentation controls rise above them. Transcript improvements from v0.4.13 are retained.
+
+Validation: demo/hosted builds and localization audit passed. Chromium preview checks at 1920×1080, 1366×900, 844×390 and 390×844 verified smaller fonts, bottom placement, width, hidden badge and controls clearing subtitles. Desktop and landscape screenshots reviewed. No speech provider requests or full workflow reruns were needed for this style change.

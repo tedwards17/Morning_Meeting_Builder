@@ -1,4 +1,4 @@
-# Morning Meeting Builder — Round 4 (v0.4.13)
+# Morning Meeting Builder — Round 4 (v0.4.14)
 
 Meeting transcripts now open in a compact reading view with topic headings, search, full-text copy/download, and optional detailed timestamps. Existing saved recordings are preserved. Speaker diarization is not enabled.
 

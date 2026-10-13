@@ -205,17 +205,18 @@
   pointer-events: none;
 }
 .translation-state.error { color: #ffe2bc; }
-/* Bottom captions use only the text width; controls rise above the caption. */
+/* Television-style subtitles: compact text at the bottom safe area. */
 .translation-caption {
   position: absolute; z-index: 4; bottom: calc(env(safe-area-inset-bottom, 0px) + var(--caption-gap, 6px));
   left: 50%; transform: translateX(-50%); width: max-content;
-  max-width: min(92%, 1320px); box-sizing: border-box;
-  padding: 6px 12px; border: 1px solid #ffffff55; border-radius: 8px;
-  background: #06111de9; box-shadow: 0 3px 12px #0008; text-align: center; pointer-events: none;
+  max-width: min(90%, 1200px); box-sizing: border-box;
+  padding: 3px 8px; border: none; border-radius: 3px;
+  background: transparent; box-shadow: none; text-align: center; pointer-events: none;
 }
-.translation-caption span { display: block; margin: 0 0 2px; color: #badcff; font-size: clamp(10px, .85vw, 15px); font-weight: 750; }
+.translation-caption span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .translation-caption p {
-  margin: 0; color: #fff; font-size: clamp(23px, 2.6vw, 46px); font-weight: 750; line-height: 1.15;
+  margin: 0; color: #fff; font-size: clamp(18px, 1.85vw, 36px); font-weight: 600; line-height: 1.25;
+  text-shadow: -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000, 1px 1px 2px #000, 0 2px 4px #000;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden; overflow-wrap: anywhere;
 }
@@ -230,8 +231,8 @@
 @media (max-width: 700px) {
   .presentation-clock { font-size: 17px; padding: 5px 8px; }
   .translation-state { top: 48px; max-width: 75vw; font-size: 11px; }
-  .translation-caption { max-width: 94%; padding: 5px 9px; }
-  .translation-caption p { font-size: clamp(22px, 5vw, 30px); }
+  .translation-caption { max-width: 94%; padding: 3px 6px; }
+  .translation-caption p { font-size: clamp(17px, 4vw, 22px); }
   .presentation-controls { flex-wrap: wrap; justify-content: center; gap: 5px; }
   .presentation-controls .translation-toggle, .presentation-controls .translation-preview { font-size: 12px; padding: 5px 7px; }
 }
