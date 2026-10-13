@@ -24,8 +24,8 @@ await p.getByRole('button',{name:'Preview captions',exact:true}).click();
 await p.locator('.translation-caption').waitFor();
 await p.waitForTimeout(50);
 const box=await p.locator('.translation-caption').boundingBox();const controls=await p.locator('.presentation-controls').boundingBox();
-ok(`${viewport.width}: bottom gap is 6 pixels`,Math.abs(viewport.height-box.y-box.height-6)<2);
-ok(`${viewport.width}: navigation remains above captions`,controls.y+controls.height<=box.y-3);
+ok(`${viewport.width}: controls stay at the bottom`,Math.abs(viewport.height-controls.y-controls.height)<2);
+ok(`${viewport.width}: captions rise above visible controls`,box.y+box.height<=controls.y-3);
 ok(`${viewport.width}: caption stays inside visible width`,box.x>=0&&box.x+box.width<=viewport.width);
 await p.screenshot({path:`test-results/round4-${viewport.width}.png`});
 // Slide changes preserve overlay; advance to the existing safety YouTube slide.

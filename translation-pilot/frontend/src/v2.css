@@ -212,6 +212,7 @@
   max-width: min(90%, 1200px); box-sizing: border-box;
   padding: 3px 8px; border: none; border-radius: 3px;
   background: transparent; box-shadow: none; text-align: center; pointer-events: none;
+  transition: bottom .15s ease;
 }
 .translation-caption span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .translation-caption p {
@@ -220,7 +221,7 @@
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden; overflow-wrap: anywhere;
 }
-.presentation.has-caption .presentation-controls { bottom: calc(env(safe-area-inset-bottom, 0px) + var(--caption-gap, 6px) + var(--caption-height, 100px) + 8px); }
+.presentation:has(.presentation-controls.visible, .presentation-controls:focus-within) .translation-caption { bottom: calc(var(--controls-height, 64px) + var(--caption-gap, 6px) + 8px); }
 .fullscreen-message {
   position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; z-index: 6;
   width: min(60%, 520px); padding: 10px; font-size: 14px; background: #071521f2; border-radius: 8px;
@@ -255,6 +256,7 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .transcript-time { color:#64748b; font-size:.8rem; margin-right:.35rem; white-space:nowrap; }
 .transcript-details { padding-left:1.4rem; }
 .transcript-copy { width:100%; min-height:12rem; }
+.transcript-match { background:#ffe17a; color:#17232e; border-radius:2px; padding:0; }
 @media(max-width:600px) { .meeting-list-row { flex-direction:column; } .meeting-metadata { grid-template-columns:1fr; gap:.3rem; } }
 
 :fullscreen .modal.practice-preview { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
@@ -269,6 +271,8 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 
 .language-selector { position: relative; flex: 0 0 auto; display: inline-block; }
 .language-button, .language-menu button { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 12px; border: 1px solid #becddd; border-radius: 7px; background: #fff; color: #143650; font-weight: 600; cursor: pointer; }
+.language-button { width:44px; height:44px; min-width:44px; padding:6px; justify-content:center; }
+.sidebar-language { margin:14px 8px 0; }
 .language-selector span, .v2-bar .language-selector span { flex: 0 1 auto; font-size: 14px; }
 .language-flag { display: block; width: 32px; height: 21px; flex: 0 0 32px; border-radius: 2px; box-shadow: 0 0 0 1px #14365022; }
 .language-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 190px; padding: 5px; border: 1px solid #becddd; border-radius: 9px; background: white; color: #143650; box-shadow: 0 5px 20px #001c3c33; z-index: 1000; }
@@ -276,6 +280,7 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .language-menu button:hover, .language-menu button[aria-pressed="true"] { background: #eaf1f8; }
 .language-menu button:focus-visible, .language-button:focus-visible { outline: 3px solid #7dc3f4; outline-offset: 2px; }
 .boot > .language-selector { display: table; margin: 0 0 24px auto; }
+.boot > .language-selector .language-menu { left:auto; right:0; }
 .record-details { white-space: normal; font-size: 13px; max-height: 400px; overflow: auto; }
 .record-details div { padding: 4px; border-bottom: 1px solid #e0e6eb; }
 .record-details dt { font-weight: 600; }

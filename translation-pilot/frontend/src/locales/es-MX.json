@@ -1028,5 +1028,8 @@
   "Detailed timestamps": "Marcas de tiempo detalladas",
   "Showing matching text. Copy and download include the entire transcript.": "Se muestra el texto que coincide con la búsqueda. Al copiar o descargar, se incluye toda la transcripción.",
   "Entire transcript": "Transcripción completa",
-  "No matching transcript text.": "No se encontró texto que coincida con la búsqueda."
+  "No matching transcript text.": "No se encontró texto que coincida con la búsqueda.",
+  "Search": "Buscar",
+  "Clear": "Limpiar",
+  "{arg0} matches highlighted. Copy and download include the entire transcript.": "Se resaltaron {arg0} coincidencias. Al copiar o descargar, se incluye toda la transcripción."
 }

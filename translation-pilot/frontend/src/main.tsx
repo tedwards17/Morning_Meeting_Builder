@@ -24,6 +24,7 @@ import "./v2.css";
 import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
 globalThis.MMB.FilePicker = FilePicker;
+globalThis.MMB.LanguageSelector = LanguageSelector;
 const Original = OriginalApp as RT.ComponentType;
 const Provider = AppProvider as RT.ComponentType<{ children: RT.ReactNode }>;
 function useRuntime() {
@@ -86,7 +87,6 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
         <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
           {editable&&<button className="primary" onClick={()=>onOpen(meeting)}>{translateUI("Open saved presentation")}</button>}
           <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
-      <TranscriptReader key={meeting.id} meeting={meeting} />
       <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
         <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{meeting.date}</dd>
         <dt>{translateUI("Status")}</dt><dd>{meeting.status==="presenting"?translateUI("Paused / in progress"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved for presentation")}</dd>
@@ -101,6 +101,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
             {slide.items.length>0&&<span> — {slide.items.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>}
         {meeting.mediaExpiredAt&&<p className="muted">{translateUI("Temporary presentation media expired. Saved topic titles and transcript remain available.")}</p>}
       </div>
+      <TranscriptReader key={meeting.id} meeting={meeting} />
     </section>;
   }
   return <section className="meetings-page">
@@ -1026,7 +1027,6 @@ function Workspace() {
   return (
     <>
       <div className="v2-bar">
-        <LanguageSelector />
         <strong>
           {runtime.hosted
             ? (runtime.session?.account.location_name ??

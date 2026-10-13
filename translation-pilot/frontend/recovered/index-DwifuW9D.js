@@ -24020,7 +24020,7 @@ function EE({ meeting: n, onExit: i }) {
     [translationError, setTranslationError] = ae.useState(""),
     [captureMode, setCaptureMode] = ae.useState("translation"),
     [caption, setCaption] = ae.useState(null),
-    [captionHeight, setCaptionHeight] = ae.useState(0),
+    [controlsHeight, setControlsHeight] = ae.useState(0),
     [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
     [fullscreenMessage, setFullscreenMessage] = ae.useState(""),
     translationPending = ae.useRef(null),
@@ -24113,14 +24113,14 @@ function EE({ meeting: n, onExit: i }) {
   currentSlide.current = A;
   return (
     ae.useEffect(() => {
-      const element = document.querySelector(".translation-caption");
-      if (!element) { setCaptionHeight(0); return; }
-      const measure = () => setCaptionHeight(element.getBoundingClientRect().height);
+      const element = document.querySelector(".presentation-controls");
+      if (!element) return;
+      const measure = () => setControlsHeight(element.getBoundingClientRect().height);
       measure();
       const observer = new ResizeObserver(measure);
       observer.observe(element);
       return () => observer.disconnect();
-    }, [caption]),
+    }, []),
     ae.useEffect(() => {
       const changed = () => setFullscreen(Boolean(document.fullscreenElement));
       document.addEventListener("fullscreenchange", changed);
@@ -24180,7 +24180,7 @@ function EE({ meeting: n, onExit: i }) {
     }, [r.settings.wakeLock]),
     d.jsxs("div", {
       className: `presentation ${caption ? "has-caption" : ""}`,
-      style: { "--caption-gap": `${globalThis.MMB.captionGap}px`, "--caption-height": `${captionHeight}px` },
+      style: { "--caption-gap": `${globalThis.MMB.captionGap}px`, "--controls-height": `${controlsHeight}px` },
       onPointerMove: () => {
         (_(Date.now()), g(!0));
       },
@@ -26152,6 +26152,10 @@ function rz() {
                     ],
                   }),
                 ],
+              }),
+              d.jsx("div", {
+                className: "sidebar-language",
+                children: d.jsx(globalThis.MMB.LanguageSelector, {}),
               }),
               d.jsx("div", {
                 className: "company-label",

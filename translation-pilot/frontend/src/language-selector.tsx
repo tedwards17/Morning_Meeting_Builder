@@ -21,6 +21,7 @@ export function LanguageSelector() {
   const language = React.useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
   const [open,setOpen] = React.useState(false);
   const ref=React.useRef<HTMLDivElement>(null);
+  const button=React.useRef<HTMLButtonElement>(null);
   const current=languages.find(item=>item.code===language)!;
   React.useEffect(()=>{
     if(!open)return;
@@ -30,11 +31,11 @@ export function LanguageSelector() {
     return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
   },[open]);
   return <div className="language-selector" ref={ref}>
-    <button type="button" className="language-button" aria-label={t("Switch interface language")} aria-expanded={open} aria-haspopup="true" onClick={()=>setOpen(!open)}>
-      <Flag country={current.country}/><span>{current.name}</span><span aria-hidden="true">▾</span>
+    <button ref={button} type="button" className="language-button" title={current.name} aria-label={t("Switch interface language")} aria-expanded={open} aria-haspopup="true" onClick={()=>setOpen(!open)}>
+      <Flag country={current.country}/>
     </button>
     {open&&<div className="language-menu" aria-label={t("Language")}>
-      {languages.map(item=><button type="button" key={item.code} aria-pressed={language===item.code} onClick={()=>{setLanguage(item.code);setOpen(false);}}>
+      {languages.map(item=><button type="button" key={item.code} aria-pressed={language===item.code} onClick={()=>{setLanguage(item.code);setOpen(false);button.current?.focus();}}>
         <Flag country={item.country}/><span lang={item.locale}>{item.name}</span>{language===item.code&&<span aria-hidden="true">✓</span>}
       </button>)}
     </div>}
