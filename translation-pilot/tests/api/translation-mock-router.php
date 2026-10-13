@@ -6,7 +6,8 @@ function curl_setopt_array($curl,$options) { $curl->options=$options; }
 function curl_exec($curl) {
     file_put_contents(getenv('MMB_TEST_CAPTURE'), json_encode(['url'=>$curl->url,'options'=>$curl->options])."\n", FILE_APPEND);
     if (str_contains($curl->url,'/auth/grant')) return json_encode(['access_token'=>str_repeat('temporary-token-',5),'expires_in'=>30]);
-    return json_encode([['translations'=>[['text'=>'Buenos días']]]]);
+    $items = json_decode($curl->options[CURLOPT_POSTFIELDS], true);
+    return json_encode(array_map(fn($item)=>['translations'=>[['text'=>str_contains($curl->url,'from=es')?'Good morning':'Buenos días']]],$items));
 }
 function curl_getinfo($curl,$option) { return 200; }
 function curl_close($curl) {}

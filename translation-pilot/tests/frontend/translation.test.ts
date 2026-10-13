@@ -78,8 +78,21 @@ test('transcript-only capture saves final speech without Azure text requests',as
   const session=await startTranslation({translate:false,onTranscript,onStatus:vi.fn(),onCaption:vi.fn(),onError:vi.fn()});
   result('en');result('es');
   await vi.waitFor(()=>expect(onTranscript).toHaveBeenCalledTimes(2));
-  expect(onTranscript.mock.calls[0][0]).toEqual({text:'Good morning',source:'en'});
+  expect(onTranscript.mock.calls[0][0]).toMatchObject({text:'Good morning',source:'en'});
+  expect(onTranscript.mock.calls[0][0].id).not.toBe(onTranscript.mock.calls[1][0].id);
   expect(fetchMock.mock.calls.some(([url])=>String(url).endsWith('action=text'))).toBe(false);
+  session.stop();
+});
+test('links saved captions to their original phrase and waits for original storage before saving translation',async()=>{
+  const {startTranslation}=await import('../../frontend/src/translation');
+  let finishSave!: ()=>void;
+  const onTranscript=vi.fn(()=>new Promise<void>(resolve=>{finishSave=resolve;}));
+  const onTranslation=vi.fn().mockResolvedValue(undefined);
+  const session=await startTranslation({onTranscript,onTranslation,onStatus:vi.fn(),onCaption:vi.fn(),onError:vi.fn()});
+  result('en');await vi.waitFor(()=>expect(onTranscript).toHaveBeenCalledOnce());
+  await new Promise(resolve=>setTimeout(resolve,20));expect(onTranslation).not.toHaveBeenCalled();
+  finishSave();await vi.waitFor(()=>expect(onTranslation).toHaveBeenCalledOnce());
+  expect(onTranslation.mock.calls[0][0]).toEqual({id:onTranscript.mock.calls[0][0].id,language:'es',text:'Buenos días'});
   session.stop();
 });
 test('45-minute deadline stops capture and ignores later speech',async()=>{

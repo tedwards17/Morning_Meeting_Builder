@@ -46,9 +46,11 @@ if (!str_starts_with($origin, 'https://') && !($testHttp && preg_match('#^http:/
     problem(400, 'Configure an HTTPS app origin.');
 if (!($config['enabled'] ?? false)) reply(['enabled'=>false, 'error'=>'Translation is disabled on this server.'], 503);
 if (!str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) problem(415, 'Send JSON.');
-if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) problem(413, 'Captions request is too large.');
-$raw = file_get_contents('php://input', false, null, 0, 8193);
-if (strlen($raw) > 8192) problem(413, 'Captions request is too large.');
+$action = $_GET['action'] ?? '';
+$requestLimit = $action === 'transcript' ? 65536 : 8192;
+if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $requestLimit) problem(413, 'Captions request is too large.');
+$raw = file_get_contents('php://input', false, null, 0, $requestLimit + 1);
+if (strlen($raw) > $requestLimit) problem(413, 'Captions request is too large.');
 try { $body = json_decode($raw, true, 16, JSON_THROW_ON_ERROR); }
 catch (Throwable) { problem(400, 'Invalid JSON.'); }
 if (!is_array($body)) problem(400, 'Expected a JSON object.');
@@ -109,6 +111,45 @@ function provider(string $url, array $headers, array $payload, string $label): a
     if (!is_array($data)) problem(503, $label.' returned an invalid response.');
     return $data;
 }
+function translate_texts(array $texts, string $source): array {
+    global $config;
+    $key = (string)($config['translator_key'] ?? ''); $region = (string)($config['translator_region'] ?? 'global');
+    if (!$key || !preg_match('/^[a-z0-9-]{2,32}$/', $region)) problem(503, 'Azure Translator key or region is not configured.');
+    $headers = ['Ocp-Apim-Subscription-Key: '.$key];
+    if ($region !== 'global') $headers[] = 'Ocp-Apim-Subscription-Region: '.$region;
+    $target = $source === 'en' ? 'es' : 'en';
+    $data = provider('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from='.$source.'&to='.$target,
+        $headers, array_map(fn($text) => ['Text'=>$text], $texts), 'Azure Translator');
+    if (count($data) !== count($texts)) problem(503, 'Azure Translator returned an incomplete transcript.');
+    $results = [];
+    foreach ($data as $item) {
+        $text = $item['translations'][0]['text'] ?? '';
+        if (!is_string($text) || !trim($text) || strlen($text) > 36000) problem(503, 'Azure Translator returned no translation.');
+        $results[] = ['language'=>$target, 'text'=>$text];
+    }
+    return $results;
+}
+// Text-only review: same presenter authentication/CSRF/origin, no microphone or speech grant.
+if ($action === 'transcript') {
+    throttle('transcript', 60, 60);
+    $source = $body['source'] ?? '';
+    $items = $body['items'] ?? null;
+    if (!in_array($source, ['en','es'], true) || !is_array($items) || !array_is_list($items) || count($items) < 1 || count($items) > 20)
+        problem(422, 'Invalid transcript translation request.');
+    $texts = []; $ids = []; $bytes = 0;
+    foreach ($items as $item) {
+        $id = $item['id'] ?? ''; $text = $item['text'] ?? '';
+        if (!is_string($id) || !preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/D', $id) || isset($ids[$id]) ||
+            !is_string($text) || !trim($text) || strlen($text) > 12000)
+            problem(422, 'Invalid transcript translation request.');
+        $ids[$id] = true; $texts[] = $text; $bytes += strlen($text);
+    }
+    if ($bytes > 20000) problem(422, 'Transcript translation batch is too large.');
+    $results = translate_texts($texts, $source);
+    foreach ($results as $index => &$result) $result['id'] = $items[$index]['id'];
+    unset($result);
+    reply(['translations'=>$results]);
+}
 if ($action === 'session') {
     throttle('session', 10, 600);
     $key = (string)($config['deepgram_key'] ?? '');
@@ -130,15 +171,6 @@ if ($action === 'text') {
     $text = is_string($body['text'] ?? null) ? trim($body['text']) : '';
     $source = $body['source'] ?? '';
     if (!$text || strlen($text) > 3000 || !in_array($source, ['en','es'], true)) problem(422, 'Invalid caption text or language.');
-    $key = (string)($config['translator_key'] ?? ''); $region = (string)($config['translator_region'] ?? 'global');
-    if (!$key || !preg_match('/^[a-z0-9-]{2,32}$/', $region)) problem(503, 'Azure Translator key or region is not configured.');
-    $headers = ['Ocp-Apim-Subscription-Key: '.$key];
-    if ($region !== 'global') $headers[] = 'Ocp-Apim-Subscription-Region: '.$region;
-    $target = $source === 'en' ? 'es' : 'en';
-    $data = provider('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from='.$source.'&to='.$target,
-        $headers, [['Text'=>$text]], 'Azure Translator');
-    $translated = $data[0]['translations'][0]['text'] ?? '';
-    if (!is_string($translated) || !trim($translated)) problem(503, 'Azure Translator returned no caption.');
-    reply(['text'=>$translated]);
+    reply(['text'=>translate_texts([$text], $source)[0]['text']]);
 }
 problem(404, 'Captions action not found.');

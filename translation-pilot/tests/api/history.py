@@ -30,6 +30,12 @@ saved={**meeting,'transcript':[entry]}
 check('valid text and topic context accepted',request(saved).get('ok'))
 check('late transcript append accepted after completion',request(saved,meeting).get('ok'))
 check('saved transcript cannot be erased',bool(request(meeting,saved).get('error')))
+translated={**saved,'transcript':[{**entry,'translations':{'es':'Mantén el pasillo despejado.'}}]}
+check('completed transcript accepts an additive translation',request(translated,saved).get('ok'))
+check('stored translation cannot be replaced',bool(request({**translated,'transcript':[{**entry,'translations':{'es':'Changed'}}]},translated).get('error')))
+check('translation cannot replace the original speech',bool(request({**translated,'transcript':[{**translated['transcript'][0],'text':'Changed'}]},translated).get('error')))
+check('translation must use the opposite supported language',bool(request({**saved,'transcript':[{**entry,'translations':{'en':'Changed'}}]}).get('error')) and bool(request({**saved,'transcript':[{**entry,'translations':{'fr':'Changed'}}]}).get('error')))
+check('oversized translation rejected',bool(request({**saved,'transcript':[{**entry,'translations':{'es':'x'*36001}}]}).get('error')))
 check('completed presenter cannot be changed',bool(request({**saved,'presenter':'Other'},saved).get('error')))
 check('unknown transcript slide rejected',bool(request({**meeting,'transcript':[{**entry,'slideId':uid()}]}).get('error')))
 check('duplicate transcript identifiers rejected',bool(request({**meeting,'transcript':[entry,entry]}).get('error')))

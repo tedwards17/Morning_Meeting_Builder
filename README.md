@@ -1,6 +1,8 @@
-# Morning Meeting Builder — Round 4 (v0.4.17)
+# Morning Meeting Builder — Round 4 (v0.4.18)
 
-Meeting details and presented topics come first, followed by a compact transcript with highlighted search, inline search/clear icons, full-text copy/download, and optional detailed timestamps. The square flag selector is in the sidebar; subtitles move above visible presentation controls. Existing saved recordings are preserved. Speaker diarization is not enabled.
+Meeting transcripts follow the website's English/Spanish selection, with translated passages italicized and marked. Copy uses the displayed language; Download spoken transcript preserves the original mixed speech. Saved captions are reused and missing translations can be prepared through the private PHP site. See [translated transcripts](translation-pilot/docs/TRANSLATED_TRANSCRIPTS.md).
+
+Meeting details and presented topics come first, followed by a compact transcript with highlighted search, inline search/clear icons, and optional detailed timestamps. The square flag selector is in the sidebar; subtitles move above visible presentation controls. Existing saved recordings are preserved. Speaker diarization is not enabled.
 
 Sidebar clicks reopen each section's main page at the top. The introduction's greeting label is omitted from the transcript display and clean export; spoken words are retained.
 

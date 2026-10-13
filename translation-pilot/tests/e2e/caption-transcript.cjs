@@ -1,0 +1,22 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {spawn}=require('node:child_process');const assert=require('node:assert/strict');
+(async()=>{let browser;const server=spawn('python3',['-m','http.server','5197','--bind','127.0.0.1','--directory','build'],{stdio:'ignore'});let count=0;
+const ok=(name,value)=>{assert.ok(value,name);count++;console.log('PASS',name);};
+try{
+ await new Promise(r=>setTimeout(r,400));browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});const page=await browser.newPage({serviceWorkers:'block'});const errors=[];page.on('pageerror',e=>errors.push(e.message));const calls=[];
+ await page.route('**/translation-api/index.php?*',async route=>{const action=new URL(route.request().url()).searchParams.get('action');const body=route.request().postDataJSON();calls.push(action);const data=action==='status'?{enabled:true,authenticated:true,csrf:'test-csrf'}:action==='session'?{access_token:'test-token',sessionId:'test-session',expiresAt:Math.floor(Date.now()/1000)+2700}:action==='text'?{text:body.source==='en'?'Buenos días':'Good morning'}:{ok:true};await route.fulfill({contentType:'application/json',body:JSON.stringify(data)});});
+ await page.goto('http://127.0.0.1:5197/demo/');await page.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Saved caption test');await page.getByRole('button',{name:'Save presentation',exact:true}).click();
+ await page.evaluate(()=>{window.WebSocket=class{static OPEN=1;readyState=1;bufferedAmount=0;constructor(){window.testSocket=this;setTimeout(()=>this.onopen?.(),0);}send(){}close(){this.readyState=3;}};});
+ await page.getByRole('button',{name:'Present saved meeting',exact:true}).click();await page.getByRole('button',{name:'Start Translation',exact:true}).click();await page.getByText('Translation ON · Saving transcript…',{exact:true}).waitFor();
+ await page.evaluate(()=>testSocket.onmessage({data:JSON.stringify({type:'Results',is_final:true,channel:{alternatives:[{transcript:'Good morning',words:[{word:'Good',language:'en'},{word:'morning',language:'en'}]}]}})}));
+ await page.waitForFunction(async()=>(await MMB.repository.load()).meetings[0].transcript?.[0]?.translations?.es==='Buenos días');
+ ok('live English caption is saved alongside its original English phrase',await page.locator('.translation-caption p').innerText()==='Buenos días');
+ await page.evaluate(()=>testSocket.onmessage({data:JSON.stringify({type:'Results',is_final:true,channel:{alternatives:[{transcript:'Buenos días',words:[{word:'Buenos',language:'es'},{word:'días',language:'es'}]}]}})}));
+ await page.waitForFunction(async()=>(await MMB.repository.load()).meetings[0].transcript?.[1]?.translations?.en==='Good morning');
+ let state=await page.evaluate(()=>MMB.repository.load());ok('both source languages retain distinct stable identifiers and their opposite-language captions',state.meetings[0].transcript[0].text==='Good morning'&&state.meetings[0].transcript[1].text==='Buenos días'&&state.meetings[0].transcript[0].id!==state.meetings[0].transcript[1].id);
+ await page.getByRole('button',{name:'Pause and exit presentation',exact:true}).click();await page.getByRole('dialog',{name:'Confirm action',exact:true}).getByRole('button',{name:'Confirm',exact:true}).click();await page.getByPlaceholder('Who is leading today?').waitFor();
+ await page.evaluate(async()=>{const stale=await MMB.repository.load();for(const entry of stale.meetings[0].transcript)delete entry.translations;await MMB.repository.save(stale);await MMB.refresh();});
+ state=await page.evaluate(()=>MMB.repository.load());ok('a stale builder save cannot erase translations already stored asynchronously',state.meetings[0].transcript[0].translations.es==='Buenos días'&&state.meetings[0].transcript[1].translations.en==='Good morning');
+ await page.getByRole('button',{name:'Meetings',exact:true}).click();await page.locator('.meeting-list-row').click();await page.locator('.meeting-transcript em').waitFor();
+ ok('review uses saved live captions without requesting translation again',await page.locator('.meeting-transcript em').innerText()==='Good morning*'&&!calls.includes('transcript')&&errors.length===0);
+ console.log(`${count} live caption/transcript checks passed.`);
+}finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exit(1);});

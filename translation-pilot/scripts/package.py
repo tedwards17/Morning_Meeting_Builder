@@ -48,7 +48,7 @@ for name in ['index.php','.htaccess']:shutil.copyfile(root/'translation-api'/nam
 (local/'private').mkdir();shutil.copyfile(root/'translation-api/config.example.php',local/'private/config.example.php')
 (local/'scripts').mkdir();shutil.copyfile(root/'scripts/presenter-hash.php',local/'scripts/presenter-hash.php')
 (local/'docs').mkdir()
-for name in ['ROUND4_HANDOFF.md','ROUND4_VERIFICATION.md','ROUND4_FOLLOWUP_HANDOFF.md','ROUND4_FOLLOWUP_VERIFICATION.md','ROUND4_CHECKPOINTS.md','PRESENTATION_REMOTES.md','ANNOUNCEMENTS.md','LOCALIZATION.md']:shutil.copyfile(root/'docs'/name,local/'docs'/name)
+for name in ['ROUND4_HANDOFF.md','ROUND4_VERIFICATION.md','ROUND4_FOLLOWUP_HANDOFF.md','ROUND4_FOLLOWUP_VERIFICATION.md','ROUND4_CHECKPOINTS.md','PRESENTATION_REMOTES.md','ANNOUNCEMENTS.md','LOCALIZATION.md','TRANSLATED_TRANSCRIPTS.md']:shutil.copyfile(root/'docs'/name,local/'docs'/name)
 (local/'README.txt').write_text('Round 4 follow-up: upload only public_html contents. Put private/config.example.php OUTSIDE the document root as config.php and set MMB_TRANSLATION_CONFIG. Read docs/ROUND4_HANDOFF.md for private credentials, presenter hash, PHP setup and testing. Node is not a production service. No MySQL is required by this package.\n')
 print('Local PHP package paths valid:',validate(local_public))
 zip_tree(out/'morning-meeting-builder-round4-php.zip',local)

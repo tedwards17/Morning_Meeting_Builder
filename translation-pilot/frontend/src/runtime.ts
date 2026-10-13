@@ -6,7 +6,7 @@ import { APP_VERSION, defaults, upgradeDefaults } from "./defaults";
 import { expireSavedMedia, isMeetingExpired } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
-import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, canReadMeeting } from "./meeting-history";
+import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, canReadMeeting } from "./meeting-history";
 import { translationEnabled, captionGap, toggleFullscreen } from "./presentation-config";
 import * as db from "./db";
 import {
@@ -319,8 +319,15 @@ export const repository = {
       // Builder saves and presentation exit can contain an older React snapshot.
       // Preserve already-persisted speech and topic snapshots on every write.
       if (prior) {
-        if (prior.transcript || meeting.transcript) meeting.transcript = [...new Map([...(prior.transcript ?? []), ...(meeting.transcript ?? [])]
-          .map((entry: Row) => [entry.id, entry])).values()];
+        if (prior.transcript || meeting.transcript) {
+          const entries = new Map<string, Row>((prior.transcript ?? []).map((entry: Row) => [entry.id, entry]));
+          for (const entry of meeting.transcript ?? []) {
+            const saved = entries.get(entry.id);
+            entries.set(entry.id, {...entry, ...(saved?.translations || entry.translations
+              ? {translations: {...entry.translations, ...saved?.translations}} : {})});
+          }
+          meeting.transcript = [...entries.values()];
+        }
         if (prior.presentedTopics || meeting.presentedTopics) meeting.presentedTopics = [...new Map([...(prior.presentedTopics ?? []), ...(meeting.presentedTopics ?? [])]
           .map((topic: Row) => [topic.slideId, topic])).values()];
       }
@@ -696,8 +703,12 @@ globalThis.MMB = {
   hosted,
   translationPilot,
   startTranslation,
-  captureTranscript: (meetingId: string, slide: Row, phrase: {text: string; source: "en" | "es"}) =>
+  captureTranscript: (meetingId: string, slide: Row, phrase: import("./translation").Caption) =>
     globalThis.MMB.updateMeetingHistory(meetingId, (current: Row) => withTranscript(current, slide, phrase)),
+  captureTranscriptTranslations: (meetingId: string, translations: import("./translation").TranscriptTranslation[]) =>
+    globalThis.MMB.updateMeetingHistory(meetingId, (current: Row) => withTranscriptTranslations(current, translations)),
+  canSaveTranscriptTranslations: (meeting: Row) => !hosted || (!!session && session.account.role !== "report_viewer" &&
+    meeting.account_id === session.account.id && meeting.device_id === session.device.id),
   exportTranscript: (meeting: Row, format: "notes" | "readable" = "notes") => {
     const url = URL.createObjectURL(new Blob([format === "readable" ? readableTranscriptText(meeting) : transcriptText(meeting)], {type:"text/plain;charset=utf-8"}));
     const link = document.createElement("a"); link.href = url;

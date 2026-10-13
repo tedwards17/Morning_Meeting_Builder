@@ -1,5 +1,5 @@
 import type { Row, Account } from "./types";
-import type { Caption } from "./translation";
+import type { Caption, TranscriptTranslation } from "./translation";
 import { t as translateUI } from "./i18n";
 
 export function canReadMeeting(account: Account, meeting: Row): boolean {
@@ -19,10 +19,29 @@ export function withTranscript(meeting: Row, slide: Row, phrase: Caption, at = n
   const transcript = meeting.transcript ?? [];
   if (transcript.length >= 6000) throw new Error("Transcript limit reached. Stop capture and start a new meeting.");
   return { ...meeting, transcript: [...transcript, {
-    id: crypto.randomUUID(), at, text: phrase.text, language: phrase.source,
+    id: phrase.id ?? crypto.randomUUID(), at, text: phrase.text, language: phrase.source,
     presenter: meeting.presenter, slideId: slide.id, slideTitle: slide.definition.title,
     contentTitles: slide.items.map((item: Row) => item.title),
   }] };
+}
+
+export function withTranscriptTranslations(meeting: Row, translations: TranscriptTranslation[]): Row {
+  return {...meeting, transcript: (meeting.transcript ?? []).map((entry: Row) => {
+    const added = translations.filter(item => item.id === entry.id && item.language !== entry.language && item.text.trim());
+    if (!added.length) return entry;
+    const values = {...entry.translations};
+    for (const item of added) values[item.language] ??= item.text;
+    return {...entry, translations: values};
+  })};
+}
+
+export function transcriptDisplayEntries(meeting: Row, language?: "en" | "es"): Row[] {
+  return (meeting.transcript ?? []).map((entry: Row) => {
+    const translated = !!language && entry.language !== language;
+    const text = translated ? entry.translations?.[language!] : entry.text;
+    const available = typeof text === "string" && !!text.trim();
+    return {...entry, text: available ? text : "", translated, missingTranslation: !available};
+  });
 }
 
 export function withPresentedTopic(meeting: Row, slide: Row, ids: string[], at = new Date().toISOString()): Row {
@@ -48,6 +67,7 @@ export function transcriptText(meeting: Row): string {
 
 export type TranscriptParagraph = {
   id: string; at: string; slideId: string; slideTitle: string; text: string;
+  parts: {text: string; translated: boolean; missingTranslation: boolean}[];
 };
 
 export function transcriptTopicTitle(meeting: Row, entry: {slideId: string; slideTitle: string}): string {
@@ -58,35 +78,42 @@ export function transcriptTopicTitle(meeting: Row, entry: {slideId: string; slid
 
 // Keep the original fragments intact. Receipt timestamps are not silence measurements:
 // older recordings can be compacted without inventing pauses or speaker identities.
-export function transcriptParagraphs(meeting: Row): TranscriptParagraph[] {
+export function transcriptParagraphs(meeting: Row, language?: "en" | "es"): TranscriptParagraph[] {
   const paragraphs: TranscriptParagraph[] = [];
   let words = 0;
-  for (const entry of meeting.transcript ?? []) {
+  for (const entry of transcriptDisplayEntries(meeting, language)) {
     const text = String(entry.text ?? "").trim();
-    if (!text) continue;
+    if (!text && !entry.missingTranslation) continue;
+    const part = {text, translated: entry.translated, missingTranslation: entry.missingTranslation};
     const previous = paragraphs.at(-1);
     if (!previous || previous.slideId !== entry.slideId || previous.slideTitle !== entry.slideTitle || words >= 120) {
       paragraphs.push({id: entry.id, at: entry.at, slideId: entry.slideId,
-        slideTitle: entry.slideTitle, text});
+        slideTitle: entry.slideTitle, text, parts: [part]});
       words = text.split(/\s+/).length;
     } else {
       previous.text += " " + text;
+      const last = previous.parts.at(-1)!;
+      if (!part.missingTranslation && !last.missingTranslation && last.translated === part.translated) last.text += " " + text;
+      else previous.parts.push(part);
       words += text.split(/\s+/).length;
     }
   }
   return paragraphs;
 }
 
-export function readableTranscriptText(meeting: Row): string {
-  const paragraphs = transcriptParagraphs(meeting);
+export function readableTranscriptText(meeting: Row, language?: "en" | "es"): string {
+  const paragraphs = transcriptParagraphs(meeting, language);
+  if (paragraphs.some(row => row.parts.some(part => part.missingTranslation)))
+    throw new Error(translateUI("Finish preparing this language before copying the transcript."));
   const parts = [`${meeting.templateName}\n${translateUI("Presenter")}: ${meeting.presenter || translateUI("Not entered")}\n${translateUI("Meeting date")}: ${meeting.date}`, translateUI("Transcript")];
   paragraphs.forEach((paragraph, index) => {
     const previous = paragraphs[index - 1];
     const topic = transcriptTopicTitle(meeting, paragraph);
     if (topic && (!previous || previous.slideId !== paragraph.slideId || previous.slideTitle !== paragraph.slideTitle))
       parts.push(topic);
-    parts.push(paragraph.text);
+    parts.push(language ? paragraph.parts.map(part => part.translated ? `${part.text}*` : part.text).join(" ") : paragraph.text);
   });
   if (!paragraphs.length) parts.push(translateUI("No transcript captured."));
+  if (language && paragraphs.some(row => row.parts.some(part => part.translated))) parts.push(translateUI("* Translated from the original speech."));
   return parts.join("\n\n") + "\n";
 }

@@ -24,6 +24,7 @@ const assert=require('node:assert/strict');
    meeting.presentedTopics=meeting.slides.slice(0,2).map((slide,i)=>({id:slide.id,slideId:slide.id,title:i?'Improvements':'Safety',at:meeting.startedAt,presenter:meeting.presenter,content:[]}));
    meeting.transcript=Array.from({length:180},(_,i)=>({id:crypto.randomUUID(),at:new Date(Date.parse(meeting.startedAt)+i*4000).toISOString(),
     text:i===0?'Keep the':i===1?'aisle clear.':i===35?'We discussed latch adjustment and safe mounting.':i===179?'El pasillo está libre.':`Recorded fragment ${i}: prepare the tools before work.`,
+    translations:i===179?{en:'The aisle is clear.'}:{es:i===0?'Mantén el':i===1?'pasillo despejado.':`Fragmento grabado ${i}: prepara las herramientas antes del trabajo.`},
     language:i===179?'es':'en',presenter:meeting.presenter,slideId:meeting.slides[i<100?0:1].id,
     slideTitle:i<100?'Safety':'Improvements',contentTitles:[]}));
    await MMB.repository.save(state);return JSON.stringify(meeting.transcript);
@@ -55,11 +56,11 @@ const assert=require('node:assert/strict');
   await reader.getByRole('button',{name:'Copy entire transcript',exact:true}).click();
   await reader.getByText('Entire transcript copied.',{exact:true}).waitFor();
   const copied=await page.evaluate(()=>navigator.clipboard.readText());
-  ok('copy includes the entire original-language transcript without highlight markup',copied.includes('Keep the aisle clear.')&&copied.includes('El pasillo está libre.')&&copied.includes('Transcript tester')&&!copied.includes('[2026-10-12T')&&!copied.includes('<mark'));
+  ok('copy includes the entire original-language transcript without highlight markup',copied.includes('Keep the aisle clear.')&&copied.includes('The aisle is clear.*')&&!copied.includes('El pasillo está libre.')&&copied.includes('Transcript tester')&&!copied.includes('[2026-10-12T')&&!copied.includes('<mark'));
   const downloadPromise=page.waitForEvent('download');
-  await reader.getByRole('button',{name:'Download transcript (.txt)',exact:true}).click();
+  await reader.getByRole('button',{name:'Download spoken transcript (.txt)',exact:true}).click();
   const download=await downloadPromise;
-  ok('UTF-8 plain-text download matches the full clean copy',download.suggestedFilename().startsWith('Transcript-')&&fs.readFileSync(await download.path(),'utf8')===copied);
+  ok('UTF-8 download preserves original mixed speech instead of translated copy',download.suggestedFilename().startsWith('Transcript-')&&fs.readFileSync(await download.path(),'utf8').includes('El pasillo está libre.')&&!fs.readFileSync(await download.path(),'utf8').includes('The aisle is clear.'));
   await reader.getByRole('searchbox').fill('');
   await reader.getByRole('button',{name:'Detailed timestamps',exact:true}).click();
   ok('detailed view retains all 180 entries and original timestamps',await reader.locator('li').count()===180&&await reader.locator('time').first().getAttribute('datetime')==='2026-10-12T12:00:00.000Z');
@@ -73,7 +74,7 @@ const assert=require('node:assert/strict');
   ok('an unmatched readable search leaves the full transcript on screen',await reader.locator('.transcript-paragraph').count()===paragraphCount&&await reader.getByText('No matching transcript text.',{exact:true}).isVisible());
   await clearSearch();
   await page.getByRole('button',{name:'Switch interface language',exact:true}).click();await page.getByRole('button',{name:'Español',exact:true}).click();
-  ok('Spanish controls retain original spoken text and translate the search icon',await page.getByRole('button',{name:'Copiar toda la transcripción',exact:true}).isVisible()&&await reader.getByRole('button',{name:'Buscar',exact:true}).isVisible()&&await reader.getByRole('button',{name:'Limpiar',exact:true}).count()===0&&await page.getByText(/Keep the aisle clear\./).isVisible());
+  ok('Spanish controls show Spanish speech and translated English passages',await page.getByRole('button',{name:'Copiar toda la transcripción',exact:true}).isVisible()&&await reader.getByRole('button',{name:'Buscar',exact:true}).isVisible()&&await reader.getByRole('button',{name:'Limpiar',exact:true}).count()===0&&await page.getByText(/Mantén el pasillo despejado\./).isVisible());
   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('Blocked');}}}));
   await page.getByRole('button',{name:'Copiar toda la transcripción',exact:true}).click();
   const fallback=page.getByRole('textbox',{name:'Transcripción completa',exact:true});await fallback.waitFor();
@@ -82,7 +83,7 @@ const assert=require('node:assert/strict');
   ok('mobile transcript stays within its panel',await page.locator('.meeting-transcript').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
   await reader.getByRole('searchbox').fill('pasillo');
   await reader.getByRole('button',{name:'Buscar',exact:true}).click();
-  ok('mobile Search highlights Spanish speech and dismisses input focus',await reader.locator('mark').innerText()==='pasillo'&&await reader.getByRole('searchbox').evaluate(el=>document.activeElement!==el));
+  ok('mobile Search highlights Spanish speech and dismisses input focus',(await reader.locator('mark').allTextContents()).every(text=>text==='pasillo')&&await reader.locator('mark').count()===2&&await reader.getByRole('searchbox').evaluate(el=>document.activeElement!==el));
   const saved=await page.evaluate(async()=>JSON.stringify((await MMB.repository.load()).meetings[0].transcript));
   ok('viewing, searching, copying, downloading and switching languages leave saved fragments unchanged',saved===original&&errors.length===0);
   console.log(`${checks.length} transcript reader checks passed.`);

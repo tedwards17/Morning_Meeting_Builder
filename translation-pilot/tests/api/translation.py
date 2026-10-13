@@ -1,5 +1,5 @@
 """PHP gateway integration with deterministic provider responses; no real credentials/network."""
-import http.cookiejar, json, os, re, socket, subprocess, tempfile, time, urllib.request, urllib.error
+import http.cookiejar, json, os, re, socket, subprocess, tempfile, time, urllib.request, urllib.error, uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 PHP=os.environ.get('PHP_BINARY','php')
@@ -27,6 +27,7 @@ with tempfile.TemporaryDirectory() as tmp:
         check('status requires presenter authentication',status==200 and not body['authenticated'])
         check('rejects incorrect native origin even with the configured page-origin header',request('status',custom_origin='https://untrusted.invalid')[0]==403)
         check('blocks token mint before authentication',request('session')[0]==401)
+        check('blocks transcript translation before authentication',request('transcript')[0]==401)
         check('rejects incorrect passphrase',request('unlock',{'passphrase':'incorrect'})[0]==401)
         status,auth=request('unlock',{'passphrase':'example-only-test-passphrase'});csrf=auth['csrf']
         check('presenter unlock creates CSRF session',status==200 and len(csrf)==64)
@@ -43,6 +44,15 @@ with tempfile.TemporaryDirectory() as tmp:
         check('uses opposite Azure target language',calls[-1]['url'].endswith('from=es&to=en') and calls[-2]['url'].endswith('from=en&to=es'))
         check('global Translator omits region header',not any('Subscription-Region:' in v for v in calls[-1]['options']['3']))
         check('stop invalidates the active translation session',request('stop',{'sessionId':sid},csrf)[0]==200 and request('text',{'sessionId':sid,'text':'hi','source':'en'},csrf)[0]==409)
+        items=[{'id':str(uuid.uuid4()),'text':'Hola equipo.'},{'id':str(uuid.uuid4()),'text':'El pasillo está libre.'}]
+        before=len([c for c in [json.loads(line) for line in capture.read_text().splitlines()] if '/auth/grant' in c['url']])
+        status,translated=request('transcript',{'source':'es','items':items},csrf)
+        check('saved transcript translation works after capture stopped and preserves fragment identifiers',status==200 and [x['id'] for x in translated['translations']]==[x['id'] for x in items] and all(x['language']=='en' for x in translated['translations']))
+        calls=[json.loads(line) for line in capture.read_text().splitlines()]
+        check('review uses batch Azure translation without a speech token or microphone session',len([c for c in calls if '/auth/grant' in c['url']])==before and len(json.loads(calls[-1]['options']['2']))==2)
+        check('review rejects missing CSRF and invalid languages',request('transcript',{'source':'es','items':items})[0]==403 and request('transcript',{'source':'fr','items':items},csrf)[0]==422)
+        check('review bounds batches and rejects duplicate identifiers',request('transcript',{'source':'es','items':items*11},csrf)[0]==422 and request('transcript',{'source':'es','items':items*2},csrf)[0]==422)
+        check('review bounds text size',request('transcript',{'source':'en','items':[{'id':str(uuid.uuid4()),'text':'x'*12001}]},csrf)[0]==422)
         status,grant=request('session',csrf=csrf);sid=grant['sessionId']
         for file in state.glob('sess_*'):
             text=file.read_text();file.write_text(re.sub(r'("expires";i:)\d+',r'\g<1>1',text))

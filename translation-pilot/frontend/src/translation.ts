@@ -2,11 +2,13 @@ import { promptUI } from "./dialogs";
 import { t as translateUI } from "./i18n";
 import { translationEnabled } from "./presentation-config";
 
-export type Caption = { text: string; source: "en" | "es" };
+export type Caption = { text: string; source: "en" | "es"; id?: string };
+export type TranscriptTranslation = {id: string; language: "en" | "es"; text: string};
 export type TranslationCallbacks = {
   onStatus: (status: "listening" | "translating") => void;
   onCaption: (caption: Caption) => void;
   onTranscript?: (phrase: Caption) => Promise<void>;
+  onTranslation?: (translation: TranscriptTranslation) => Promise<void>;
   onError: (message: string) => void;
   translate?: boolean;
   signal?: AbortSignal;
@@ -52,7 +54,7 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   let maxTimer: ReturnType<typeof setTimeout> | undefined;
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   let busy = false;
-  let queued: Caption | undefined;
+  let queued: {phrase: Caption; saved: Promise<void>} | undefined;
   const stop = () => {
     if (stopped) return;
     stopped = true; abort.abort(); queued = undefined;
@@ -81,16 +83,22 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   window.addEventListener("pagehide", stop);
   document.addEventListener("visibilitychange", visibility);
   callbacks.signal?.addEventListener("abort", stop, { once: true });
-  const translate = async (phrase: Caption) => {
-    queued = phrase;
+  const translate = async (phrase: Caption, saved: Promise<void>) => {
+    queued = {phrase, saved};
     if (busy) return;
     busy = true;
     while (queued && checkDeadline()) {
-      const current = queued; queued = undefined;
+      const next = queued; queued = undefined;
+      const current = next.phrase;
       callbacks.onStatus("translating");
       try {
-        const result = await translationApi("text", { ...current, sessionId }, csrf, abort.signal);
-        if (checkDeadline() && result.text) callbacks.onCaption({ text: result.text, source: current.source });
+        const result = await translationApi("text", {text: current.text, source: current.source, sessionId}, csrf, abort.signal);
+        if (result.text) {
+          await next.saved;
+          if (current.id && callbacks.onTranslation) await callbacks.onTranslation({id: current.id,
+            language: current.source === "en" ? "es" : "en", text: result.text});
+          if (checkDeadline()) callbacks.onCaption({ text: result.text, source: current.source });
+        }
       } catch (error) { if (!stopped) fail(error instanceof Error ? error.message : translateUI("Translation unavailable.")); }
     }
     busy = false;
@@ -155,11 +163,12 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
           if (language === "en" || language === "es") runs.push({ source: language, text: alternative.transcript.trim() });
         }
         for (const run of runs) if (run.text.trim()) {
+          run.id = crypto.randomUUID();
           // Save every final recognition phrase before the caption queue can replace it.
           // Pending saves finish even when capture is stopped or the presentation exits.
-          if (callbacks.onTranscript) void callbacks.onTranscript(run)
-            .catch(() => fail(translateUI("Transcript could not be saved. Capture stopped; previously saved text is still available.")));
-          if (callbacks.translate !== false) void translate(run);
+          const saved = callbacks.onTranscript?.(run) ?? Promise.resolve();
+          void saved.catch(() => fail(translateUI("Transcript could not be saved. Capture stopped; previously saved text is still available.")));
+          if (callbacks.translate !== false) void translate(run, saved);
         }
       } catch { fail(translateUI("Speech response could not be read. Restart translation.")); }
     };

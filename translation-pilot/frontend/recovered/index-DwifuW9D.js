@@ -24086,6 +24086,7 @@ function EE({ meeting: n, onExit: i }) {
           signal: translationPending.current.signal,
           translate: mode === "translation",
           onTranscript: (phrase) => globalThis.MMB.captureTranscript(n.id, currentSlide.current, phrase),
+          onTranslation: (translation) => globalThis.MMB.captureTranscriptTranslations(n.id, [translation]),
           onStatus: (status) => {
             if (translationGeneration.current === generation) setTranslationStatus(status);
           },

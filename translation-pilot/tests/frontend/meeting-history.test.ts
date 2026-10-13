@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, transcriptTopicTitle, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
+import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, transcriptDisplayEntries, transcriptTopicTitle, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
 import { defaults } from "../../frontend/src/defaults";
 import { expireSavedMedia } from "../../frontend/src/retention";
 const slide = {id:crypto.randomUUID(),definition:{title:"Safety Moment"},items:[{id:crypto.randomUUID(),title:"Safe lifting",type:"lesson"}]};
@@ -14,6 +14,23 @@ test("keeps each original-language phrase and its presented topic snapshot after
   expect(expired.transcript[0]).toMatchObject({presenter:"Thomas",slideTitle:"Safety Moment",contentTitles:["Safe lifting"]});
   expect(transcriptText(expired)).toContain("El pasillo está libre.");
   expect(transcriptText(expired)).toContain("Safe lifting");
+});
+test("shows and copies the selected language while spoken downloads remain original and translations stay immutable",()=>{
+  let saved=withTranscript(meeting,slide,{id:crypto.randomUUID(),source:"en",text:"Keep the aisle clear."});
+  saved=withTranscript(saved,slide,{id:crypto.randomUUID(),source:"es",text:"Las herramientas están listas."});
+  const originals=JSON.stringify(saved.transcript);
+  expect(()=>readableTranscriptText(saved,"en")).toThrow("Finish preparing");
+  saved=withTranscriptTranslations(saved,[{id:saved.transcript[0].id,language:"es",text:"Mantén el pasillo despejado."},
+    {id:saved.transcript[1].id,language:"en",text:"The tools are ready."}]);
+  expect(transcriptDisplayEntries(saved,"en").map(row=>row.text)).toEqual(["Keep the aisle clear.","The tools are ready."]);
+  expect(transcriptDisplayEntries(saved,"es").map(row=>row.text)).toEqual(["Mantén el pasillo despejado.","Las herramientas están listas."]);
+  expect(readableTranscriptText(saved,"en")).toContain("The tools are ready.*");
+  expect(readableTranscriptText(saved,"en")).not.toContain("Las herramientas");
+  expect(readableTranscriptText(saved)).toContain("Las herramientas están listas.");
+  expect(readableTranscriptText(saved)).not.toContain("The tools are ready.");
+  const attempts=withTranscriptTranslations(saved,[{id:saved.transcript[1].id,language:"en",text:"Replacement"}]);
+  expect(attempts.transcript[1].translations.en).toBe("The tools are ready.");
+  expect(JSON.stringify(saved.transcript.map(({translations:_translations,...entry}: any)=>entry))).toBe(originals);
 });
 test("returning to a slide does not duplicate its topic record",()=>{
   const first=withPresentedTopic(meeting,slide,[slide.items[0].id]);

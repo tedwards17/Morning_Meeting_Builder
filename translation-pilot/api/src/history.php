@@ -15,6 +15,9 @@ function validate_meeting_history(array $meeting):void {
   if(!$slide||!is_string($entry['text']??null)||strlen($entry['text'])<1||strlen($entry['text'])>12000||!in_array($entry['language']??'',['en','es'],true)||strtotime($entry['at']??'')===false||strlen($entry['slideTitle']??'')>300||strlen($entry['presenter']??'')>300)fail(422,'Invalid transcript text or context');
   if(!is_array($entry['contentTitles']??null)||count($entry['contentTitles'])>20)fail(422,'Invalid transcript topics');
   foreach($entry['contentTitles'] as $title)if(!is_string($title)||strlen($title)>300)fail(422,'Invalid transcript topic title');
+  $translations=$entry['translations']??[];
+  if(!is_array($translations)||count($translations)>1)fail(422,'Invalid transcript translation');
+  foreach($translations as $language=>$text)if(!in_array($language,['en','es'],true)||$language===$entry['language']||!is_string($text)||!trim($text)||strlen($text)>36000)fail(422,'Invalid transcript translation');
  }
  foreach($topics as $topic){
   if(!is_array($topic)||!isset($slides[$topic['slideId']??''])||strlen($topic['title']??'')>300||!is_array($topic['content']??null)||count($topic['content'])>20)fail(422,'Invalid presented topic');
@@ -22,10 +25,15 @@ function validate_meeting_history(array $meeting):void {
  }
 }
 function append_completed_history(array $prior,array $incoming):array {
- // Only late queued transcript appends may update a completed meeting.
+ // Originals remain immutable; late speech and additive translations may finish after exit.
  $a=$prior;$b=$incoming;unset($a['transcript'],$b['transcript']);
  if(encoded($a)!==encoded($b))fail(409,'Completed meeting details cannot be changed');
  $old=$prior['transcript']??[];$new=$incoming['transcript']??[];
- if(count($new)<count($old)||encoded(array_slice($new,0,count($old)))!==encoded($old))fail(409,'Saved transcript cannot be replaced');
+ if(count($new)<count($old))fail(409,'Saved transcript cannot be replaced');
+ foreach($old as $index=>$entry){
+  $original=$entry;$incoming=$new[$index];unset($original['translations'],$incoming['translations']);
+  if(encoded($original)!==encoded($incoming))fail(409,'Saved transcript cannot be replaced');
+  foreach($entry['translations']??[] as $language=>$text)if(($new[$index]['translations'][$language]??null)!==$text)fail(409,'Saved transcript translation cannot be replaced');
+ }
  return $incoming;
 }
