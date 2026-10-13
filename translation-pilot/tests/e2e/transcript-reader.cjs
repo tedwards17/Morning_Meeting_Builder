@@ -19,6 +19,7 @@ const assert=require('node:assert/strict');
   await page.getByText('Presentation saved for future use.',{exact:true}).waitFor();
   const original=await page.evaluate(async()=>{
    const state=await MMB.repository.load();const meeting=state.meetings[0];
+   meeting.slides[0].definition.type='text';
    meeting.status='completed';meeting.startedAt='2026-10-12T12:00:00Z';meeting.endedAt='2026-10-12T12:30:00Z';
    meeting.presentedTopics=meeting.slides.slice(0,2).map((slide,i)=>({id:slide.id,slideId:slide.id,title:i?'Improvements':'Safety',at:meeting.startedAt,presenter:meeting.presenter,content:[]}));
    meeting.transcript=Array.from({length:180},(_,i)=>({id:crypto.randomUUID(),at:new Date(Date.parse(meeting.startedAt)+i*4000).toISOString(),

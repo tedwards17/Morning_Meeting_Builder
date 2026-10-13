@@ -89,3 +89,11 @@ Validation: TypeScript, lint, locale coverage/placeholder audit and 56 frontend 
 Removed the separate Search and Clear buttons. A borderless magnifying-glass submit action sits inside the search input; the native × clear control remains. Clicking the magnifier or pressing Enter keeps the existing search/highlight, first-match scrolling and keyboard dismissal behavior. English/Spanish accessible labels remain available.
 
 Validation: TypeScript, localization audit, demo/hosted builds and all 19 focused transcript-reader Chromium checks passed, including the native ×, inline icon placement, Enter, highlighting, Spanish/mobile search and unchanged saved text. Only the existing transcript-reader suite was updated; no paid provider calls were made.
+
+## Transcript introduction label and sidebar navigation — v0.4.17
+
+The introduction/Good morning slide label is omitted from readable transcript headings, detailed transcript metadata, and clean copy/download. Words actually spoken, saved slide context and Presented topics are unchanged. Other topic headings remain available and searchable.
+
+Every sidebar selection remounts the section's main page and scrolls to the top, including selecting the already-active section. Meetings returns from a record to the list; Templates returns from its editor to the list; other page filters/local state reset. Existing unsaved-change confirmation remains. Confirmed clicks replay the actual clicked button rather than its nav container, so approving a return now completes navigation.
+
+Validation: TypeScript, lint, locale audit, all 57 frontend tests, both builds, 24 desktop/mobile sidebar-navigation checks and 19 transcript-reader checks passed. Navigation checks cover every sidebar option, editor return, cancel/confirm protection, greeting-label removal and unchanged saved speech. No provider calls were made. Separate English/Spanish transcript views were discussed only and are not implemented.

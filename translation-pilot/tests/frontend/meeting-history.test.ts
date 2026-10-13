@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
+import { withTranscript, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, transcriptTopicTitle, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
 import { defaults } from "../../frontend/src/defaults";
 import { expireSavedMedia } from "../../frontend/src/retention";
 const slide = {id:crypto.randomUUID(),definition:{title:"Safety Moment"},items:[{id:crypto.randomUUID(),title:"Safe lifting",type:"lesson"}]};
@@ -65,4 +65,14 @@ test("keeps long topics readable without dropping text and preserves the detaile
 test("handles meetings without captured speech",()=>{
   expect(transcriptParagraphs(meeting)).toEqual([]);
   expect(readableTranscriptText(meeting)).toContain("No transcript captured.");
+});
+test("hides the introduction label while keeping Good morning when it was actually spoken",()=>{
+  const intro={...slide,definition:{title:"Good morning",type:"intro"}};
+  const saved=withTranscript({...meeting,slides:[intro]},intro,{source:"en",text:"Good morning, team. Keep the aisle clear."});
+  const original=JSON.stringify(saved);
+  expect(transcriptTopicTitle(saved,saved.transcript[0])).toBe("");
+  expect(readableTranscriptText(saved)).toContain("Good morning, team.");
+  expect(readableTranscriptText(saved).match(/Good morning/g)).toHaveLength(1);
+  expect(JSON.stringify(saved)).toBe(original);
+  expect(transcriptTopicTitle(meeting,{slideId:slide.id,slideTitle:"Safety Moment"})).toBe("Safety Moment");
 });

@@ -1,7 +1,7 @@
 import type * as RT from "react";
 import { React as RecoveredReact } from "../recovered/index-DwifuW9D.js";
 import { t as translateUI, getLocale, uiText } from "./i18n";
-import { readableTranscriptText, transcriptParagraphs } from "./meeting-history";
+import { readableTranscriptText, transcriptParagraphs, transcriptTopicTitle } from "./meeting-history";
 import { transcriptSearchParts } from "./transcript-search";
 import type { Row } from "./types";
 const React = RecoveredReact as typeof RT;
@@ -15,13 +15,14 @@ export function TranscriptReader({meeting}: {meeting: Row}) {
   const reader = React.useRef<HTMLElement>(null);
   const paragraphs = transcriptParagraphs(meeting);
   const needle = query.trim().toLocaleLowerCase(getLocale());
+  const topicTitle = (entry: Row | {slideId: string; slideTitle: string}) => transcriptTopicTitle(meeting, entry as {slideId: string; slideTitle: string});
   const matches = (text: string, title: string) =>
     !needle || `${title} ${text}`.toLocaleLowerCase(getLocale()).includes(needle);
-  const entries: Row[] = (meeting.transcript ?? []).filter((row: Row) => matches(row.text, row.slideTitle));
+  const entries: Row[] = (meeting.transcript ?? []).filter((row: Row) => matches(row.text, topicTitle(row)));
   const newTopic = (index: number) => !paragraphs[index - 1] ||
     paragraphs[index - 1].slideId !== paragraphs[index].slideId || paragraphs[index - 1].slideTitle !== paragraphs[index].slideTitle;
-  const searchTexts = detailed ? entries.flatMap(row => [row.slideTitle, row.text])
-    : paragraphs.flatMap((row, index) => newTopic(index) ? [row.slideTitle, row.text] : [row.text]);
+  const searchTexts = detailed ? entries.flatMap(row => [topicTitle(row), row.text])
+    : paragraphs.flatMap((row, index) => newTopic(index) ? [topicTitle(row), row.text] : [row.text]);
   const matchCount = searchTexts.reduce((count, text) => count + transcriptSearchParts(text, query).filter(part => part.match).length, 0);
   const highlight = (text: string) => transcriptSearchParts(text, query).map((part, index) =>
     part.match ? <mark className="transcript-match" key={index}>{part.text}</mark> : part.text);
@@ -69,11 +70,11 @@ export function TranscriptReader({meeting}: {meeting: Row}) {
       {manualCopy && <textarea className="transcript-copy" readOnly aria-label={translateUI("Entire transcript")}
         value={readableTranscriptText(meeting)} onFocus={event => event.currentTarget.select()} />}
       {detailed ? <ol className="transcript-details">{entries.map(entry => <li key={entry.id}>
-        <small><time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(getLocale())}</time> · {highlight(entry.slideTitle)} · {entry.language.toUpperCase()}</small>
+        <small><time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(getLocale())}</time>{topicTitle(entry) && <> · {highlight(topicTitle(entry))}</>} · {entry.language.toUpperCase()}</small>
         <p>{highlight(entry.text)}</p>
       </li>)}</ol> : <div className="transcript-paragraphs">{paragraphs.map((paragraph, index) => {
         return <div key={paragraph.id} className="transcript-paragraph">
-          {newTopic(index) && <h3>{highlight(paragraph.slideTitle)}</h3>}
+          {newTopic(index) && topicTitle(paragraph) && <h3>{highlight(topicTitle(paragraph))}</h3>}
           <p><time className="transcript-time" dateTime={paragraph.at}>{new Date(paragraph.at).toLocaleTimeString(getLocale(), {hour:"numeric", minute:"2-digit"})}</time>{" "}{highlight(paragraph.text)}</p>
         </div>;
       })}</div>}

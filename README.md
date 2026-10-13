@@ -1,6 +1,8 @@
-# Morning Meeting Builder — Round 4 (v0.4.16)
+# Morning Meeting Builder — Round 4 (v0.4.17)
 
 Meeting details and presented topics come first, followed by a compact transcript with highlighted search, inline search/clear icons, full-text copy/download, and optional detailed timestamps. The square flag selector is in the sidebar; subtitles move above visible presentation controls. Existing saved recordings are preserved. Speaker diarization is not enabled.
+
+Sidebar clicks reopen each section's main page at the top. The introduction's greeting label is omitted from the transcript display and clean export; spoken words are retained.
 
 Development branch: **Round-4-Development**, based on approved Round 3 commit `b99ef562`. The repository root is the static GitHub Pages test build. It preserves existing content and YouTube presentation embedding. No PHP or private configuration is deployed by GitHub Pages.
 

@@ -50,6 +50,12 @@ export type TranscriptParagraph = {
   id: string; at: string; slideId: string; slideTitle: string; text: string;
 };
 
+export function transcriptTopicTitle(meeting: Row, entry: {slideId: string; slideTitle: string}): string {
+  const slide = (meeting.slides ?? []).find((row: Row) => row.id === entry.slideId);
+  return slide?.definition?.type === "intro" || entry.slideTitle.trim().toLowerCase() === "good morning"
+    ? "" : entry.slideTitle;
+}
+
 // Keep the original fragments intact. Receipt timestamps are not silence measurements:
 // older recordings can be compacted without inventing pauses or speaker identities.
 export function transcriptParagraphs(meeting: Row): TranscriptParagraph[] {
@@ -76,8 +82,9 @@ export function readableTranscriptText(meeting: Row): string {
   const parts = [`${meeting.templateName}\n${translateUI("Presenter")}: ${meeting.presenter || translateUI("Not entered")}\n${translateUI("Meeting date")}: ${meeting.date}`, translateUI("Transcript")];
   paragraphs.forEach((paragraph, index) => {
     const previous = paragraphs[index - 1];
-    if (!previous || previous.slideId !== paragraph.slideId || previous.slideTitle !== paragraph.slideTitle)
-      parts.push(paragraph.slideTitle);
+    const topic = transcriptTopicTitle(meeting, paragraph);
+    if (topic && (!previous || previous.slideId !== paragraph.slideId || previous.slideTitle !== paragraph.slideTitle))
+      parts.push(topic);
     parts.push(paragraph.text);
   });
   if (!paragraphs.length) parts.push(translateUI("No transcript captured."));

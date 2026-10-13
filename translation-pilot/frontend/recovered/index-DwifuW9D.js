@@ -19363,8 +19363,9 @@ function au(n) {
     if (!n) return;
     const unloading = (event) => { event.preventDefault(); event.returnValue = ""; };
     const leaving = async (event) => {
-      const target = event.target?.closest?.("[data-leaves-editor]");
-      if (!target || bypass.current) return;
+      const marker = event.target?.closest?.("[data-leaves-editor]");
+      const target = event.target?.closest?.("button,a") ?? marker;
+      if (!marker || bypass.current) return;
       event.preventDefault(); event.stopImmediatePropagation();
       if (await confirmUI(translateUI("You have unsaved changes. Leave this screen without saving?"))) {
         bypass.current = true; target.click(); bypass.current = false;
@@ -26094,7 +26095,9 @@ function rz() {
     return () => clearTimeout(timer);
   }, [n.meetings, r]);
   const L = (H) => {
-      (c(H), _(!1), H === "meeting" && (h(void 0), setFromSaved(!1), M((ie) => ie + 1)));
+      c(H); _(!1); M((ie) => ie + 1);
+      if (H === "meeting") { h(void 0); setFromSaved(!1); }
+      window.scrollTo({top: 0, left: 0});
     },
     O = (H) => {
       r(async () => {
@@ -26232,7 +26235,7 @@ function rz() {
               s === "backup" && d.jsx(az, {}),
               s === "settings" && d.jsx(iz, {}, n.device.id),
             ],
-          }),
+          }, A),
         ],
       });
 }
