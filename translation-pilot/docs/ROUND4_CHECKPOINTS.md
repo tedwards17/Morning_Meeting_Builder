@@ -83,3 +83,9 @@ Validation: demo/hosted builds and localization audit passed. Chromium preview c
 - A 44px square flag-only language button lives inside the desktop/mobile sidebar near its top. Dropdown options retain flags and language names. Removed the top-toolbar selector that overlapped navigation. Loading/login selectors also use a square flag, with their dropdown aligned inside the screen.
 
 Validation: TypeScript, lint, locale coverage/placeholder audit and 56 frontend tests passed. Eighteen transcript-reader Chromium checks verify page order, readable/detailed search, query/Enter/clear focus behavior, partial-fragment matching, copy/download, Spanish controls, mobile layout and unchanged saved data. Thirty-two sidebar/caption checks cover 1366×900, 844×390, 667×375 and 390×844: unobstructed square selector, visible dropdown options, both-language switching, controls shown/hidden/focused and touch restoration. Demo/hosted builds and package path checks passed. No live provider calls or physical keyboard/device tests were performed.
+
+## Inline transcript search action — v0.4.16
+
+Removed the separate Search and Clear buttons. A borderless magnifying-glass submit action sits inside the search input; the native × clear control remains. Clicking the magnifier or pressing Enter keeps the existing search/highlight, first-match scrolling and keyboard dismissal behavior. English/Spanish accessible labels remain available.
+
+Validation: TypeScript, localization audit, demo/hosted builds and all 19 focused transcript-reader Chromium checks passed, including the native ×, inline icon placement, Enter, highlighting, Spanish/mobile search and unchanged saved text. Only the existing transcript-reader suite was updated; no paid provider calls were made.

@@ -50,10 +50,15 @@ export function TranscriptReader({meeting}: {meeting: Row}) {
     </div>
     {paragraphs.length > 0 ? <>
       <form className="transcript-tools" onSubmit={search}>
+        <div className="transcript-search-field">
         <input ref={input} type="search" enterKeyHint="search" aria-label={translateUI("Search transcript")} placeholder={translateUI("Search transcript")}
           value={query} onChange={event => setQuery(event.target.value)} />
-        <button type="submit">{translateUI("Search")}</button>
-        <button type="button" onClick={() => {setQuery(""); dismissKeyboard();}}>{translateUI("Clear")}</button>
+        <button className="transcript-search-button" type="submit" aria-label={translateUI("Search")} title={translateUI("Search")}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>
+          </svg>
+        </button>
+        </div>
         <button type="button" aria-pressed={detailed} onClick={() => setDetailed(value => !value)}>
           {translateUI(detailed ? "Readable view" : "Detailed timestamps")}</button>
       </form>

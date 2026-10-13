@@ -250,7 +250,10 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .transcript-heading, .transcript-tools { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
 .transcript-heading h2 { margin:0; }
 .transcript-tools { margin:.7rem 0; }
-.transcript-tools input { flex:1; min-width:12rem; }
+.transcript-search-field { position:relative; flex:1; min-width:12rem; }
+.transcript-search-field input { width:100%; min-height:44px; padding:10px 12px 10px 44px; border:1px solid #becddd; border-radius:8px; }
+.transcript-tools .transcript-search-button { position:absolute; left:2px; top:50%; transform:translateY(-50%); width:40px; height:40px; min-height:40px; padding:8px; border:0; border-radius:50%; background:transparent; color:#143650; }
+.transcript-tools .transcript-search-button:hover { background:transparent; }
 .transcript-paragraph h3 { margin:.8rem 0 .2rem; font-size:1rem; }
 .transcript-paragraph p { margin:.4rem 0; line-height:1.5; }
 .transcript-time { color:#64748b; font-size:.8rem; margin-right:.35rem; white-space:nowrap; }
