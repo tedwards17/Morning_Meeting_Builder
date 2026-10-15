@@ -3,6 +3,7 @@
 // Environment variables work without this file. Empty provider values are examples only.
 return [
     'enabled' => false, // MMB_TRANSLATION_ENABLED=true to enable paid provider requests.
+    'auth_mode' => 'account', // Round 5: signed-in account. Standalone pilot: 'passphrase'.
     'origin' => 'https://meetings.example.invalid', // MMB_TRANSLATION_ORIGIN: exact app origin, no path.
     'deepgram_key' => '', // DEEPGRAM_API_KEY: permanent key with Member permissions.
     'translator_key' => '', // AZURE_TRANSLATOR_KEY: Translator Text resource key.

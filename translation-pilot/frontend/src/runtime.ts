@@ -34,6 +34,12 @@ export function subscribe(fn: () => void) {
     listeners.delete(fn);
   };
 }
+if (typeof window !== "undefined") window.addEventListener("storage", event => {
+  if (event.key === "mmb-auth-change") window.location.reload();
+});
+function notifyAccountChange() {
+  try { localStorage.setItem("mmb-auth-change", crypto.randomUUID()); } catch { /* Single-tab operation remains available. */ }
+}
 export function announce() {
   for (const f of listeners) f();
 }
@@ -58,6 +64,9 @@ export async function api(
         : JSON.stringify(body)
       : undefined,
   });
+  const type = res.headers.get("content-type") ?? "";
+  if (!type.includes("application/json"))
+    throw new Error(translateUI("The account service is unavailable. Ask your administrator to check the PHP upload and database configuration."));
   const data = await res.json();
   if (!res.ok) {
     if (res.status === 401) {
@@ -69,18 +78,26 @@ export async function api(
   return data;
 }
 export async function login(username: string, password: string, name: string) {
-  let id = await db.get("meta", "installation");
-  if (!id) {
-    id = crypto.randomUUID();
-    await db.put("meta", "installation", id);
-  }
+  const previous = await db.get("meta", "account");
+  const previousName = await db.get("meta", "accountUsername") ?? (await db.get("meta", "offlineSession"))?.account?.username;
+  if ((await db.all("outbox")).length && previousName?.toLowerCase() !== username.trim().toLowerCase())
+    throw new Error(translateUI("This browser has unsent records from another account. Sign into that account and sync first."));
+  // Keep a stable device per account, including across sign-out. These UUIDs are
+  // identifiers only; the HttpOnly server cookie remains the authentication secret.
+  let devices: Record<string,string> = Object.create(null);
+  try { const saved = JSON.parse(localStorage.getItem("mmb-account-devices") ?? "{}"); if(saved && typeof saved === "object" && !Array.isArray(saved)) devices = Object.assign(Object.create(null), saved); } catch { /* Browser storage may be unavailable. */ }
+  const key = username.trim().toLowerCase();
+  const priorDevice = previousName?.toLowerCase() === key ? (await db.get("meta", "offlineSession"))?.device?.id : undefined;
+  const stored = typeof devices[key] === "string" && /^[a-f0-9-]{36}$/i.test(devices[key]) ? devices[key] : undefined;
+  const id = stored ?? priorDevice ?? crypto.randomUUID();
+  devices[key] = id;
+  try { localStorage.setItem("mmb-account-devices", JSON.stringify(devices)); } catch { /* Online sign-in still works. */ }
   const next = await api("auth/login", {
     username,
     password,
     device_id: id,
     device_name: name,
   });
-  const previous = await db.get("meta", "account");
   if (previous && previous !== next.account.id) {
     if ((await db.all("outbox")).length)
       throw new Error(
@@ -90,9 +107,14 @@ export async function login(username: string, password: string, name: string) {
     await db.put("meta", "installation", id);
   }
   session = next;
+  error = "";
+  await db.put("meta", "accountUsername", next.account.username);
+  await db.put("meta", "installation", id);
+  await db.put("meta", "deviceName", name);
   await db.put("meta", "account", next.account.id);
   await db.put("meta", "offlineSession", { ...next, csrf: "" });
   await sync();
+  notifyAccountChange();
   announce();
 }
 export async function initialize() {
@@ -109,7 +131,7 @@ export async function initialize() {
       await db.put("meta", "offlineSession", { ...session, csrf: "" });
     } catch (e) {
       if (!navigator.onLine) session = await db.get("meta", "offlineSession");
-      else error = String(e);
+      else if (!String(e).includes("Sign in required")) error = String(e);
     }
   }
   const loaded = await repository.load();
@@ -129,6 +151,7 @@ export async function logout() {
   await api("auth/logout", {});
   session = null;
   await db.clearAccount();
+  notifyAccountChange();
   location.reload();
 }
 export async function discardExpiredMedia(hashes: string[]) {
@@ -682,7 +705,7 @@ export async function saveRecord(kind: string, data: Row) {
 }
 export function canNavigate(page: string) {
   if (!session) return true;
-  if (session.account.role === "report_viewer") return ["home", "meetings"].includes(page);
+  if (session.account.role === "report_viewer") return ["home", "meetings", "settings"].includes(page);
   if (page === "templates")
     return (
       session.account.can_create_templates ||
@@ -690,7 +713,7 @@ export function canNavigate(page: string) {
       session.account.role === "content_manager"
     );
   return (
-    (page !== "settings" && page !== "backup") ||
+    page !== "backup" ||
     session.account.role === "administrator"
   );
 }

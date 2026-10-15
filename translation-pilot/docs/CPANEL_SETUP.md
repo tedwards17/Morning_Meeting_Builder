@@ -1,3 +1,5 @@
+> Round 5 first installation: start with [ROUND5_SETUP.md](ROUND5_SETUP.md) and the prebuilt `hosting-upload/public_html` folder. The older pilot package is for local trials.
+
 # cPanel setup — staging first
 
 Use a dedicated HTTPS subdomain and document root. Do not overwrite the current GitHub Pages demo or any existing production root.

@@ -1,3 +1,5 @@
+> Round 5 first installation: start with [ROUND5_SETUP.md](ROUND5_SETUP.md) and the prebuilt `hosting-upload/public_html` folder. The older pilot package is for local trials.
+
 # FileZilla deployment
 
 Use SFTP or FTPS supported by your host. Verify the server certificate/host key with IT. Extract `morning-meeting-builder-cpanel.zip` on your computer.

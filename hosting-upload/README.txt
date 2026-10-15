@@ -1,0 +1,1 @@
+Upload ONLY the contents of public_html to the domain document root. Place private/config.example.php outside that root as config.php after editing it. Read docs/ROUND5_SETUP.md first. Database and scripts directories are private setup materials, not web content.

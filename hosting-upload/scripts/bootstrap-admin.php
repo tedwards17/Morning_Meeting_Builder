@@ -1,0 +1,8 @@
+<?php
+declare(strict_types=1);
+if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
+if(count($argv)!==3){fwrite(STDERR,"Usage: php bootstrap-admin.php /private/config.php username\n");exit(1);}
+require __DIR__.'/../api/src/core.php';$c=require $argv[1];$p=new PDO($c['dsn'],$c['user'],$c['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);$org='d7b00000-0000-4000-8000-000000000001';
+$p->beginTransaction();$p->prepare('SELECT id FROM organizations WHERE id=? FOR UPDATE')->execute([$org]);$q=$p->prepare("SELECT COUNT(*) FROM accounts WHERE organization_id=? AND role='administrator'");$q->execute([$org]);if($q->fetchColumn()){echo "Already initialized. Remove the one-time cron entry.\n";exit;}
+$username=trim($argv[2]);if(!$username||strlen($username)>190)throw new RuntimeException('Invalid username');$password=bin2hex(random_bytes(16));$output=dirname(realpath($argv[1])).'/first-admin-once.txt';$handle=fopen($output,'x');if(!$handle)throw new RuntimeException('Credential file already exists or directory is not writable');chmod($output,0600);
+try{$p->prepare("INSERT INTO accounts(id,organization_id,username,password_hash,category,role,can_create_templates,enabled) VALUES(?,?,?,?,'individual','administrator',1,1)")->execute([uuid(),$org,$username,password_hash($password,PASSWORD_DEFAULT)]);fwrite($handle,"Username: $username\nPassword: $password\nDelete this file after signing in and saving the password securely. Remove the one-time cron entry.\n");fclose($handle);$p->commit();echo "Initialized. Retrieve first-admin-once.txt privately; remove cron entry.\n";}catch(Throwable $e){$p->rollBack();fclose($handle);unlink($output);throw $e;}

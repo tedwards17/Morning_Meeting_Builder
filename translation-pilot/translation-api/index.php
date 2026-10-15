@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// Independent PHP captions gateway. No database, long-lived worker, or Node service.
+// PHP captions gateway. Hosted accounts use MySQL; the standalone pilot uses a passphrase.
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
@@ -18,7 +18,9 @@ set_exception_handler(function (Throwable $e): void {
     problem(500, 'Captions gateway failed. Ask IT to check the PHP configuration.');
 });
 $config = [];
-$configPath = getenv('MMB_TRANSLATION_CONFIG');
+$paths = is_file(dirname(__DIR__).'/server-paths.php') ? require dirname(__DIR__).'/server-paths.php' : [];
+$privateDir = $paths['private_dir'] ?? dirname(__DIR__, 2).'/morning-meeting-private';
+$configPath = getenv('MMB_TRANSLATION_CONFIG') ?: (is_file($privateDir.'/translation-config.php') ? $privateDir.'/translation-config.php' : '');
 if ($configPath) {
     if (!is_file($configPath)) problem(503, 'Private captions configuration is missing.');
     $documentRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
@@ -81,8 +83,32 @@ session_set_cookie_params(['lifetime'=>0, 'path'=>'/', 'secure'=>str_starts_with
 session_start();
 $action = $_GET['action'] ?? '';
 $authenticated = (int)($_SESSION['authenticated_until'] ?? 0) > time();
+$accountMode = !empty($paths['hosted_accounts']) || ($config['auth_mode'] ?? 'passphrase') === 'account';
+if ($accountMode) {
+    // Recheck account, device revocation and session expiry on EVERY provider request.
+    // A previous pilot unlock can never bypass hosted account authentication.
+    require_once dirname(__DIR__).'/api/src/core.php';
+    require_once dirname(__DIR__).'/api/src/auth.php';
+    $appPath = getenv('MMB_CONFIG') ?: $privateDir.'/config.php';
+    $appReal = realpath($appPath);
+    if (!$appReal || ($documentRoot && ($appReal === $documentRoot || str_starts_with($appReal, $documentRoot.'/'))))
+        problem(503, 'Private account configuration is missing or inside the document root.');
+    $appConfig = require $appPath;
+    $GLOBALS['pdo'] = new PDO($appConfig['dsn'], $appConfig['user'], $appConfig['password'], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false]);
+    query("SET time_zone='+00:00'");
+    authenticate();
+    if (actor()['role'] === 'report_viewer' && !in_array($action, ['status','transcript'], true))
+        problem(403, 'This account cannot start live captions.');
+    $binding = $GLOBALS['session']['token_hash'];
+    if (($_SESSION['account_binding'] ?? '') !== $binding) {
+        session_regenerate_id(true);
+        $_SESSION = ['account_binding'=>$binding, 'csrf'=>bin2hex(random_bytes(32))];
+    }
+    $authenticated = true;
+}
 if ($action === 'status') reply(['enabled'=>true, 'authenticated'=>$authenticated, 'csrf'=>$authenticated ? $_SESSION['csrf'] : '']);
 if ($action === 'unlock') {
+    if ($accountMode) problem(403, 'Sign in with your meeting account.');
     throttle('unlock', 10, 600);
     $passphrase = $body['passphrase'] ?? '';
     $hash = (string)($config['presenter_hash'] ?? '');

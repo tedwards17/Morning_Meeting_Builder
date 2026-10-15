@@ -31,7 +31,7 @@ export async function translationApi(action: string, body: unknown, csrf = "", s
   if (!type.includes("application/json"))
     throw new Error(translateUI("Live translation needs the PHP backend. GitHub Pages can preview captions only. Open the private PHP pilot link for a microphone test."));
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || translateUI("Translation connection unavailable. Try again."));
+  if (!response.ok) throw new Error((typeof data.error === "string" ? data.error : data.error?.message) || translateUI("Translation connection unavailable. Try again."));
   return data;
 }
 

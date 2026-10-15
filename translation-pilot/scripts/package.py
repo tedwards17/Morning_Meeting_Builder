@@ -6,6 +6,7 @@ if deploy.exists():shutil.rmtree(deploy)
 public=deploy/'public_html';shutil.copytree(root/'build/hosted',public)
 shutil.copytree(root/'api',public/'api',ignore=shutil.ignore_patterns('config.example.php'))
 shutil.copyfile(root/'scripts/public.htaccess',public/'.htaccess')
+shutil.copyfile(root/'server-paths.example.php',public/'server-paths.php')
 (public/'translation-api').mkdir()
 shutil.copyfile(root/'translation-api/index.php',public/'translation-api/index.php')
 shutil.copyfile(root/'translation-api/.htaccess',public/'translation-api/.htaccess')
@@ -15,7 +16,7 @@ shutil.copytree(root/'database',deploy/'database');shutil.copytree(root/'docs',d
 for name in ['migrate.php','create-admin.php','bootstrap-admin.php','presenter-hash.php']:shutil.copyfile(root/'scripts'/name,deploy/'scripts'/name)
 # CLI password tool depends on core.php; keep private copy outside public tree too.
 (deploy/'api/src').mkdir(parents=True);shutil.copyfile(root/'api/src/core.php',deploy/'api/src/core.php')
-(deploy/'README.txt').write_text('Upload ONLY the contents of public_html to the domain document root. Place private/config.example.php outside that root as config.php after editing it. Read docs/CPANEL_SETUP.md first. Database and scripts directories are private setup materials, not web content.\n')
+(deploy/'README.txt').write_text('Upload ONLY the contents of public_html to the domain document root. Place private/config.example.php outside that root as config.php after editing it. Read docs/ROUND5_SETUP.md first. Database and scripts directories are private setup materials, not web content.\n')
 def validate(folder):
  html=(folder/'index.html').read_text()
  for url in re.findall(r'(?:src|href)="([^"]+)"',html):
@@ -39,13 +40,14 @@ def zip_tree(destination,folder,exclude=()):
    rel=p.relative_to(folder)
    if not p.is_file() or any(part in exclude for part in rel.parts) or p.name.startswith('.env') or p.name=='config.php' or p.suffix=='.log':continue
    info=zipfile.ZipInfo(rel.as_posix(),date_time=(2026,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.external_attr=0o100644<<16;z.writestr(info,p.read_bytes(),compresslevel=9)
-# Recommended deployment preserves the current browser-local workflow; no MySQL login required.
+# Legacy standalone pilot; production uses the hosted account package above.
 local=deploy/'local-php'
 local_public=local/'public_html';shutil.copytree(root/'build/demo',local_public)
 shutil.copyfile(root/'scripts/public.htaccess',local_public/'.htaccess')
 (local_public/'translation-api').mkdir()
 for name in ['index.php','.htaccess']:shutil.copyfile(root/'translation-api'/name,local_public/'translation-api'/name)
 (local/'private').mkdir();shutil.copyfile(root/'translation-api/config.example.php',local/'private/config.example.php')
+p=local/'private/config.example.php';p.write_text(p.read_text().replace("'auth_mode' => 'account'","'auth_mode' => 'passphrase'"))
 (local/'scripts').mkdir();shutil.copyfile(root/'scripts/presenter-hash.php',local/'scripts/presenter-hash.php')
 (local/'docs').mkdir()
 for name in ['ROUND4_HANDOFF.md','ROUND4_VERIFICATION.md','ROUND4_FOLLOWUP_HANDOFF.md','ROUND4_FOLLOWUP_VERIFICATION.md','ROUND4_CHECKPOINTS.md','PRESENTATION_REMOTES.md','ANNOUNCEMENTS.md','LOCALIZATION.md','TRANSLATED_TRANSCRIPTS.md']:shutil.copyfile(root/'docs'/name,local/'docs'/name)
@@ -53,6 +55,11 @@ for name in ['ROUND4_HANDOFF.md','ROUND4_VERIFICATION.md','ROUND4_FOLLOWUP_HANDO
 print('Local PHP package paths valid:',validate(local_public))
 zip_tree(out/'morning-meeting-builder-round4-php.zip',local)
 zip_tree(out/'morning-meeting-builder-cpanel.zip',deploy,('local-php',))
+# GitHub Download ZIP includes this complete, prebuilt FileZilla folder.
+release=root.parent/'hosting-upload'
+if release.exists():shutil.rmtree(release)
+shutil.copytree(deploy,release,ignore=shutil.ignore_patterns('local-php'))
+zip_tree(out/'morning-meeting-builder-round5-hosting.zip',release)
 zip_tree(out/'morning-meeting-builder-github-pages-demo.zip',root/'build/demo')
 zip_tree(out/'morning-meeting-builder-source.zip',root,('node_modules','.git','build','deploy','artifacts','test-results','__pycache__'))
 zip_tree(out/'morning-meeting-builder-migrations.zip',root/'database')

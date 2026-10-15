@@ -24260,7 +24260,7 @@ function EE({ meeting: n, onExit: i }) {
               children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "transcript" ? translateUI("Stop transcript") : translateUI("Start transcript"),
               title: translateUI("Save speech text with this meeting without using Azure translation"),
             }),
-            globalThis.MMB.translationEnabled && d.jsx("button", {
+            !globalThis.MMB.hosted && globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-preview",
               onClick: () => {
                 setCaption({ source: "en", text: "Asegurémonos de que este camión pase por control de calidad antes del almuerzo." });
@@ -25871,6 +25871,7 @@ function iz() {
                         required: !0,
                         maxLength: 300,
                         value: f.company,
+                        disabled: globalThis.MMB.hosted,
                         onChange: (b) => h({ ...f, company: b.target.value }),
                       }),
                     }),
@@ -25880,6 +25881,7 @@ function iz() {
                         required: !0,
                         maxLength: 300,
                         value: m,
+                        disabled: globalThis.MMB.hosted,
                         onChange: (b) => g(b.target.value),
                       }),
                     }),
@@ -25995,6 +25997,7 @@ function iz() {
             }),
           ],
         }),
+        d.jsx(globalThis.MMB.AccountSettings, {}),
         d.jsx(globalThis.MMB.RemoteSettings, {}),
         d.jsxs("section", {
           className: "panel settings-form",
@@ -26190,9 +26193,9 @@ function rz() {
                       d.jsx(Tf, { size: 18 }),
                       d.jsxs("span", {
                         children: [
-                          translateUI("Stored on this device"),
+                          translateUI(globalThis.MMB.hosted ? "Company account" : "Stored on this device"),
                           d.jsx("small", {
-                            children: b ? translateUI("Works offline") : translateUI("You’re offline"),
+                            children: b ? translateUI(globalThis.MMB.hosted ? "Online" : "Works offline") : translateUI("You’re offline"),
                           }),
                         ],
                       }),

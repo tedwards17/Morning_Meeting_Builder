@@ -1,21 +1,13 @@
-# Morning Meeting Builder — Round 4 (v0.4.18)
+# Morning Meeting Builder — Round 5 (v0.5.0)
 
-Meeting transcripts follow the website's English/Spanish selection, with translated passages italicized and marked. Copy uses the displayed language; Download spoken transcript preserves the original mixed speech. Saved captions are reused and missing translations can be prepared through the private PHP site. See [translated transcripts](translation-pilot/docs/TRANSLATED_TRANSCRIPTS.md).
+Branch: **Round-5-Development**, based on the tested Round 4 v0.4.18 (`c7e413d`).
 
-Meeting details and presented topics come first, followed by a compact transcript with highlighted search, inline search/clear icons, and optional detailed timestamps. The square flag selector is in the sidebar; subtitles move above visible presentation controls. Existing saved recordings are preserved. Speaker diarization is not enabled.
+For the real PHP/MySQL website, download this branch as ZIP and use **hosting-upload/public_html**. It is already built: upload its contents through FileZilla. **Do not upload the repository root demo as the real account website.**
 
-Sidebar clicks reopen each section's main page at the top. The introduction's greeting label is omitted from the transcript display and clean export; spoken words are retained.
+Start with [the Round 5 setup guide](hosting-upload/docs/ROUND5_SETUP.md), covering the database, private PHP configuration, first administrator, meeting-area accounts and Deepgram/Azure keys. [Development checkpoint](translation-pilot/docs/ROUND5_CHECKPOINT.md).
 
-Development branch: **Round-4-Development**, based on approved Round 3 commit `b99ef562`. The repository root is the static GitHub Pages test build. It preserves existing content and YouTube presentation embedding. No PHP or private configuration is deployed by GitHub Pages.
+The hosted app has a login front page, visible account and sign-out, Settings maintenance/password tools, authenticated company data, and account-authorized captions. Production runs static HTML/JavaScript plus PHP/MySQL; Node is development/build tooling only. No Next.js server is required.
 
-Round 4 adds Deepgram Nova-3 + Azure Translator captions through a PHP gateway, compact bottom captions, explicit presentation fullscreen controls, optional translation switches and 45-minute session safeguards. Production requires static files and PHP, not a Node service.
+`hosting-upload/private`, `database`, `scripts`, `api` and `docs` are setup materials, **not public website content**. Real passwords, API keys and stored images stay outside the public document root and GitHub. The public server-paths.php contains only a path to that private directory.
 
-**Follow-up:** all ten requested improvements have separate checkpoints: meeting history/transcripts, save-in-place, practice fullscreen, presentation remotes, dated targeted announcements, Personal share, default skips and builder-only colors. Read [the follow-up handoff](translation-pilot/docs/ROUND4_FOLLOWUP_HANDOFF.md) and [checkpoints](translation-pilot/docs/ROUND4_CHECKPOINTS.md).
-
-Editable project: `translation-pilot/`. Start with [Round 4 setup and handoff](translation-pilot/docs/ROUND4_HANDOFF.md) and [tested checks and gaps](translation-pilot/docs/ROUND4_VERIFICATION.md). Build with `npm ci`, `npm run build:demo`, `npm run build:hosted`, and `npm run package` from that directory. Node is build tooling only.
-
-For authenticated company meeting history and cross-device announcements use `morning-meeting-builder-cpanel.zip` (PHP/MySQL). The existing `morning-meeting-builder-round4-php.zip` preserves the working browser-local app plus independent PHP captions gateway for local/Codespaces trials; it cannot provide company account isolation or push to other tablets. No provider keys or presenter credentials belong in the repository or browser settings.
-
-Pages settings and the default branch are unchanged. Publish this testing branch through Pages settings only when ready; live microphone tests use the private same-origin PHP pilot documented in the handoff. Preserve previous hashed assets for already-open tabs.
-
-**Interface language:** English / Español selector with US/Mexico flags; see [localization and future additions](translation-pilot/docs/LOCALIZATION.md). Library/presentation content and speech transcripts remain in their original language.
+Editable project: `translation-pilot/`. Build with `npm ci`, `npm run build:demo`, `npm run build:hosted`, and `npm run package` there. The package command refreshes `hosting-upload` and creates ZIPs under `translation-pilot/artifacts`. The repository root remains a browser-local GitHub Pages preview; Pages cannot run PHP accounts or the database. Existing default branch/Pages settings are unchanged.

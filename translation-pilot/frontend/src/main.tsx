@@ -10,11 +10,10 @@ import {
   AppProvider,
   OriginalApp,
   useApp,
-  exportBackup,
 } from "../recovered/index-DwifuW9D.js";
 import * as runtime from "./runtime";
 import * as db from "./db";
-import { defaults, resetDefaults } from "./defaults";
+import { defaults } from "./defaults";
 import { csv, normalizeNumber, zonedInput, zonedUtc } from "./domain";
 import type { Row, State } from "./types";
 import { canReadMeeting, groupMeetings } from "./meeting-history";
@@ -148,48 +147,68 @@ function Numeric({
 }
 function Login() {
   const [error, setError] = React.useState("");
-  return (
-    <main className="boot">
-      <LanguageSelector />
-      <form
-        className="panel login"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const f = new FormData(e.currentTarget);
-          try {
-            await runtime.login(
-              String(f.get("username")),
-              String(f.get("password")),
-              String(f.get("device")),
-            );
-          } catch (e) {
-            setError(String(e));
-          }
-        }}
-      >
-        <span className="eyebrow">DOUGLASS TRUCK BODIES</span>
-        <h1>{translateUI("Morning Meeting Builder")}</h1>
-        <p>{translateUI("Sign in with your location or management account.")}</p>
-        <label>
-          {translateUI("Username")}<input name="username" autoComplete="username" required />
-        </label>
-        <label>
-          {translateUI("Password")}<input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </label>
-        <label>
-          {translateUI("This device’s name")}<input name="device" defaultValue="Meeting tablet" required />
-        </label>
-        <button className="primary">{translateUI("Sign in")}</button>
-        <p role="alert">{uiError(error)}</p>
-      </form>
-    </main>
-  );
+  const [busy, setBusy] = React.useState(false);
+  return <main className="login-page">
+    <div className="login-language"><LanguageSelector /></div>
+    <section className="login-welcome">
+      <span className="eyebrow">DOUGLASS TRUCK BODIES</span>
+      <h1>{translateUI("Morning Meeting Builder")}</h1>
+      <p>{translateUI("A better day starts together.")}</p>
+      <div className="login-topics"><span>{translateUI("Safety")}</span><span>{translateUI("Improvements")}</span><span>{translateUI("Teamwork")}</span></div>
+    </section>
+    <form className="panel login" onSubmit={async e=>{
+      e.preventDefault(); if(busy)return;
+      const f=new FormData(e.currentTarget);setBusy(true);setError("");
+      try {await runtime.login(String(f.get("username")).trim(),String(f.get("password")),String(f.get("device")||translateUI("Meeting tablet")));}
+      catch(e){setError(uiError(e));}finally{setBusy(false);}
+    }}>
+      <h2>{translateUI("Welcome back")}</h2>
+      <p>{translateUI("Sign in with your location or management account.")}</p>
+      <label>{translateUI("Username")}<input name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={190} required disabled={busy}/></label>
+      <label>{translateUI("Password")}<input name="password" type="password" autoComplete="current-password" required disabled={busy}/></label>
+      <details><summary>{translateUI("Device name (optional)")}</summary>
+        <label>{translateUI("This device’s name")}<input name="device" defaultValue={translateUI("Meeting tablet")} maxLength={200}/></label>
+      </details>
+      <button className="primary" disabled={busy}>{translateUI(busy?"Signing in…":"Sign in")}</button>
+      <p className="muted">{translateUI("Need an account or password reset? Contact your Morning Meeting Builder administrator.")}</p>
+      {(error||runtime.error)&&<p role="alert">{uiError(error||runtime.error)}</p>}
+    </form>
+  </main>;
 }
+function AccountSettings() {
+  useRuntime();
+  const [message,setMessage]=React.useState("");
+  const [busy,setBusy]=React.useState(false);
+  const account=runtime.session?.account;
+  async function perform(fn:()=>Promise<unknown>) {
+    setBusy(true);setMessage("");try{await fn();}catch(e){setMessage(uiError(e));}finally{setBusy(false);}
+  }
+  return <section className="panel account-settings">
+    <h2>{translateUI(runtime.hosted?"Your account":"Workspace tools")}</h2>
+    {account&&<><p><strong>{account.username}</strong> · {uiLabel(account.role)}{account.location_name?` · ${account.location_name}`:""}</p>
+      <p className="muted">{translateUI("Device")}: {runtime.session?.device.name}</p></>}
+    <p role="status">{uiText(runtime.status)}{runtime.lastSync?` · ${new Date(runtime.lastSync).toLocaleString(getLocale())}`:""}</p>
+    <div className="actions">
+      <button disabled={busy} onClick={()=>void perform(()=>runtime.sync())}>{translateUI("Sync Now")}</button>
+      <button disabled={busy} onClick={()=>void perform(async()=>setMessage(await runtime.cleanDownloads()))}>{translateUI("Clean old downloads")}</button>
+      {(!runtime.hosted||account?.role!=="location")&&<button onClick={()=>window.dispatchEvent(new Event("mmb-open-workspace"))}>{translateUI("Company workspace")}</button>}
+    </div>
+    {runtime.hosted&&<details className="password-settings"><summary>{translateUI("Change password")}</summary>
+      <form onSubmit={e=>{
+        e.preventDefault();const form=e.currentTarget;const f=new FormData(form);
+        if(f.get("password")!==f.get("confirm")){setMessage(translateUI("Passwords do not match."));return;}
+        void perform(async()=>{await runtime.api("auth/password",{current_password:f.get("current"),password:f.get("password")});form.reset();setMessage(translateUI("Password updated. Other devices must sign in again."));});
+      }}>
+        <label>{translateUI("Current password")}<input type="password" name="current" autoComplete="current-password" required/></label>
+        <label>{translateUI("New password")}<input type="password" name="password" autoComplete="new-password" minLength={12} maxLength={72} required/></label>
+        <label>{translateUI("Confirm new password")}<input type="password" name="confirm" autoComplete="new-password" minLength={12} maxLength={72} required/></label>
+        <button disabled={busy} className="primary">{translateUI("Update password")}</button>
+      </form>
+    </details>}
+    <p role="status">{message}</p>
+  </section>;
+}
+globalThis.MMB.AccountSettings=AccountSettings;
 function CheckList({
   rows,
   selected,
@@ -296,6 +315,7 @@ function Manager({ close }: { close: () => void }) {
   });
   const [preview, setPreview] = React.useState(false);
   const [uploadingAnnouncement,setUploadingAnnouncement]=React.useState(false);
+  const [installing,setInstalling]=React.useState(false);
   const admin =
     !runtime.hosted || runtime.session?.account.role === "administrator";
   const manager = admin || runtime.session?.account.role === "content_manager";
@@ -536,19 +556,25 @@ function Manager({ close }: { close: () => void }) {
           }
         />
         {admin && runtime.hosted && tab === "templates" && !rows.length && (
-          <button
-            onClick={() =>
-              perform(async () => {
-                const starter = defaults();
-                for (const kind of ["libraries", "items", "templates"])
-                  for (const row of starter[kind])
-                    await runtime.saveRecord(kind, {
-                      ...row,
-                      company_visible: kind === "templates",
-                      locations: [],
-                    });
-              })
-            }
+          <button disabled={installing}
+            onClick={()=>void perform(async()=>{
+              setInstalling(true);
+              try {
+                await runtime.sync();
+                const starter=defaults();
+                // Libraries precede their content, and templates reference both.
+                // Skip completed batches if a prior installation was interrupted.
+                for(const kind of ["libraries","items","templates"]) {
+                  const existing=new Set((await db.all(kind)).map(row=>row.id));
+                  const missing=starter[kind].filter((row:Row)=>!existing.has(row.id));
+                  for(let start=0;start<missing.length;start+=50) {
+                    const result=await runtime.api("records/batch",{records:missing.slice(start,start+50).map((row:Row)=>({id:row.id,kind,expected_version:0,data:{...row,company_visible:kind==="templates",locations:[]}}))});
+                    for(const record of result.records)await db.put(kind,record.id,record.data);
+                  }
+                }
+                await runtime.sync();
+              }finally{setInstalling(false);}
+            })}
           >
             {translateUI("Install DTB starter libraries and daily template")}</button>
         )}
@@ -1005,69 +1031,27 @@ function Workspace() {
   const [error, setError] = React.useState("");
   const { state } = useApp() as { state: State };
   const role = runtime.session?.account.role;
-  async function exportLocalData() {
-    try {
-      const zip = await exportBackup(state);
-      const url = URL.createObjectURL(zip);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Morning-Meeting-Backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      await runtime.repository.save({ ...state, settings: { ...state.settings, lastBackupAt: new Date().toISOString() } });
-    } catch (e) { setError(String(e)); }
-  }
-  async function resetStarterData() {
-    if (!(await confirmUI(translateUI("Reset the default libraries, their content, and the default Morning Meeting template to the GitHub version? Content you added to those default libraries will be removed. Custom libraries, custom templates, saved meetings, history, and local media will stay. Export your data first if you want a copy.")))) return;
-    try {
-      await runtime.repository.save(resetDefaults(state));
-      location.reload();
-    } catch (e) { setError(String(e)); }
-  }
+  React.useEffect(()=>{
+    const open=()=>setOpen(true);window.addEventListener("mmb-open-workspace",open);
+    return ()=>window.removeEventListener("mmb-open-workspace",open);
+  },[]);
   return (
     <>
       <div className="v2-bar">
-        <strong>
-          {runtime.hosted
-            ? (runtime.session?.account.location_name ??
-              runtime.session?.account.username)
-            : translateUI("Demo / Local data only")}
-        </strong>
-        <span>
-          {runtime.hosted ? uiText(runtime.status) : translateUI("Works offline")}
-          {runtime.lastSync
-            ? " · " + new Date(runtime.lastSync).toLocaleString(getLocale())
-            : ""}
-        </span>
-        {!runtime.hosted && <>
-          <button onClick={exportLocalData}>{translateUI("Export current data")}</button>
-          <button onClick={resetStarterData}>{translateUI("Reset GitHub defaults")}</button>
-        </>}
-        <button
-          onClick={() => runtime.sync().catch((e) => setError(String(e)))}
-        >
-          {translateUI("Sync Now")}</button>
-        <button onClick={() => setOpen(true)}>{translateUI("Company workspace")}</button>
-        <button
-          onClick={() =>
-            runtime
-              .cleanDownloads()
-              .then(setError)
-              .catch((e) => setError(String(e)))
-          }
-        >
-          {translateUI("Clean old downloads")}</button>
+        <div className="account-identity"><strong>{runtime.hosted?runtime.session?.account.username:translateUI("Browser preview")}</strong>
+          <span>{runtime.hosted?uiLabel(role??""):translateUI("Local data only")}</span></div>
+        {(!runtime.hosted||role!=="location")&&<button onClick={()=>setOpen(true)}>{translateUI("Company workspace")}</button>}
         {runtime.hosted && role !== "location" && (
           <label>
             {translateUI("Meeting location")}<select aria-label={translateUI("Meeting location")}
-              defaultValue=""
+              defaultValue={globalThis.MMB.location??""}
               onChange={(e) => (
                 (globalThis.MMB.location = e.target.value),
                 db.put("meta", "location", e.target.value)
               )}
             >
               <option value="">{translateUI("Choose before building")}</option>
-              {(globalThis.MMB.locations ?? []).map((l: Row) => (
+              {(globalThis.MMB.locations ?? []).filter((l:Row)=>l.enabled).map((l: Row) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                 </option>

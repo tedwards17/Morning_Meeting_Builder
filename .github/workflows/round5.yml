@@ -1,0 +1,68 @@
+name: Round 5 hosting checks
+on:
+  push:
+    branches: [Round-5-Development]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: translation-pilot
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-disposable-only
+          MYSQL_DATABASE: mmb_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -pci-disposable-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: translation-pilot/package-lock.json
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, fileinfo, curl, mbstring, gd, exif
+          coverage: none
+      - run: npm ci
+      - run: npm run typecheck && npm run lint && npm test && npm run check:php
+      - run: python3 scripts/check-migrations.py
+      - run: python3 tests/api/history.py && python3 tests/api/translation.py && python3 tests/api/codespaces-origin.py
+      - run: npm run build:demo && npm run build:hosted
+      - run: npx playwright install --with-deps chromium
+      - name: Disposable database and hosted login checks
+        env:
+          MMB_TEST_ALLOW_RESET: '1'
+          MMB_CONFIG: /tmp/mmb-ci.php
+          MMB_TRANSLATION_CONFIG: /tmp/mmb-captions-ci.php
+        run: |
+          mkdir -p /tmp/mmb-ci-media
+          cat > /tmp/mmb-ci.php <<'PHP'
+          <?php return ['dsn'=>'mysql:host=127.0.0.1;port=3306;dbname=mmb_test;charset=utf8mb4','user'=>'root','password'=>'ci-disposable-only','media_dir'=>'/tmp/mmb-ci-media','origin'=>'http://127.0.0.1:8081','max_image_bytes'=>15728640,'max_storage_bytes'=>10737418240,'test_http'=>true];
+          PHP
+          cat > /tmp/mmb-captions-ci.php <<'PHP'
+          <?php return ['enabled'=>true,'auth_mode'=>'account','origin'=>'http://127.0.0.1:8081','state_dir'=>'/tmp/mmb-ci-captions','test_http'=>true];
+          PHP
+          php scripts/migrate.php /tmp/mmb-ci.php
+          php scripts/migrate.php /tmp/mmb-ci.php
+          MYSQL_PWD=ci-disposable-only mysql -h127.0.0.1 -uroot mmb_test < database/seed/001_dtb.sql
+          php -S 127.0.0.1:8081 -t build/hosted tests/api/router.php > /tmp/mmb-api.log 2>&1 &
+          sleep 1
+          python3 tests/api/integration.py
+          python3 tests/api/round5.py
+          node tests/e2e/round5.cjs
+          npm run package
+          python3 tests/api/package-smoke.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: morning-meeting-builder-round5-hosting
+          path: hosting-upload/
