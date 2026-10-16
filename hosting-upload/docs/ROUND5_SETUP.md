@@ -1,6 +1,6 @@
 # Round 5 — first hosting setup
 
-Version 0.5.3. Existing installations: use [ROUND5_0_5_3_UPGRADE.md](ROUND5_0_5_3_UPGRADE.md); do not repeat first installation. Start with the `hosting-upload` folder in the **Round-5-Development** GitHub branch. Everything in `public_html` is already built. You do not run npm, Node, Next.js, or a development server on the host.
+Version 0.5.4. Existing installations: use [ROUND5_0_5_4_UPGRADE.md](ROUND5_0_5_4_UPGRADE.md); do not repeat first installation. Start with the `hosting-upload` folder in the **Round-5-Development** GitHub branch. Everything in `public_html` is already built. You do not run npm, Node, Next.js, or a development server on the host.
 
 ## 1. Confirm the host and domain
 

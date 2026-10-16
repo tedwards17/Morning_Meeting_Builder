@@ -64,6 +64,7 @@ jobs:
           node tests/e2e/meeting-fixes.cjs
           node tests/e2e/round5-repair.cjs
           node tests/e2e/media-attachment.cjs
+          node tests/e2e/image-decoding.cjs
           npm run package
           python3 tests/api/package-smoke.py
       - uses: actions/upload-artifact@v4
@@ -72,4 +73,4 @@ jobs:
           path: |
             hosting-upload/
             hosting-update/
-            translation-pilot/artifacts/morning-meeting-builder-update-0.5.3.zip
+            translation-pilot/artifacts/morning-meeting-builder-update-0.5.4.zip

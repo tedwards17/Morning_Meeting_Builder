@@ -1001,7 +1001,31 @@ export async function meetingMedia(maxFiles = 12, meetingId?:string, beforeUploa
           closeImage = () => URL.revokeObjectURL(url);
         } catch {
           URL.revokeObjectURL(url);
-          throw new Error(translateUI("{arg0}: this browser cannot display this image. Try a JPEG or a screenshot.", {arg0: file.name}));
+          try {
+            // Some file providers/browser policies reject blob-backed images.
+            // Materialize the selected bytes before trying normal image loading.
+            const dataUrl=await new Promise<string>((resolve,reject)=>{
+              const reader=new FileReader();
+              reader.onload=()=>resolve(String(reader.result));
+              reader.onerror=()=>reject(reader.error);
+              reader.onabort=()=>reject(new Error("Image read cancelled"));
+              reader.readAsDataURL(file);
+            });
+            image=await new Promise<HTMLImageElement>((resolve,reject)=>{
+              const element=new Image();
+              element.onload=()=>resolve(element);
+              element.onerror=()=>reject(new Error("Image could not be decoded"));
+              element.src=dataUrl;
+            });
+          } catch {
+            // PHP checks actual MIME, dimensions and image validity, then uses
+            // GD when available. A browser decoder is not the hosted validator.
+            if(hosted&&["image/jpeg","image/png","image/webp"].includes(file.type)) {
+              readyFiles.push(file);
+              continue;
+            }
+            throw new Error(translateUI("{arg0}: this browser cannot display this image. Try a JPEG or a screenshot.", {arg0: file.name}));
+          }
         }
       }
       const width = "naturalWidth" in image ? image.naturalWidth : image.width;

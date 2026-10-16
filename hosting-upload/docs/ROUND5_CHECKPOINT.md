@@ -1,6 +1,6 @@
 # Round 5 checkpoint
 
-Current follow-up: **v0.5.3**, 2026-10-16. Existing live installations should use [ROUND5_0_5_3_UPGRADE.md](ROUND5_0_5_3_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
+Current follow-up: **v0.5.4**, 2026-10-16. Existing live installations should use [ROUND5_0_5_4_UPGRADE.md](ROUND5_0_5_4_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
 
 Base: Round-4-Development c7e413d (v0.4.18). Branch: Round-5-Development. Target: v0.5.0.
 
@@ -93,3 +93,14 @@ Verified locally:
 - Both static builds and package paths validated. Four real-package smoke checks passed, preserving existing public configuration and cPanel PHP settings, private configuration discovery, account login and captions authorization.
 
 Use ROUND5_0_5_3_UPGRADE.md and hosting-update/public_html for the existing site. No production host changes were made; upload and verify 0.5.3 online. If the host still rejects media, report the new inline error and file type/size instead of clearing site data.
+
+
+## Browser image decoding follow-up — 2026-10-16, v0.5.4
+
+User supplied the exact pre-upload error: “1000023509.jp: this browser cannot display this image. Try a JPEG or a screenshot.” The v0.3.4 commit 619e6c4 added normal Image/object-URL loading after createImageBitmap rejection; that fallback is still present, so merely restoring browser storage would not change this error. The actual user image has not been inspected.
+
+Added a FileReader/data-URL fallback after both existing browser decoders fail. For hosted JPEG/PNG/WebP, browser preparation failure now passes the original file to the existing PHP validator: it checks actual MIME, image headers and pixel dimensions, and uses GD/WebP processing when available. Browser resize/conversion remains for decodable camera photos. HEIC/HEIF still require a working client decoder/conversion; no unsupported HEIC-to-PHP path, added dependency, backend change, SQL migration or credentials change. Existing file-size checks and server authorization remain in place.
+
+Seven focused real-PHP/MySQL browser checks passed: valid JPEG named .jp through FileReader fallback, JPEG and PNG with all preparation decoders rejected, PHP rejection of forged JPEG bytes, no upload for unsupported HEIC, three persisted server image attachments and no uncaught runtime errors. TypeScript, lint, both static builds and package path checks passed. These checks use a generated real JPEG, not the user's unseen original; physical browsers and live-host GD behavior remain deployment checks.
+
+Publish the prebuilt hosting-update/public_html through cPanel and verify 0.5.4. No rollback to browser-only media storage is needed. No live host deployment performed.
