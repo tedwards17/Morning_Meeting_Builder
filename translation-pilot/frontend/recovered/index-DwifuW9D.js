@@ -19610,9 +19610,23 @@ class oE {
     const s = await (await tf()).get("assets", i);
     return s ? new Blob([s], { type: r }) : null;
   }
-  async url(i, r) {
-    const s = await this.read(i, r);
-    return s ? URL.createObjectURL(s) : globalThis.MMB.mediaUrl(i);
+  async url(i, r, assetId) {
+    const serverUrl = globalThis.MMB.mediaUrl(i, assetId);
+    // Prefer cached bytes for offline playback, but do not let a blocked legacy
+    // media database prevent a hosted preview from using its server image.
+    let timer;
+    try {
+      const s = serverUrl ? await Promise.race([
+        this.read(i, r),
+        new Promise((_, reject) => {timer = setTimeout(() => reject(new Error("Media cache unavailable")), 1000);}),
+      ]) : await this.read(i, r);
+      return s ? URL.createObjectURL(s) : serverUrl;
+    } catch (error) {
+      if (serverUrl) return serverUrl;
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 const Ds = (n, i) =>
@@ -19687,7 +19701,7 @@ function Qs(n) {
       let m = !1,
         g = null;
       return (
-        Ji.url(s, c)
+        Ji.url(s, c, n)
           .then((v) => {
             ((g = v),
               m
@@ -19701,7 +19715,7 @@ function Qs(n) {
           ((m = !0), g?.startsWith("blob:") && URL.revokeObjectURL(g));
         }
       );
-    }, [s, c]),
+    }, [s, c, n]),
     s && f?.key === s ? f.url : void 0
   );
 }
@@ -23191,9 +23205,12 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
     [S, A] = ae.useState(null),
     [M, L] = ae.useState(null),
     [O, V] = ae.useState(!1),
+    [uploadFeedback, setUploadFeedback] = ae.useState(null),
     rotations = ae.useRef(new Map()),
     autosaveTimer = ae.useRef(null),
-    starting = ae.useRef(false);
+    starting = ae.useRef(false),
+    latestMeeting = ae.useRef(g);
+  latestMeeting.current = g;
   au(O);
   ae.useEffect(() => {
     if (!g || isMeetingExpired(g) || !O || starting.current) return;
@@ -23597,10 +23614,32 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   d.jsx("p", { className: "muted", children: translateUI("Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Media is optional for Personal share; other included media slides need an item.") }),
                   d.jsxs("div", { className: "actions", children: [
                     d.jsx("button", {
-                      disabled: le.items.length >= 12,
+                      disabled: m || le.items.length >= 12,
                       onClick: () => f(async () => {
-                        const items = await globalThis.MMB.meetingMedia(12 - le.items.length, g.id);
-                        if (items.length) E(_, { items: [...le.items, ...items] });
+                        setUploadFeedback({text: translateUI("Preparing and uploading media…"), error: false});
+                        try {
+                        const meetingId = g.id, slideId = le.id;
+                        const saveDraft = async () => {
+                          const draft = latestMeeting.current;
+                          await c(state => ({...state, meetings: state.meetings.some(meeting => meeting.id === draft.id)
+                            ? state.meetings.map(meeting => meeting.id === draft.id ? draft : meeting) : [...state.meetings, draft]}));
+                        };
+                        const items = await globalThis.MMB.meetingMedia(12 - le.items.length, meetingId, saveDraft);
+                        if (!items.length) { setUploadFeedback(null); return; }
+                        const current = latestMeeting.current;
+                        const updated = {...current, slides: current.slides.map(slide => slide.id === slideId
+                          ? {...slide, items: [...slide.items, ...items], skipped: false} : slide)};
+                        latestMeeting.current = updated; v(updated); V(true);
+                        await c(state => ({...state, meetings: state.meetings.some(meeting => meeting.id === meetingId)
+                          ? state.meetings.map(meeting => meeting.id === meetingId ? updated : meeting) : [...state.meetings, updated]}));
+                        if (latestMeeting.current === updated) V(false);
+                        setUploadFeedback({text: translateUI(items.cacheWarning
+                          ? "Media attached and saved to this meeting. Offline download is incomplete; stay connected or try Download meeting media again."
+                          : "Media attached and saved to this meeting."), error: false});
+                        } catch (error) {
+                          globalThis.MMB.clearError();
+                          setUploadFeedback({text: error instanceof Error ? uiError(error.message) : translateUI("Something went wrong. Your saved data has not been reset."), error: true});
+                        }
                       }),
                       children: translateUI("Upload images / videos"),
                     }),
@@ -23615,6 +23654,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                       children: translateUI("Add media slide"),
                     }),
                   ] }),
+                  uploadFeedback && d.jsx("p", {className: uploadFeedback.error ? "warning media-upload-feedback" : "muted media-upload-feedback", role: uploadFeedback.error ? "alert" : "status", children: uploadFeedback.text}),
                   d.jsx("div", { className: "media-slide-grid", children: mediaSlides.map(({ slide, index }) =>
                     d.jsxs("div", {
                       className: `media-drop-zone ${index === _ ? "selected" : ""}`,

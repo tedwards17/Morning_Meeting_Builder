@@ -1102,5 +1102,8 @@
   "Completed · personal media removed": "Terminada · archivos personales eliminados",
   "Close navigation": "Cerrar navegación",
   "Dismiss error": "Cerrar error",
-  "Presentation controls hide after 5 seconds. Tap the screen or move the pointer to show them again.": "Los controles se ocultan después de 5 segundos. Toque la pantalla o mueva el puntero para mostrarlos de nuevo."
+  "Presentation controls hide after 5 seconds. Tap the screen or move the pointer to show them again.": "Los controles se ocultan después de 5 segundos. Toque la pantalla o mueva el puntero para mostrarlos de nuevo.",
+  "Media attached and saved to this meeting.": "Archivos adjuntados y guardados en esta reunión.",
+  "Media attached and saved to this meeting. Offline download is incomplete; stay connected or try Download meeting media again.": "Archivos adjuntados y guardados en esta reunión. La descarga sin conexión está incompleta; mantén la conexión o intenta de nuevo Descargar archivos de la reunión.",
+  "Preparing and uploading media…": "Preparando y subiendo archivos…"
 }

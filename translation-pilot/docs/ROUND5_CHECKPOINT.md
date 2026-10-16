@@ -1,6 +1,6 @@
 # Round 5 checkpoint
 
-Current follow-up: **v0.5.2**, 2026-10-16. Existing live installations should use [ROUND5_0_5_2_UPGRADE.md](ROUND5_0_5_2_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
+Current follow-up: **v0.5.3**, 2026-10-16. Existing live installations should use [ROUND5_0_5_3_UPGRADE.md](ROUND5_0_5_3_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
 
 Base: Round-4-Development c7e413d (v0.4.18). Branch: Round-5-Development. Target: v0.5.0.
 
@@ -78,3 +78,18 @@ Verified locally:
 - 19 new upgrade/browser checks passed with real PHP/MySQL: injected a genuine legacy completed record plus a poisoned outbox and unsent new draft; verified automatic recovery, retained speech, new meeting creation from Home/Meetings, another successful completion with older history unchanged, one dismissible startup error, portrait close-button spacing, landscape scrolling with a fixed drawer header, and five-second controls even with the old keep-visible setting. Portrait/landscape screenshots were visually inspected.
 
 No production host changes were made. The user uploads the prebuilt folder through cPanel and refreshes online; no new migration is required when version 004 is installed. Fullscreen's browser-owned exit notice cannot be hidden by app code; see the new upgrade guide for the primary reference.
+
+
+## Upload attachment repair — 2026-10-16, v0.5.3
+
+Reported on Android Chrome/Samsung Internet and desktop Chrome/Edge: choosing media leaves the preview and required Improvements slide empty. Basic real-server PNG upload passed locally; injecting a media-cache quota failure reproduced the reported empty-slide/missing-media behavior on 0.5.2. The exact live hosting failure has not been observed.
+
+Fixed: successful PHP uploads survive offline-cache download/write failure and an eight-second cache timeout; cached previews have a bounded read with exact-asset server fallback, preserving normal offline blob playback. Asset ID selection avoids selecting another meeting's protected URL when hashes match. The builder saves its latest draft before upload, targets the original slide by ID, preserves concurrent presenter/slide edits, includes the media slide and persists attachments immediately. Upload status and actionable errors appear beside the upload button. No SQL or backend/key/config change.
+
+Verified locally:
+
+- TypeScript and lint passed; 69 frontend unit checks passed.
+- 14 new focused Chromium browser checks passed against PHP/MySQL and the full starter Improvements slide: cache quota/read errors, exact asset URLs, automatic save to MySQL, required-media validation, narrow mobile layout with slide switching/edits during a delayed POST, failed cache GET, actual offline image rendering, visible PHP rejection, blocked cache timeout, save/reopen, and presentation start. This checks Chromium at desktop/mobile widths, not physical devices or installed Chrome/Edge/Samsung Internet browsers.
+- Both static builds and package paths validated. Four real-package smoke checks passed, preserving existing public configuration and cPanel PHP settings, private configuration discovery, account login and captions authorization.
+
+Use ROUND5_0_5_3_UPGRADE.md and hosting-update/public_html for the existing site. No production host changes were made; upload and verify 0.5.3 online. If the host still rejects media, report the new inline error and file type/size instead of clearing site data.

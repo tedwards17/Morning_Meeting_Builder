@@ -691,8 +691,8 @@ export async function download(meeting: Row) {
   }
 }
 let assets: Row[] = [];
-export function mediaUrl(hash: string) {
-  const asset = assets.find((a) => a.hash === hash);
+export function mediaUrl(hash: string, assetId?:string) {
+  const asset = assets.find((a) => assetId ? a.id === assetId : a.hash === hash);
   return hosted && asset ? `./api/v1/media/${asset.id}` : null;
 }
 export async function upload(file: File) {
@@ -940,7 +940,7 @@ export async function claimSavedMeeting(meeting:Row):Promise<Row> {
   const result=await api(`meetings/${meeting.id}/claim`,{expected_device_id:meeting.device_id});
   await db.put("meetings",meeting.id,result.meeting);await sync();return result.meeting;
 }
-export async function meetingMedia(maxFiles = 12, meetingId?:string): Promise<Row[]> {
+export async function meetingMedia(maxFiles = 12, meetingId?:string, beforeUpload?:()=>Promise<void>): Promise<Row[] & {cacheWarning?:boolean}> {
   const files = await new Promise<File[]>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -1036,21 +1036,37 @@ export async function meetingMedia(maxFiles = 12, meetingId?:string): Promise<Ro
       readyFiles.push(file);
     }
   }
+  await beforeUpload?.();
   if(hosted) {
     if(!navigator.onLine)throw new Error(translateUI("Connect to upload meeting media. Download the saved meeting before presenting offline."));
     if(!meetingId)throw new Error(translateUI("Save this meeting before adding media."));
     await sync();
   }
-  const result:Row[]=[];const uploaded:Row[]=[];
+  const result:Row[] & {cacheWarning?:boolean}=[];const uploaded:Row[]=[];
+  let cacheFailed=false;
   for(const file of readyFiles) {
     let asset:Row;
     if(hosted) {
       const body=new FormData();body.append("image",file);body.append("scope","meeting-only");body.append("meeting_id",meetingId!);
       asset=await api("media",body);assets.push(asset);
-      // Cache the exact server bytes (the host may resize a JPEG to WebP).
-      const response=await fetch(`./api/v1/media/${asset.id}`,{credentials:"same-origin",cache:"no-store"});
-      if(!response.ok)throw new Error(translateUI("Media uploaded, but its download failed. Sync and retry."));
-      await media.write(asset.hash,await response.blob());
+      // Offline caching is optional: a quota/network failure must not discard a
+      // successful server upload. Cache only the exact bytes returned by PHP.
+      let timer:ReturnType<typeof setTimeout>|undefined;
+      const controller=new AbortController();
+      try {
+        await Promise.race([
+          (async()=>{
+            const response=await fetch(`./api/v1/media/${asset.id}`,{credentials:"same-origin",cache:"no-store",signal:controller.signal});
+            if(!response.ok)throw new Error("Media cache download failed");
+            await media.write(asset.hash,await response.blob());
+          })(),
+          new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error("Media cache timed out"));},8000);}),
+        ]);
+      } catch {
+        cacheFailed=true;
+      } finally {
+        clearTimeout(timer);
+      }
     }else {
       const hash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,"0")).join("");
       await media.write(hash,file);asset={id:crypto.randomUUID(),hash,name:file.name,mime:file.type,size:file.size,createdAt:new Date().toISOString(),scope:"meeting-only"};
@@ -1062,7 +1078,9 @@ export async function meetingMedia(maxFiles = 12, meetingId?:string): Promise<Ro
   // whole app state here could overwrite a draft being saved at the same time.
   if (globalThis.MMB.addMediaAssets) await globalThis.MMB.addMediaAssets(uploaded);
   else for (const asset of uploaded) await db.put("assets", asset.id, asset);
+  await refreshAssets();
   globalThis.MMB.refresh?.();
+  if(cacheFailed)result.cacheWarning=true;
   return result;
 }
 globalThis.MMB.meetingMedia = meetingMedia;

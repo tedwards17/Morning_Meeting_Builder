@@ -9,7 +9,7 @@ import { templateDefaults } from "./slide-policy";
 
 const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4] };
 
-export const APP_VERSION = "0.5.2";
+export const APP_VERSION = "0.5.3";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;
