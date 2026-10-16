@@ -25,7 +25,7 @@ import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
 globalThis.MMB.FilePicker = FilePicker;
 globalThis.MMB.LanguageSelector = LanguageSelector;
-const Original = OriginalApp as RT.ComponentType;
+const Original = OriginalApp as RT.ComponentType<{navigationOpen:boolean;onCloseNavigation:()=>void}>;
 const Provider = AppProvider as RT.ComponentType<{ children: RT.ReactNode }>;
 function useRuntime() {
   const [, set] = React.useState(0);
@@ -1032,7 +1032,9 @@ function _unusedLocalDate(iso: string) {
 function Workspace() {
   useRuntime();
   const [open, setOpen] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const [navigationOpen,setNavigationOpen]=React.useState(false);
+  const closeNavigation=React.useCallback(()=>setNavigationOpen(false),[]);
+  React.useEffect(()=>{const query=matchMedia("(max-width:900px)");const resized=()=>{if(!query.matches)setNavigationOpen(false);};query.addEventListener("change",resized);return()=>query.removeEventListener("change",resized);},[]);
   const { state } = useApp() as { state: State };
   const role = runtime.session?.account.role;
   React.useEffect(()=>{
@@ -1042,6 +1044,9 @@ function Workspace() {
   return (
     <>
       <div className="v2-bar">
+        <button className="account-menu-toggle icon-button" aria-label={translateUI("Open navigation")} aria-controls="mmb-navigation" aria-expanded={navigationOpen} onClick={()=>setNavigationOpen(value=>!value)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
         <div className="account-identity"><strong>{runtime.hosted?runtime.session?.account.username:translateUI("Browser preview")}</strong>
           <span>{runtime.hosted?uiLabel(role??""):translateUI("Local data only")}</span></div>
         {(!runtime.hosted||role!=="location")&&<button onClick={()=>setOpen(true)}>{translateUI("Company workspace")}</button>}
@@ -1064,18 +1069,16 @@ function Workspace() {
           </label>
         )}
         {runtime.hosted && (
-          <button
-            onClick={() => runtime.logout().catch((e) => setError(String(e)))}
+          <button className="account-signout"
+            onClick={() => runtime.logout().catch(runtime.reportError)}
           >
             {translateUI("Sign out")}</button>
         )}
       </div>
-      {(error || runtime.error) && (
-        <p className="v2-error" role="alert">
-          {uiError(error || runtime.error)}
-        </p>
-      )}
-      <Original />
+      {runtime.error && <div className="v2-error" role="alert"><span>{uiError(runtime.error)}</span>
+        <button className="icon-button" aria-label={translateUI("Dismiss error")} onClick={runtime.clearError}>×</button>
+      </div>}
+      <Original navigationOpen={navigationOpen} onCloseNavigation={closeNavigation} />
       {open && <Manager close={() => setOpen(false)} />}
       <span className="sr-only">{state.settings.company}</span>
     </>
@@ -1085,7 +1088,6 @@ function App() {
   React.useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
   useRuntime();
   const [ready, setReady] = React.useState(false);
-  const [error, setError] = React.useState("");
   const [startupDelayed, setStartupDelayed] = React.useState(db.databaseBlocked);
   const [databaseBlocked, setDatabaseBlocked] = React.useState(db.databaseBlocked);
   React.useEffect(() => {
@@ -1105,7 +1107,7 @@ function App() {
         setReady(true);
       })
       .catch((e) => {
-        setError(String(e));
+        runtime.reportError(e);
         setReady(true);
       })
       .finally(() => window.clearTimeout(timer));
@@ -1133,7 +1135,6 @@ function App() {
   if (runtime.hosted && !runtime.session) return <Login />;
   return (
     <>
-      {error && <p role="alert">{uiError(error)}</p>}
       <Provider>
         <Workspace />
       </Provider>

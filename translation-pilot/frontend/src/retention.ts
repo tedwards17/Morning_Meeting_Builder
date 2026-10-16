@@ -17,10 +17,11 @@ function collectReferences(meeting: Row, ids: Set<string>) {
   }
 }
 
-export function expireSavedMedia(state: State, now = Date.now()): {
+export function expireSavedMedia(state: State, now = Date.now(), meetingId?:string): {
   state: State; hashes: string[]; changed: boolean;
 } {
-  const expired = state.meetings.filter((meeting) => meeting.status === "completed" && !meeting.mediaExpiredAt);
+  const eligible=(meeting:Row)=>meeting.status==="completed"&&!meeting.mediaExpiredAt&&(!meetingId||meeting.id===meetingId);
+  const expired = state.meetings.filter(eligible);
   if (!expired.length) return { state, hashes: [], changed: false };
   const candidates = new Set<string>();
   for (const meeting of expired)
@@ -29,7 +30,7 @@ export function expireSavedMedia(state: State, now = Date.now()): {
         if (item.scope === "meeting-only")
           for (const id of [item.assetId, item.thumbnailAssetId]) if (id) candidates.add(id);
 
-  const meetings = state.meetings.map((meeting) => meeting.status === "completed" && !meeting.mediaExpiredAt
+  const meetings = state.meetings.map((meeting) => eligible(meeting)
     ? { ...meeting, mediaExpiredAt: new Date(now).toISOString(), mediaCleanupConfirmed: true,
       slides: meeting.slides.map((slide: Row) => ({ ...slide,
         items: slide.items.map((item:Row)=>{

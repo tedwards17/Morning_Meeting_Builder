@@ -39,6 +39,8 @@ check('saved meeting keeps server asset references',push(a,meeting)[0]==200)
 asset_php="$c=require getenv('MMB_CONFIG');$p=new PDO($c['dsn'],$c['user'],$c['password']);$q=$p->prepare('SELECT stored_path FROM media_assets WHERE id=?');$q->execute([$argv[1]]);echo $q->fetchColumn();"
 asset_path=subprocess.check_output([os.environ.get('PHP_BIN','php'),'-r',asset_php,asset['id']],text=True).strip()
 assert asset_path and os.path.isfile(asset_path)
+check('owner can retrieve the authoritative meeting',b.call('meetings/'+meeting['id'])[0]==200)
+check('another account cannot retrieve the meeting',other.call('meetings/'+meeting['id'])[0]==404)
 check('same account on another device can download photo',b.call('media/'+asset['id'])[0]==200)
 check('other account cannot download private meeting photo',other.call('media/'+asset['id'])[0]==404)
 check('other account cannot claim presentation',other.call('meetings/'+meeting['id']+'/claim',{'expected_device_id':a.device})[0]==403)

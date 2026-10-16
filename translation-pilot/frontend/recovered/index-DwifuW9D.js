@@ -18625,14 +18625,10 @@ function $j({ children: n }) {
         await S();
       } catch (A) {
         clearTimeout(messageTimer.current);
-        (console.error("[Morning Meeting]", A),
-          h(
-            A instanceof ax
-              ? translateUI("Check {arg0}: {arg1}", {arg0: A.issues[0]?.path.join(" → ") || translateUI("the form"), arg1: uiError(A.issues[0]?.message)})
-              : A instanceof Error
-                ? A.message
-                : translateUI("Something went wrong. Your saved data has not been reset."),
-          ));
+        console.error("[Morning Meeting]", A);
+        globalThis.MMB.reportError(A instanceof ax
+          ? translateUI("Check {arg0}: {arg1}", {arg0:A.issues[0]?.path.join(" → ")||translateUI("the form"),arg1:uiError(A.issues[0]?.message)})
+          : A instanceof Error?A.message:translateUI("Something went wrong. Your saved data has not been reset."));
       } finally {
         g((A) => A - 1);
       }
@@ -24154,10 +24150,13 @@ function EE({ meeting: n, onExit: i }) {
       );
     }, [L, M, r.settings.remoteKeys]),
     ae.useEffect(() => {
-      if (!r.settings.hideControls) return;
-      const V = setTimeout(() => g(!1), 4500);
+      const V = setTimeout(() => {
+        const focused=document.activeElement;
+        if(focused?.closest(".presentation-controls"))focused.blur();
+        g(!1);
+      }, 5000);
       return () => clearTimeout(V);
-    }, [v, r.settings.hideControls]),
+    }, [v]),
     ae.useEffect(() => {
       if (!r.settings.wakeLock || !("wakeLock" in navigator)) return;
       let V,
@@ -24220,7 +24219,8 @@ function EE({ meeting: n, onExit: i }) {
         d.jsx(globalThis.MMB.RollingCaptions, {events: caption}),
         d.jsxs("div", {
           className: `presentation-controls ${m ? "visible" : ""}`,
-          onFocusCapture: () => g(!0),
+          onFocusCapture: () => {_(Date.now());g(!0);},
+          onClickCapture: event => {if(event.detail>0)event.target.closest("button")?.blur();},
           children: [
             d.jsx("button", {
               className: "control-icon",
@@ -25937,28 +25937,7 @@ function iz() {
               className: "panel",
               children: [
                 d.jsx("h2", { children: translateUI("Presentation behavior") }),
-                d.jsxs("label", {
-                  className: "check setting-toggle",
-                  children: [
-                    d.jsx("input", {
-                      type: "checkbox",
-                      checked: f.hideControls,
-                      onChange: (b) =>
-                        h({ ...f, hideControls: b.target.checked }),
-                    }),
-                    d.jsxs("span", {
-                      children: [
-                        d.jsx("strong", {
-                          children: translateUI("Hide controls while presenting"),
-                        }),
-                        d.jsx("small", {
-                          children:
-                            translateUI("Touch the screen or move the pointer to bring them back."),
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
+                d.jsx("p",{className:"muted",children:translateUI("Presentation controls hide after 5 seconds. Tap the screen or move the pointer to show them again.")}),
                 d.jsxs("label", {
                   className: "check setting-toggle",
                   children: [
@@ -26057,13 +26036,12 @@ const lz = [
   { id: "backup", label: translateUI("Backup & restore"), icon: tu },
   { id: "settings", label: translateUI("Settings"), icon: Xw },
 ];
-function rz() {
+function rz({navigationOpen:v=false,onCloseNavigation=()=>{}}={}) {
   const { state: n, update: i, run: r } = qt(),
     [s, c] = ae.useState("home"),
     [f, h] = ae.useState(),
     [fromSaved, setFromSaved] = ae.useState(!1),
     [m, g] = ae.useState(),
-    [v, _] = ae.useState(!1),
     [b, S] = ae.useState(navigator.onLine),
     [A, M] = ae.useState(0);
   ae.useEffect(() => {
@@ -26077,8 +26055,25 @@ function rz() {
       }
     );
   }, []);
+  ae.useEffect(()=>{
+    if(!v)return;
+    const previous=document.activeElement,overflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    const drawer=document.getElementById("mmb-navigation");drawer?.querySelector(".sidebar-close")?.focus({preventScroll:true});
+    const key=event=>{
+      if(event.key==="Escape"){event.preventDefault();onCloseNavigation();}
+      if(event.key==="Tab"){
+        const buttons=[...drawer.querySelectorAll("button:not(:disabled),a[href],input,select,[tabindex='0']")].filter(el=>el.getClientRects().length);
+        const first=buttons[0],last=buttons.at(-1);
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+      }
+    };
+    document.addEventListener("keydown",key);
+    return()=>{document.body.style.overflow=overflow;document.removeEventListener("keydown",key);if(previous?.isConnected)previous.focus({preventScroll:true});};
+  },[v,onCloseNavigation]);
   const L = (H) => {
-      c(H); _(!1); M((ie) => ie + 1);
+      c(H); onCloseNavigation();globalThis.MMB.clearError(); M((ie) => ie + 1);
       if (H === "meeting") { h(void 0); setFromSaved(!1); }
       window.scrollTo({top: 0, left: 0});
     },
@@ -26106,7 +26101,7 @@ function rz() {
             H = outcome === "finished" ? { ...latest, status: "completed", endedAt: gt() }
               : { ...latest, status: "presenting" };
             const updated={...ie,meetings:ie.meetings.map((le)=>(le.id===H.id?{...H,...(outcome==="finished"?{mediaCleanupConfirmed:true}:{} )}:le))};
-            const result=outcome==="finished" ? globalThis.MMB.completeMeetingState(updated) : updated;
+            const result=outcome==="finished" ? globalThis.MMB.completeMeetingState(updated,H.id) : updated;
             H=result.meetings.find(meeting=>meeting.id===H.id);return result; });
           if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
           g(void 0); h(H); c("meeting"); M((ie) => ie + 1);
@@ -26118,15 +26113,11 @@ function rz() {
     : d.jsxs("div", {
         className: "app-shell",
         children: [
-          d.jsx("div", {className:"mobile-navigation",children:d.jsx("button", {
-            className: "mobile-menu icon-button",
-            "aria-label": translateUI("Open navigation"),
-            onClick: () => _((H) => !H),
-            children: v ? d.jsx(iy, {}) : d.jsx(Cw, {}),
-          })}),
+          v&&d.jsx("div",{className:"navigation-backdrop","aria-hidden":true,onClick:onCloseNavigation}),
           d.jsxs("aside", {
-            className: `sidebar ${v ? "open" : ""}`,
-            children: [
+            id:"mmb-navigation",className: `sidebar ${v ? "open" : ""}`,
+            children: [d.jsxs("div",{className:"sidebar-header",children:[
+              d.jsx("button",{className:"sidebar-close icon-button","aria-label":translateUI("Close navigation"),onClick:onCloseNavigation,children:d.jsx(iy,{size:22})}),
               d.jsxs("div", {
                 className: "app-logo",
                 children: [
@@ -26139,6 +26130,7 @@ function rz() {
                   }),
                 ],
               }),
+              ]}),d.jsxs("div",{className:"sidebar-scroll",children:[
               d.jsx("div", {
                 className: "sidebar-language",
                 children: d.jsx(globalThis.MMB.LanguageSelector, {}),
@@ -26187,7 +26179,7 @@ function rz() {
                   }),
                 ],
               }),
-            ],
+            ]}),],
           }),
           d.jsxs("main", {
             className: "main-content",

@@ -10,6 +10,16 @@ with tempfile.TemporaryDirectory() as directory:
  code="$c=require getenv('MMB_CONFIG');$c['origin']=$argv[1];echo '<?php return '.var_export($c,true).';';"
  (private/'config.php').write_bytes(subprocess.check_output([php,'-r',code,origin]))
  (private/'translation-config.php').write_text("<?php return "+"['enabled'=>true,'auth_mode'=>'passphrase','origin'=>'"+origin+"','test_http'=>true,'state_dir'=>"+repr(str(private/'state'))+"];" )
+ # Model a cPanel merge over an existing install with custom paths and PHP rules.
+ (public/'server-paths.php').write_text("<?php return ['hosted_accounts'=>true,'private_dir'=>"+repr(str(private))+"];")
+ (public/'.htaccess').write_text((public/'.htaccess').read_text()+"\n# Existing cPanel PHP settings must survive updates.\n")
+ preserved={name:(public/name).read_bytes() for name in ['server-paths.php','config.js','.htaccess']}
+ update=root.parent/'hosting-update/public_html'
+ assert all(not (update/name).exists() for name in preserved)
+ shutil.copytree(update,public,dirs_exist_ok=True)
+ assert all((public/name).read_bytes()==data for name,data in preserved.items())
+ print('PASS cPanel update merge preserves custom paths, browser config and PHP settings')
+
  router=stage/'router.php';router.write_text("<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_contains($p,'/api/v1/')){require $_SERVER['DOCUMENT_ROOT'].'/api/index.php';return true;}return false;")
  env={k:v for k,v in os.environ.items() if k not in ['MMB_CONFIG','MMB_TRANSLATION_CONFIG']}
  server=subprocess.Popen([php,'-S',f'127.0.0.1:{port}','-t',str(public),str(router)],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -30,4 +40,4 @@ with tempfile.TemporaryDirectory() as directory:
   print('PASS packaged captions finds private config and accepts the signed-in account')
  finally:
   server.terminate();server.wait(timeout=5)
-print('Upload package: 3 checks passed')
+print('Upload package: 4 checks passed')

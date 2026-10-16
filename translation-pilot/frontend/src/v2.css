@@ -317,5 +317,31 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
 .rolling-captions p.caption-line{display:block;-webkit-line-clamp:unset;overflow:visible;margin:0;font:inherit;line-height:inherit;white-space:nowrap}
 .rolling-captions .caption-line span{position:static;width:auto;height:auto;padding:0;margin:0;overflow:visible;clip-path:none;white-space:normal}
 .rolling-captions .caption-en{color:#8fc8ff}.rolling-captions .caption-es{color:#8ae6a3}
-.mobile-navigation{display:none}
-@media(max-width:680px){.app-shell{flex-direction:column}.mobile-navigation{align-items:center;flex:0 0 auto;display:flex;position:relative;z-index:30;padding:10px 18px;background:#f4f7fa;border-bottom:1px solid #dce4ec}.mobile-navigation .mobile-menu{display:flex;position:static;top:auto;left:auto;transform:none;margin:0;min-height:44px;min-width:44px}.main-content{padding-top:24px}.translation-caption.rolling-captions{width:94%;font-size:clamp(17px,4vw,22px);padding:7px 10px}}
+/* Header menu and drawer are separate controls, in both phone orientations. */
+.account-menu-toggle,.sidebar-close{display:none}
+.sidebar{overflow:hidden;padding:0;max-height:100vh;max-height:100dvh}
+.sidebar-header{position:relative;flex:0 0 auto;padding:32px 18px 12px;background:white}
+.sidebar-scroll{min-height:0;flex:1;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;padding:0 18px 22px}
+.sidebar-scroll>*{flex-shrink:0}
+.sidebar>*{flex-shrink:0}
+.v2-error{display:flex;align-items:center;justify-content:space-between;gap:12px;overflow-wrap:anywhere}
+.v2-error>span{min-width:0}.v2-error button{flex-shrink:0}
+.presentation-controls:not(.visible){opacity:0;pointer-events:none}
+.presentation:has(.presentation-controls:not(.visible)) .translation-caption{bottom:calc(env(safe-area-inset-bottom,0px) + var(--caption-gap,6px))}
+@media(max-width:900px){
+ .v2-bar{position:sticky;top:0;z-index:25;margin-left:0;padding:10px 12px;gap:8px}
+ .v2-bar .account-menu-toggle{display:inline-flex;position:static;flex:0 0 44px;min-width:44px;min-height:44px;padding:8px;order:0}
+ .v2-bar .account-identity{min-width:0;flex:1 1 120px;margin-right:0;order:1}
+ .account-identity strong{overflow-wrap:anywhere}
+ .v2-bar .account-signout{order:2;flex-shrink:0}
+ .v2-bar>button:not(.account-menu-toggle):not(.account-signout),.v2-bar>label{order:3}
+ .app-shell{flex-direction:column}
+ .sidebar{visibility:hidden;z-index:50;transform:translateX(-105%);width:min(310px,90vw);padding:0;transition:transform .2s;box-shadow:10px 0 30px #14365033}
+ .sidebar.open{visibility:visible;transform:translateX(0)}
+ .sidebar-header{padding:24px 18px 12px}
+ .sidebar .app-logo{padding-right:42px}
+ .sidebar-close{display:inline-flex;position:absolute;right:12px;top:12px;min-width:44px;min-height:44px;padding:8px}
+ .navigation-backdrop{position:fixed;inset:0;background:#07152188;z-index:40}
+ .main-content{margin-left:0;padding:24px 18px 32px}
+}
+@media(max-width:680px){.translation-caption.rolling-captions{width:94%;font-size:clamp(17px,4vw,22px);padding:7px 10px}}

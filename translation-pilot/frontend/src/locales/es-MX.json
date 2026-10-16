@@ -1099,5 +1099,8 @@
   "This presentation is completed. Its personal media was removed.": "Esta presentación ya terminó. Se eliminaron sus archivos personales.",
   "Personal Share Images were removed after completion. Saved topic titles and transcript remain available.": "Las imágenes de la sección personal se eliminaron al terminar. Los títulos y la transcripción siguen disponibles.",
   "Download meeting media": "Descargar archivos de la reunión",
-  "Completed · personal media removed": "Terminada · archivos personales eliminados"
+  "Completed · personal media removed": "Terminada · archivos personales eliminados",
+  "Close navigation": "Cerrar navegación",
+  "Dismiss error": "Cerrar error",
+  "Presentation controls hide after 5 seconds. Tap the screen or move the pointer to show them again.": "Los controles se ocultan después de 5 segundos. Toque la pantalla o mueva el puntero para mostrarlos de nuevo."
 }

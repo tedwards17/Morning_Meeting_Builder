@@ -24,15 +24,23 @@ function validate_meeting_history(array $meeting):void {
   foreach($topic['content'] as $item)if(!is_array($item)||!valid_id($item['id']??null)||!is_string($item['title']??null)||mb_strlen($item['title'],'UTF-8')>300)fail(422,'Invalid presented content title');
  }
 }
+function canonical_history_value(mixed $value):mixed {
+ if(!is_array($value))return $value;
+ if(!array_is_list($value))ksort($value,SORT_STRING);
+ foreach($value as &$child)$child=canonical_history_value($child);unset($child);return $value;
+}
+function same_history_value(mixed $a,mixed $b):bool {
+ return encoded(canonical_history_value($a))===encoded(canonical_history_value($b));
+}
 function append_completed_history(array $prior,array $incoming):array {
  // Originals remain immutable; late speech and additive translations may finish after exit.
  $a=$prior;$b=$incoming;unset($a['transcript'],$b['transcript']);
- if(encoded($a)!==encoded($b))fail(409,'Completed meeting details cannot be changed');
+ if(!same_history_value($a,$b))fail(409,'Completed meeting details cannot be changed');
  $old=$prior['transcript']??[];$new=$incoming['transcript']??[];
  if(count($new)<count($old))fail(409,'Saved transcript cannot be replaced');
  foreach($old as $index=>$entry){
   $original=$entry;$incomingEntry=$new[$index];unset($original['translations'],$incomingEntry['translations']);
-  if(encoded($original)!==encoded($incomingEntry))fail(409,'Saved transcript cannot be replaced');
+  if(!same_history_value($original,$incomingEntry))fail(409,'Saved transcript cannot be replaced');
   foreach($entry['translations']??[] as $language=>$text)if(($new[$index]['translations'][$language]??null)!==$text)fail(409,'Saved transcript translation cannot be replaced');
  }
  return $incoming;

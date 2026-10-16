@@ -38,3 +38,11 @@ describe("completed presentation replay and media retention", () => {
     expect(expireSavedMedia(result.state, new Date(2026, 8, 28).getTime()).changed).toBe(false);
   });
 });
+
+it("finishing one meeting does not clean up older completed records during an upgrade",()=>{
+ const state=defaults();
+ const old={id:"old",status:"completed",slides:[{id:"s",definition:{title:"Personal share"},items:[{id:"p",scope:"meeting-only",assetId:"old-image",title:"Photo"}]}]};
+ state.meetings=[old,{...structuredClone(old),id:"finishing"}];
+ const result=expireSavedMedia(state,Date.now(),"finishing");
+ expect(result.state.meetings[0]).toEqual(old);expect(result.state.meetings[1].mediaCleanupConfirmed).toBe(true);
+});

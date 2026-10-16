@@ -56,6 +56,10 @@ function store_event(array $e):void{
  $e['event_key']=implode(':',[$m['id'],$slide['id']??'',$type,$content['id']??'']);$existing=one('SELECT id FROM usage_events WHERE organization_id=? AND event_key=?',[org(),$e['event_key']]);if($existing)return;
  query('INSERT INTO usage_events(id,organization_id,location_id,account_id,device_id,meeting_id,event_key,event_type,content_id,broadcast_id,occurred_at_utc,server_received_at,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6),?)',[$id,org(),$m['location_id'],actor()['id'],$GLOBALS['device']['id'],$m['id'],$e['event_key'],$type,$content['id']??null,$slide['broadcast_id']??null,gmdate('Y-m-d H:i:s',$when),encoded($e)]);change('events',$id);
 }
+if(preg_match('#^meetings/([a-f0-9-]{36})$#',$path,$matches)&&$method==='GET') {
+ $saved=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$matches[1]]);
+ if(!$saved||!can_read_meeting($saved))fail(404,'Meeting unavailable');json_out(['meeting'=>payload($saved)]);
+}
 if(preg_match('#^meetings/([a-f0-9-]{36})/claim$#',$path,$matches)&&$method==='POST') {
  role(['administrator','content_manager','location']);begin_write();
  $saved=one('SELECT * FROM meetings WHERE organization_id=? AND id=? FOR UPDATE',[org(),$matches[1]]);

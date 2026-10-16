@@ -1,6 +1,6 @@
 # Round 5 checkpoint
 
-Current follow-up: **v0.5.1**, 2026-10-16. Existing live installations should use [ROUND5_0_5_1_UPGRADE.md](ROUND5_0_5_1_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
+Current follow-up: **v0.5.2**, 2026-10-16. Existing live installations should use [ROUND5_0_5_2_UPGRADE.md](ROUND5_0_5_2_UPGRADE.md). The 0.5.0 launch notes below are historical; the follow-up replaces their device-only media limitation.
 
 Base: Round-4-Development c7e413d (v0.4.18). Branch: Round-5-Development. Target: v0.5.0.
 
@@ -52,3 +52,29 @@ Verified locally:
 - Desktop captions and mobile navigation screenshots visually inspected. npm audit reports zero known vulnerabilities in the locked dependency tree.
 
 The live hosting update, physical TV/phone behavior and real provider microphone test remain deployment checks for Thomas. Existing photos already lost before this patch cannot be restored; re-add any old device-only photos and save online.
+
+
+## Mobile/save repair — 2026-10-16, v0.5.2
+
+Reported after live 0.5.1 upload: mobile close button overlaid drawer content, landscape navigation could not scroll, all new-meeting actions were blocked by a completed-history conflict, duplicate error banners persisted, and focused presentation buttons did not hide.
+
+Implemented:
+
+- Hamburger moved into the account header beside the username. Drawer has a separate header/close button and a scrollable body in portrait and landscape. The background is locked while open, keyboard focus stays inside, Escape/backdrop closes, and changing to desktop closes the mobile drawer. The close button remains outside scrolling content.
+- Completed-history comparison now canonicalizes JSON object key order while preserving array order and actual field immutability. Client writes freeze existing completed details and merge only additive transcript/translation data. Finishing a meeting cleans up only that meeting, not older completed records.
+- Automatic recovery for an already-poisoned completed-history outbox: fetch the authorized server record, keep an account-local copy of the pending payload, rebase onto frozen details, preserve unsent speech/missing translations, and retry once. New unsynced drafts in the same batch are retained. Authorization failures and other errors are not ignored.
+- One dismissible error banner replaces duplicated startup/runtime messages and error toasts. Success or navigation clears stale errors.
+- Presentation controls hide after five idle seconds regardless of the previous preference; pointer button focus no longer pins them open. Taps, pointer movement and keyboard focus reveal controls and restart the timer.
+- The native fullscreen exit notification is outside website control. No unsupported suppression or browser-security setting change is attempted. The app continues to show failure feedback only if fullscreen cannot start.
+- The cPanel update package now also preserves the root .htaccess, keeping cPanel's PHP directives intact. No new database migration beyond 004 is needed.
+
+Verified locally:
+
+- TypeScript, lint and 69 frontend checks passed, including frozen completed details, additive translations and targeted media cleanup.
+- 24 PHP history checks passed, including reordered JSON and rejection of actual presenter/transcript changes. All 20 PHP files passed syntax checks.
+- 71 existing database/API checks, 13 Round 5 API checks, and 24 media/API checks passed. The authoritative meeting endpoint returns own-account history and rejects another account.
+- 13 existing Round 5 browser checks and 14 media/caption browser checks passed.
+- Four real-package smoke checks passed, including merging the update over custom public paths/config/root .htaccess without replacing them. Both builds and package paths validated; repeated packaging produced identical checksums.
+- 19 new upgrade/browser checks passed with real PHP/MySQL: injected a genuine legacy completed record plus a poisoned outbox and unsent new draft; verified automatic recovery, retained speech, new meeting creation from Home/Meetings, another successful completion with older history unchanged, one dismissible startup error, portrait close-button spacing, landscape scrolling with a fixed drawer header, and five-second controls even with the old keep-visible setting. Portrait/landscape screenshots were visually inspected.
+
+No production host changes were made. The user uploads the prebuilt folder through cPanel and refreshes online; no new migration is required when version 004 is installed. Fullscreen's browser-owned exit notice cannot be hidden by app code; see the new upgrade guide for the primary reference.

@@ -28,6 +28,13 @@ def check(name, condition):
     checks.append(name);print('PASS',name)
 saved={**meeting,'transcript':[entry]}
 check('valid text and topic context accepted',request(saved).get('ok'))
+def reorder(value):
+    if isinstance(value,dict):return {key:reorder(value[key]) for key in reversed(value)}
+    if isinstance(value,list):return [reorder(item) for item in value]
+    return value
+check('completed details accept equivalent reordered JSON keys',request(reorder(saved),saved).get('ok'))
+check('late translation accepts reordered transcript context keys',request(reorder({**saved,'transcript':[{**entry,'translations':{'es':'Mantenga el pasillo libre.'}}]}),saved).get('ok'))
+
 check('late transcript append accepted after completion',request(saved,meeting).get('ok'))
 check('saved transcript cannot be erased',bool(request(meeting,saved).get('error')))
 translated={**saved,'transcript':[{**entry,'translations':{'es':'Mantén el pasillo despejado.'}}]}

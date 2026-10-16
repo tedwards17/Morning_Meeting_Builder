@@ -3,6 +3,7 @@ import { isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaul
 import { remoteDirection } from "./remote";
 import { recalculate, media } from "../recovered/index-DwifuW9D.js";
 import { APP_VERSION, defaults, upgradeDefaults } from "./defaults";
+import {mergeCompletedMeeting} from "./completed-meeting";
 import { expireSavedMedia, isMeetingExpired } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
@@ -43,6 +44,11 @@ function notifyAccountChange() {
 export function announce() {
   for (const f of listeners) f();
 }
+export class ApiError extends Error {
+  constructor(message:string,public status:number){super(message);this.name="ApiError";}
+}
+export function reportError(value:unknown){error=value instanceof Error?value.message:String(value);announce();}
+export function clearError(){error="";announce();}
 export async function api(
   path: string,
   body?: unknown,
@@ -73,7 +79,7 @@ export async function api(
       session = null;
       announce();
     }
-    throw new Error(data.error?.message || translateUI("Request failed"));
+    throw new ApiError(data.error?.message || translateUI("Request failed"),res.status);
   }
   return data;
 }
@@ -337,7 +343,8 @@ export const repository = {
         }
       }
     }
-    for (const [meetingIndex, meeting] of next.meetings.entries()) {
+    for (const [meetingIndex, incoming] of next.meetings.entries()) {
+      let meeting=incoming;
       const prior = before?.meetings.find((r) => r.id === meeting.id);
       // Read-only history from another account/device must never enter this device's outbox.
       if(hosted&&prior&&(prior.account_id!==session?.account.id||prior.device_id!==session?.device.id)) {
@@ -357,6 +364,10 @@ export const repository = {
         }
         if (prior.presentedTopics || meeting.presentedTopics) meeting.presentedTopics = [...new Map([...(prior.presentedTopics ?? []), ...(meeting.presentedTopics ?? [])]
           .map((topic: Row) => [topic.slideId, topic])).values()];
+      }
+      if(hosted&&prior?.status==="completed") {
+        const preserved=mergeCompletedMeeting(prior,meeting);
+        next.meetings[meetingIndex]=preserved;meeting=preserved;
       }
       if (stable(prior) !== stable(meeting)) {
         meeting.location_id =
@@ -422,12 +433,37 @@ async function doSync() {
       (a, b) => (a.kind === "meeting" ? 0 : 1) - (b.kind === "meeting" ? 0 : 1),
     );
     for (let i = 0; i < outbox.length; i += 50) {
-      const batch = outbox
+      let batch = outbox
         .slice(i, i + 50)
         .sort((a, b) =>
           a.kind === "meeting" ? -1 : b.kind === "meeting" ? 1 : 0,
         );
-      const res = await api("sync/push", { writes: batch });
+      let res;
+      try {res=await api("sync/push",{writes:batch});}
+      catch(failure) {
+        if(!(failure instanceof ApiError)||failure.status!==409||
+          !["Completed meeting details cannot be changed","Saved transcript cannot be replaced","Saved transcript translation cannot be replaced"].includes(failure.message))throw failure;
+        let repaired=false;
+        for(const write of batch.filter(write=>write.kind==="meeting")) {
+          let saved:Row;
+          try {saved=(await api(`meetings/${write.id}`)).meeting;}
+          catch(readFailure){if(readFailure instanceof ApiError&&readFailure.status===404)continue;throw readFailure;}
+          if(saved.status!=="completed"||saved.account_id!==session!.account.id||saved.device_id!==session!.device.id)continue;
+          const database=await db.db;const tx=database.transaction(["outbox","meta","meetings"],"readwrite");
+          const current=await tx.objectStore("outbox").get(write.id);
+          if(current?.kind==="meeting") {
+            // Preserve the original pending payload privately before repairing an old failed save.
+            await tx.objectStore("meta").put(current,`recoveredMeeting:${write.id}`);
+            const rebased={...current,data:mergeCompletedMeeting(saved,current.data)};
+            await tx.objectStore("outbox").put(rebased,write.id);
+            await tx.objectStore("meetings").put(rebased.data,write.id);repaired=true;
+          }
+          await tx.done;
+        }
+        if(!repaired)throw failure;
+        batch=(await Promise.all(batch.map(write=>db.get("outbox",write.id)))).filter(Boolean);
+        res=await api("sync/push",{writes:batch});
+      }
       for (const id of res.accepted) {
         const current = await db.get("outbox", id);
         if (
@@ -736,6 +772,7 @@ declare global {
 }
 globalThis.MMB = {
   appVersion: APP_VERSION,
+  reportError,clearError,
   claimSavedMeeting, isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
   hosted,
   translationPilot,
@@ -756,8 +793,8 @@ globalThis.MMB = {
   captionGap,
   toggleFullscreen,
   expireMeetingState: expireSavedMedia,
-  completeMeetingState: (state:State)=>{
-    const result=expireSavedMedia(state);void discardExpiredMedia(result.hashes);return result.state;
+  completeMeetingState: (state:State,meetingId:string)=>{
+    const result=expireSavedMedia(state,Date.now(),meetingId);void discardExpiredMedia(result.hashes);return result.state;
   },
   isMeetingExpired,
   discardExpiredMedia,
