@@ -1,8 +1,12 @@
-# Morning Meeting Builder — Round 5 (v0.5.0)
+# Morning Meeting Builder — Round 5 (v0.5.1)
 
 Branch: **Round-5-Development**, based on the tested Round 4 v0.4.18 (`c7e413d`).
 
-For the real PHP/MySQL website, download this branch as ZIP and use **hosting-upload/public_html**. It is already built: upload its contents through FileZilla. **Do not upload the repository root demo as the real account website.**
+For the real PHP/MySQL website, download this branch as ZIP and use **hosting-upload/public_html**. It is already built: upload its contents through cPanel File Manager or FileZilla. **Do not upload the repository root demo as the real account website.**
+
+**Already running the website? Use [the 0.5.1 cPanel update guide](hosting-update/docs/ROUND5_0_5_1_UPGRADE.md) and `hosting-update/public_html`. Import only migration 4 into the existing database. This update folder preserves your public paths/config.**
+
+This patch adds rolling blue/green captions, temporary meeting photos/videos stored privately on the server until confirmed completion, same-account device handoff, and a mobile navigation button below the account bar.
 
 Start with [the Round 5 setup guide](hosting-upload/docs/ROUND5_SETUP.md), covering the database, private PHP configuration, first administrator, meeting-area accounts and Deepgram/Azure keys. [Development checkpoint](translation-pilot/docs/ROUND5_CHECKPOINT.md).
 

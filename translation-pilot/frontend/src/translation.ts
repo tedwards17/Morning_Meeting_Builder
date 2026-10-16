@@ -54,10 +54,10 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   let maxTimer: ReturnType<typeof setTimeout> | undefined;
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   let busy = false;
-  let queued: {phrase: Caption; saved: Promise<void>} | undefined;
+  const queued: {phrase: Caption; saved: Promise<void>}[] = [];
   const stop = () => {
     if (stopped) return;
-    stopped = true; abort.abort(); queued = undefined;
+    stopped = true; abort.abort(); queued.length = 0;
     clearTimeout(maxTimer); clearInterval(keepAlive);
     window.removeEventListener("pagehide", stop);
     document.removeEventListener("visibilitychange", visibility);
@@ -84,25 +84,32 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   document.addEventListener("visibilitychange", visibility);
   callbacks.signal?.addEventListener("abort", stop, { once: true });
   const translate = async (phrase: Caption, saved: Promise<void>) => {
-    queued = {phrase, saved};
-    if (busy) return;
-    busy = true;
-    while (queued && checkDeadline()) {
-      const next = queued; queued = undefined;
-      const current = next.phrase;
+    queued.push({phrase,saved});
+    if(busy)return;busy=true;
+    while(queued.length&&checkDeadline()) {
+      const batch=[queued.shift()!];let bytes=new TextEncoder().encode(batch[0].phrase.text).length;
+      while(queued.length&&batch.length<20&&queued[0].phrase.source===batch[0].phrase.source) {
+        const nextBytes=new TextEncoder().encode(queued[0].phrase.text).length;
+        if(bytes+nextBytes>3000)break;
+        bytes+=nextBytes;batch.push(queued.shift()!);
+      }
       callbacks.onStatus("translating");
       try {
-        const result = await translationApi("text", {text: current.text, source: current.source, sessionId}, csrf, abort.signal);
-        if (result.text) {
+        const source=batch[0].phrase.source;
+        const body=batch.length===1?{text:batch[0].phrase.text,source,sessionId}:{items:batch.map(row=>({id:row.phrase.id,text:row.phrase.text})),source,sessionId};
+        const result=await translationApi("text",body,csrf,abort.signal);
+        const values=batch.length===1?[{text:result.text}]:result.translations;
+        if(!Array.isArray(values)||values.length!==batch.length)throw new Error(translateUI("The translated transcript response was incomplete. Try again."));
+        for(let index=0;index<batch.length;index++) {
+          const next=batch[index];const current=next.phrase;const text=values[index]?.text;
+          if(typeof text!=="string"||!text.trim()||(batch.length>1&&values[index].id!==current.id))throw new Error(translateUI("The translated transcript response was incomplete. Try again."));
           await next.saved;
-          if (current.id && callbacks.onTranslation) await callbacks.onTranslation({id: current.id,
-            language: current.source === "en" ? "es" : "en", text: result.text});
-          if (checkDeadline()) callbacks.onCaption({ text: result.text, source: current.source });
+          if(current.id&&callbacks.onTranslation)await callbacks.onTranslation({id:current.id,language:source==="en"?"es":"en",text});
+          if(checkDeadline())callbacks.onCaption({text,source});
         }
-      } catch (error) { if (!stopped) fail(error instanceof Error ? error.message : translateUI("Translation unavailable.")); }
+      }catch(error){if(!stopped)fail(error instanceof Error?error.message:translateUI("Translation unavailable."));}
     }
-    busy = false;
-    if (!stopped) callbacks.onStatus("listening");
+    busy=false;if(!stopped)callbacks.onStatus("listening");
   };
   try {
     if (callbacks.signal?.aborted) { stop(); throw new Error(translateUI("Translation canceled.")); }
@@ -128,7 +135,7 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
     deadline = Math.min(Date.now() + MAX_SESSION_MS, Number(grant.expiresAt) * 1000);
     if (!Number.isFinite(deadline)) throw new Error(translateUI("Translation session configuration unavailable."));
     maxTimer = setTimeout(() => checkDeadline(), Math.max(0, deadline - Date.now()));
-    const params = new URLSearchParams({ model: "nova-3", language: "multi", encoding: "linear16", sample_rate: String(context.sampleRate), channels: "1", punctuate: "true", interim_results: "false", endpointing: "100" });
+    const params = new URLSearchParams({ model: "nova-3", language: "multi", encoding: "linear16", sample_rate: String(context.sampleRate), channels: "1", punctuate: "true", interim_results: "false", endpointing: "300" });
     socket = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ["bearer", grant.access_token]);
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(translateUI("Speech connection timed out. Try again."))), 15000);

@@ -8,7 +8,7 @@ Use a dedicated HTTPS subdomain and document root. Do not overwrite the current 
 
 1. Export a ZIP backup from the current MVP and retain the original browser ZIP. Create a new staging subdomain and record its exact document root; confirm AutoSSL works.
 2. In cPanel, select PHP 8.3, enable PDO MySQL and fileinfo, inspect the extension/limit checklist below, and create `morning-meeting-private/media` outside the public document root.
-3. Create a new database and users in Database Wizard. Import migrations `001`, `002`, `003`, then `database/seed/001_dtb.sql` into that empty database, following DATABASE_SETUP.md. Do not import into an existing application database.
+3. Create a new database and users in Database Wizard. Import migrations `001`, `002`, `003`, `004`, then `database/seed/001_dtb.sql` into that empty database, following DATABASE_SETUP.md. Do not import into an existing application database.
 4. Configure the private `config.php` with that database, absolute media path, and exact HTTPS origin. Create the first administrator through the private one-time CLI/cron method; there is no web installer.
 5. Upload only the ZIP’s `public_html/` contents to the new document root, open the HTTPS URL, sign in, check Company workspace → Readiness, install the DTB starter, and run the two-device staging checks before rollout.
 

@@ -10,6 +10,7 @@
    - `database/migrations/001_foundation.sql`
    - `database/migrations/002_content_sync.sql`
    - `database/migrations/003_meetings_events.sql`
+   - `database/migrations/004_meeting_media.sql`
    - `database/seed/001_dtb.sql`
 4. Check each import result before continuing. DDL is not transactionally rollbackable in MySQL. If a first installation fails partway, inspect the error, then recreate the **new empty staging database** and reimport; do not rerun all statements against a half-created schema.
 5. Create a separate runtime database user and grant only SELECT, INSERT, UPDATE, DELETE on this database. Put that user's credentials in private config. It does not need CREATE, ALTER, DROP, FILE, GRANT OPTION, SUPER, or access to another database. Some cPanel setups require using the privileges checkboxes instead of GRANT SQL.
@@ -27,7 +28,7 @@ SELECT id, name, enabled FROM locations;
 SELECT @@version, @@character_set_database, @@collation_database;
 ```
 
-Expected migration versions: 1, 2, 3. Every application table uses InnoDB and utf8mb4. DTB has Assembly, Paint, Mount, and Detail; rename/disable/add locations in the admin UI before creating fixed location accounts. There are deliberately no seeded account passwords.
+Expected migration versions: 1, 2, 3, 4. Every application table uses InnoDB and utf8mb4. DTB has Assembly, Paint, Mount, and Detail; rename/disable/add locations in the admin UI before creating fixed location accounts. There are deliberately no seeded account passwords.
 
 ## SSH / command line
 

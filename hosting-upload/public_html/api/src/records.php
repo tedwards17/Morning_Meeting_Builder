@@ -11,7 +11,7 @@ function save_record(array $write):array{
  }else role(['administrator','content_manager']);
  if((int)($write['expected_version']??-1)!==(int)($old['version']??0))fail(409,'This record changed elsewhere. Refresh and retry your edit.');
  verify_targets($data);
- $validateMedia=function(array $node) use (&$validateMedia):void{foreach($node as $key=>$value){if(is_array($value))$validateMedia($value);elseif(in_array($key,['assetId','backgroundAssetId','logoAssetId','thumbnailAssetId'],true)&&$value){if(!one('SELECT id FROM media_assets WHERE organization_id=? AND id=?',[org(),require_id($value)])||!media_allowed($value))fail(403,'Image access denied');}elseif(in_array($key,['background','foreground','accent'],true)&&$value&&!preg_match('/^#[a-f0-9]{6}$/i',$value))fail(422,'Invalid theme color');}};$validateMedia($data);
+ $validateMedia=function(array $node) use (&$validateMedia):void{foreach($node as $key=>$value){if(is_array($value))$validateMedia($value);elseif(in_array($key,['assetId','backgroundAssetId','logoAssetId','thumbnailAssetId'],true)&&$value){if(!one("SELECT id FROM media_assets WHERE organization_id=? AND id=? AND scope='shared'",[org(),require_id($value)])||!media_allowed($value))fail(403,'Image access denied');}elseif(in_array($key,['background','foreground','accent'],true)&&$value&&!preg_match('/^#[a-f0-9]{6}$/i',$value))fail(422,'Invalid theme color');}};$validateMedia($data);
  if(in_array($kind,['templates','libraries'],true)&&(strlen($data['name']??'')<1||strlen($data['name'])>300))fail(422,'Name required');
 
  if($kind==='items'){require_content($data);$lib=record_row('libraries',require_id($data['libraryId']??''));if(!$lib)fail(422,'Library unavailable');}

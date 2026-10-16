@@ -60,9 +60,14 @@ jobs:
           python3 tests/api/integration.py
           python3 tests/api/round5.py
           node tests/e2e/round5.cjs
+          python3 tests/api/meeting-media.py
+          node tests/e2e/meeting-fixes.cjs
           npm run package
           python3 tests/api/package-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: morning-meeting-builder-round5-hosting
-          path: hosting-upload/
+          path: |
+            hosting-upload/
+            hosting-update/
+            translation-pilot/artifacts/morning-meeting-builder-update-0.5.1.zip

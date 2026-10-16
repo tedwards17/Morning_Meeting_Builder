@@ -3,12 +3,11 @@ import { defaults } from "../../frontend/src/defaults";
 import { expireSavedMedia, isMeetingExpired, meetingExpiresAt } from "../../frontend/src/retention";
 
 describe("completed presentation replay and media retention", () => {
-  it("expires at midnight two calendar days after the scheduled date", () => {
-    const cutoff = new Date(2026, 8, 27).getTime();
-    expect(meetingExpiresAt("2026-09-25")).toBe(cutoff);
-    expect(isMeetingExpired({ status: "completed", date: "2026-09-25" }, cutoff - 1)).toBe(false);
-    expect(isMeetingExpired({ status: "completed", date: "2026-09-25" }, cutoff)).toBe(true);
-    expect(isMeetingExpired({ status: "presenting", date: "2026-09-25" }, cutoff)).toBe(false);
+  it("keeps uncompleted media indefinitely and expires only after completion",()=>{
+    expect(meetingExpiresAt("2026-09-25")).toBe(Infinity);
+    expect(isMeetingExpired({status:"draft",date:"2026-09-25"},Date.now())).toBe(false);
+    expect(isMeetingExpired({status:"presenting",date:"2026-09-25"},Date.now())).toBe(false);
+    expect(isMeetingExpired({status:"completed",mediaExpiredAt:"2026-10-16T00:00:00Z"})).toBe(true);
   });
 
   it("removes expired meeting-only media without deleting a file shared by an active draft", () => {
@@ -32,7 +31,7 @@ describe("completed presentation replay and media retention", () => {
     expect(result.changed).toBe(true);
     expect(result.hashes).toEqual(["private-hash"]);
     expect(result.state.assets.map((asset) => asset.id)).toEqual(["shared"]);
-    expect(result.state.meetings[0].slides[0].items).toEqual([]);
+    expect(result.state.meetings[0].slides[0].items.every((item:any)=>!item.assetId&&item.mediaDeleted)).toBe(true);
     expect(result.state.meetings[0].slides[1].items).toHaveLength(1);
     expect(result.state.meetings[1].slides[0].items).toHaveLength(1);
     expect(result.state.usage).toEqual(state.usage);

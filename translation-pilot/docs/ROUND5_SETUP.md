@@ -1,6 +1,6 @@
 # Round 5 — first hosting setup
 
-Version 0.5.0. Start with the `hosting-upload` folder in the **Round-5-Development** GitHub branch. Everything in `public_html` is already built. You do not run npm, Node, Next.js, or a development server on the host.
+Version 0.5.1. Existing installations: use [ROUND5_0_5_1_UPGRADE.md](ROUND5_0_5_1_UPGRADE.md); do not repeat first installation. Start with the `hosting-upload` folder in the **Round-5-Development** GitHub branch. Everything in `public_html` is already built. You do not run npm, Node, Next.js, or a development server on the host.
 
 ## 1. Confirm the host and domain
 
@@ -20,9 +20,10 @@ Open **MySQL Databases / Database Wizard** in the hosting control panel.
    1. `hosting-upload/database/migrations/001_foundation.sql`
    2. `hosting-upload/database/migrations/002_content_sync.sql`
    3. `hosting-upload/database/migrations/003_meetings_events.sql`
-   4. `hosting-upload/database/seed/001_dtb.sql`
+   4. `hosting-upload/database/migrations/004_meeting_media.sql`
+   5. `hosting-upload/database/seed/001_dtb.sql`
 
-Do not import these into the Key Manager database or another app's database. On a first-install error, stop and inspect it; these scripts are for an empty database. There are no seeded passwords. Expected migration versions are 1, 2, 3. See DATABASE_SETUP.md for verification queries.
+Do not import these into the Key Manager database or another app's database. On a first-install error, stop and inspect it; these scripts are for an empty database. There are no seeded passwords. Expected migration versions are 1, 2, 3, 4. See DATABASE_SETUP.md for verification queries.
 
 ## 3. Put private configuration outside the website
 
@@ -53,6 +54,8 @@ This public PHP file contains paths only. Passwords and API keys stay in private
 ## 4. Upload the website
 
 In GitHub choose **Round-5-Development → Code → Download ZIP**, unzip it on your computer, and open `hosting-upload/public_html`.
+
+You may use cPanel File Manager through your browser; FileZilla is optional. For a browser-only upload, upload the GitHub ZIP into a temporary folder outside public_html and extract it there. Move the contents of hosting-upload/public_html into the domain document root, showing hidden files so .htaccess is included.
 
 In FileZilla, open the domain's document root on the remote side. Upload **all contents** of `hosting-upload/public_html`, including `.htaccess`, `api/.htaccess`, and `translation-api/.htaccess`. Include every asset and subfolder; do not upload just `index.html`. The `public_html` folder itself does not need to be nested inside your existing document root. Check FileZilla's Failed transfers tab.
 
@@ -87,7 +90,7 @@ If Cron Jobs are unavailable, the alternative is running `scripts/create-admin.p
 6. **Accounts**: create one location account per meeting area, with its own username and password. Administrators manage accounts and company settings; content managers manage shared content; report viewers have read access; location accounts build meetings in their assigned area. Passwords require 12–72 bytes. Administrators reset forgotten passwords from Accounts.
 7. Share the daily template for company use or grant selected locations use/edit access. Management accounts select a meeting location before building; location accounts use their assigned area automatically.
 
-Temporary photos/videos added only to a meeting remain on the device that imported them; shared library images use protected server storage. Meeting text, topics and transcripts sync through the account database.
+Meeting photos/videos now upload into private server storage. Save the presentation while online; on another device sign into the same account, open Meetings, and choose Open saved presentation. Opening transfers editing to that device. Drafts, scheduled dates, previews and pauses do not delete photos. The finish checkmark asks for confirmation, then removes only temporary meeting media; shared library images, meeting text, topics and transcripts remain. For offline use, download the images on the presenting device while online. YouTube and speech/translation APIs still need internet.
 
 Ordinary account meeting history is scoped to that account; administrators can review all company meetings. Sync/download maintenance is in Settings. Sign-out waits for pending records to sync so a meeting is not silently lost.
 
@@ -130,7 +133,7 @@ To leave translation unavailable during initial account testing, keep private `e
 | Site opens the old local app | Upload `hosting-upload/public_html`, not the repository root demo. Refresh/close old tabs. |
 | Account service unavailable / HTML instead of JSON | PHP enabled, entire api folder and both .htaccess files uploaded, rewrite support. |
 | Private configuration is not installed | server-paths.php absolute private directory and config.php filename. |
-| Database request fails | Full prefixed database/user names, assigned permissions, host, password, all three migrations plus seed. Use the request ID in the PHP error log. |
+| Database request fails | Full prefixed database/user names, assigned permissions, host, password, all four migrations plus seed. Use the request ID in the PHP error log. |
 | App origin rejected | Both private origin values exactly match the browser's scheme and hostname; no trailing slash. |
 | HTTPS required behind a proxy | Ask IT to pass trusted HTTPS information to PHP. Do not enable test_http. |
 | Deepgram grant rejected | Key permissions, project/balance, outbound HTTPS, cURL and CA certificates. |

@@ -17,6 +17,7 @@ import { defaults } from "./defaults";
 import { csv, normalizeNumber, zonedInput, zonedUtc } from "./domain";
 import type { Row, State } from "./types";
 import { canReadMeeting, groupMeetings } from "./meeting-history";
+import { RollingCaptions } from "./rolling-captions";
 import { TranscriptReader } from "./transcript-reader";
 import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
@@ -69,23 +70,26 @@ function RemoteSettings() {
   </section>;
 }
 globalThis.MMB.RemoteSettings=RemoteSettings;
+globalThis.MMB.RollingCaptions=RollingCaptions;
 function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeting:Row)=>void}) {
   const {state}=useApp() as {state:State};
   const [selected,setSelected]=React.useState<string|null>(null);
+  const [openError,setOpenError]=React.useState("");
   const account=runtime.session?.account;
   const rows=state.meetings.filter(meeting=>!account||canReadMeeting(account,meeting));
   const meeting=rows.find(row=>row.id===selected);
   const groups=groupMeetings(rows);
   const newMeeting=()=>onBuild(state.templates.find(template=>template.id===(state.settings.lastTemplateId??state.settings.defaultTemplateId)&&!template.archived&&globalThis.MMB.canUse(template)));
   if(meeting) {
-    const editable=(!runtime.hosted||(meeting.account_id===account?.id&&meeting.device_id===runtime.session?.device.id))&&
+    const editable=(!runtime.hosted||(meeting.account_id===account?.id))&&
       !globalThis.MMB.isMeetingExpired(meeting);
     const topics=meeting.presentedTopics??[];
     return <section className="meeting-record">
       <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</p></div>
         <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
-          {editable&&<button className="primary" onClick={()=>onOpen(meeting)}>{translateUI("Open saved presentation")}</button>}
+          {editable&&<button className="primary" onClick={async()=>{try{setOpenError("");onOpen(await runtime.claimSavedMeeting(meeting));}catch(error){setOpenError(uiError(error));}}}>{translateUI("Open saved presentation")}</button>}
           <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
+      {openError&&<p role="alert">{openError}</p>}
       <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
         <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{meeting.date}</dd>
         <dt>{translateUI("Status")}</dt><dd>{meeting.status==="presenting"?translateUI("Paused / in progress"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved for presentation")}</dd>
@@ -98,7 +102,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
           {(topic.content??[]).length>0&&<span> — {topic.content.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>
           :<ol>{meeting.slides.filter((slide:Row)=>!slide.skipped).map((slide:Row)=><li key={slide.id}>{slide.definition.title}
             {slide.items.length>0&&<span> — {slide.items.map((item:Row)=>item.title).join("; ")}</span>}</li>)}</ol>}
-        {meeting.mediaExpiredAt&&<p className="muted">{translateUI("Temporary presentation media expired. Saved topic titles and transcript remain available.")}</p>}
+        {meeting.mediaExpiredAt&&<p className="muted">{translateUI("Personal Share Images were removed after completion. Saved topic titles and transcript remain available.")}</p>}
       </div>
       <TranscriptReader key={meeting.id} meeting={meeting} />
     </section>;

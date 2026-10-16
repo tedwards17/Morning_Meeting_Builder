@@ -43,6 +43,10 @@ with tempfile.TemporaryDirectory() as tmp:
         calls=[json.loads(line) for line in capture.read_text().splitlines()]
         check('uses opposite Azure target language',calls[-1]['url'].endswith('from=es&to=en') and calls[-2]['url'].endswith('from=en&to=es'))
         check('global Translator omits region header',not any('Subscription-Region:' in v for v in calls[-1]['options']['3']))
+        live_items=[{'id':str(uuid.uuid4()),'text':'Good morning'},{'id':str(uuid.uuid4()),'text':'Keep the aisle clear.'}]
+        status,batch=request('text',{'sessionId':sid,'source':'en','items':live_items},csrf)
+        check('live batch preserves fragment order and identifiers',status==200 and [x['id'] for x in batch['translations']]==[x['id'] for x in live_items])
+        check('live batch rejects duplicate identifiers',request('text',{'sessionId':sid,'source':'en','items':live_items*2},csrf)[0]==422)
         check('stop invalidates the active translation session',request('stop',{'sessionId':sid},csrf)[0]==200 and request('text',{'sessionId':sid,'text':'hi','source':'en'},csrf)[0]==409)
         items=[{'id':str(uuid.uuid4()),'text':'Hola equipo.'},{'id':str(uuid.uuid4()),'text':'El pasillo está libre.'}]
         before=len([c for c in [json.loads(line) for line in capture.read_text().splitlines()] if '/auth/grant' in c['url']])

@@ -193,6 +193,22 @@ if ($action === 'stop') { unset($_SESSION['caption_session']); reply(['ok'=>true
 if (time() >= $session['expires']) { unset($_SESSION['caption_session']); problem(410, 'Translation stopped at the 45-minute limit.'); }
 if ($action === 'text') {
     throttle('text', 120, 60);
+    if(isset($body['items'])) {
+        $items=$body['items'];$source=$body['source']??'';
+        if(!is_array($items)||!array_is_list($items)||count($items)<1||count($items)>20||!in_array($source,['en','es'],true))problem(422,'Invalid caption batch.');
+        $texts=[];$ids=[];$bytes=0;
+        foreach($items as $item) {
+            $id=$item['id']??'';$text=$item['text']??'';
+            if(!is_string($id)||!preg_match('/^[a-f0-9-]{36}$/D',$id)||isset($ids[$id])||!is_string($text)||!trim($text))problem(422,'Invalid caption batch.');
+            $ids[$id]=true;$texts[]=$text;$bytes+=strlen($text);
+        }
+        if($bytes>3000)problem(422,'Caption batch is too large.');
+        $_SESSION['caption_session']['count']+=count($items);
+        if($_SESSION['caption_session']['count']>3000)problem(429,'Captions session request limit reached.');
+        $results=translate_texts($texts,$source);
+        foreach($results as $index=>&$value)$value['id']=$items[$index]['id'];unset($value);
+        reply(['translations'=>$results]);
+    }
     if (++$_SESSION['caption_session']['count'] > 3000) problem(429, 'Captions session request limit reached.');
     $text = is_string($body['text'] ?? null) ? trim($body['text']) : '';
     $source = $body['source'] ?? '';

@@ -12,7 +12,7 @@ if($root&&($private===$root||str_starts_with($private,$root.'/')))fail(503,'Move
 $config=require $configPath;$GLOBALS['config']=$config;
 $pdo=new PDO($config['dsn'],$config['user'],$config['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);$GLOBALS['pdo']=$pdo;query("SET time_zone='+00:00'");
 $method=$_SERVER['REQUEST_METHOD'];$path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);$path=preg_replace('#^.*?/api/v1/?#','',$path);
-if((int)($_SERVER['CONTENT_LENGTH']??0)>max($config['max_image_bytes']+1048576,2097152))fail(413,'Request too large');
+if((int)($_SERVER['CONTENT_LENGTH']??0)>max($config['max_image_bytes']+1048576,($config['max_meeting_media_bytes']??150*1024*1024)+1048576,2097152))fail(413,'Request too large');
 $body=[];if($method!=='GET'&&str_contains($_SERVER['CONTENT_TYPE']??'','application/json')){try{$body=json_decode(file_get_contents('php://input'),true,128,JSON_THROW_ON_ERROR)??[];}catch(Throwable){fail(400,'Invalid JSON');}if(!is_array($body))fail(400,'Expected an object');}
 if($method!=='GET'){if(($_SERVER['HTTP_ORIGIN']??'')!==$config['origin'])fail(403,'Origin rejected');if(($_SERVER['HTTPS']??'')!=='on'&&!($config['test_http']??false))fail(400,'HTTPS is required');}
 require __DIR__.'/src/auth.php';
@@ -23,5 +23,5 @@ require __DIR__.'/src/translation.php';
 if($path==='auth/session'&&$method==='GET')json_out(session_response());
 if($path==='auth/password'&&$method==='POST')change_password($body);
 if($path==='auth/logout'&&$method==='POST'){query('DELETE FROM sessions WHERE token_hash=?',[$GLOBALS['session']['token_hash']]);setcookie('mmb_session','',['expires'=>1,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Strict']);json_out(['ok'=>true]);}
-require __DIR__.'/src/media.php';require __DIR__.'/src/records.php';require __DIR__.'/src/history.php';require __DIR__.'/src/sync.php';require __DIR__.'/src/admin.php';
+require __DIR__.'/src/history.php';require __DIR__.'/src/media.php';require __DIR__.'/src/records.php';require __DIR__.'/src/sync.php';require __DIR__.'/src/admin.php';
 fail(404,'Route not found');

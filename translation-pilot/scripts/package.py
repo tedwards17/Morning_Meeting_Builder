@@ -60,6 +60,19 @@ release=root.parent/'hosting-upload'
 if release.exists():shutil.rmtree(release)
 shutil.copytree(deploy,release,ignore=shutil.ignore_patterns('local-php'))
 zip_tree(out/'morning-meeting-builder-round5-hosting.zip',release)
+# Existing hosts retain their edited public paths/config and all private state.
+update=root.parent/'hosting-update'
+if update.exists():shutil.rmtree(update)
+shutil.copytree(public,update/'public_html')
+for name in ['server-paths.php','config.js']:(update/'public_html'/name).unlink()
+(update/'database').mkdir();shutil.copyfile(root/'database/migrations/004_meeting_media.sql',update/'database/004_meeting_media.sql')
+(update/'docs').mkdir()
+for name in ['ROUND5_0_5_1_UPGRADE.md','ROUND5_CHECKPOINT.md']:shutil.copyfile(root/'docs'/name,update/'docs'/name)
+(update/'README.txt').write_text('EXISTING HOST UPDATE 0.5.1. Read docs/ROUND5_0_5_1_UPGRADE.md. Back up privately, import ONLY database/004_meeting_media.sql once into the existing MMB database, then merge public_html contents into the live document root. This update omits server-paths.php and config.js to preserve working settings. Keep private configs/media and existing database. Do not import the first-install seed.\n')
+assert not (update/'public_html/server-paths.php').exists()
+assert not (update/'public_html/config.js').exists()
+zip_tree(out/'morning-meeting-builder-update-0.5.1.zip',update)
+
 zip_tree(out/'morning-meeting-builder-github-pages-demo.zip',root/'build/demo')
 zip_tree(out/'morning-meeting-builder-source.zip',root,('node_modules','.git','build','deploy','artifacts','test-results','__pycache__'))
 zip_tree(out/'morning-meeting-builder-migrations.zip',root/'database')

@@ -1,0 +1,29 @@
+<?php
+function auth_throttle(string $user,string $scope='login'):void {
+ $ip=$_SERVER['REMOTE_ADDR']??'unknown';$keys=[hash('sha256',$scope.':ip:'.$ip),hash('sha256',$scope.':user:'.strtolower($user))];
+ $GLOBALS['pdo']->beginTransaction();foreach($keys as $bucket){query('INSERT IGNORE INTO login_attempts(bucket,attempts,window_start) VALUES(?,0,UTC_TIMESTAMP())',[$bucket]);$r=one('SELECT *,TIMESTAMPDIFF(SECOND,window_start,UTC_TIMESTAMP()) AS age FROM login_attempts WHERE bucket=? FOR UPDATE',[$bucket]);if((int)$r['age']>=900)query('UPDATE login_attempts SET attempts=0,window_start=UTC_TIMESTAMP() WHERE bucket=?',[$bucket]);elseif((int)$r['attempts']>=10){$GLOBALS['pdo']->commit();fail(429,'Too many attempts. Try again in 15 minutes.');}query('UPDATE login_attempts SET attempts=attempts+1 WHERE bucket=?',[$bucket]);}$GLOBALS['pdo']->commit();
+}
+function change_password(array $b):never {
+ auth_throttle(actor()['id'],'password');
+ $current=$b['current_password']??'';$next=$b['password']??'';
+ if(!is_string($current)||!is_string($next)||strlen($current)>1024||strlen($next)<12||strlen($next)>72)fail(422,'Use a password of 12 to 72 bytes');
+ begin_write();$account=one('SELECT password_hash FROM accounts WHERE id=? AND organization_id=? FOR UPDATE',[actor()['id'],org()]);
+ if(!password_verify($current,$account['password_hash']))fail(403,'Current password was not accepted');
+ query('UPDATE accounts SET password_hash=? WHERE id=? AND organization_id=?',[password_hash($next,PASSWORD_DEFAULT),actor()['id'],org()]);
+ query('DELETE FROM sessions WHERE account_id=? AND organization_id=? AND token_hash<>?',[actor()['id'],org(),$GLOBALS['session']['token_hash']]);
+ audit('password_change',actor()['id']);$GLOBALS['pdo']->commit();json_out(['ok'=>true]);
+}
+function login(array $b):never{
+ $user=trim((string)($b['username']??''));$password=(string)($b['password']??'');if(strlen($user)>190||strlen($password)>1024)fail(401,'Unable to sign in');
+ auth_throttle($user);
+ $a=one('SELECT * FROM accounts WHERE username=? AND enabled=1',[$user]);$hash=$a?$a['password_hash']:'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+ if(!password_verify($password,$hash)||!$a)fail(401,'Unable to sign in');
+ if($a['location_id']&&!one('SELECT id FROM locations WHERE organization_id=? AND id=? AND enabled=1',[$a['organization_id'],$a['location_id']]))fail(401,'Unable to sign in');
+ $id=require_id($b['device_id']??'');$d=one('SELECT * FROM devices WHERE id=?',[$id]);if($d&&($d['account_id']!==$a['id']||(bool)$d['revoked']))fail(403,'Device unavailable. Use a new browser profile or ask your administrator.');
+ if(!$d)query('INSERT INTO devices(id,organization_id,account_id,name,last_seen) VALUES(?,?,?,?,UTC_TIMESTAMP(6))',[$id,$a['organization_id'],$a['id'],substr($b['device_name']??'Browser',0,200)]);
+ $token=bin2hex(random_bytes(32));$csrf=bin2hex(random_bytes(32));$days=max(1,min(180,(int)($GLOBALS['config']['session_days']??90)));
+ query('INSERT INTO sessions(token_hash,organization_id,account_id,device_id,csrf,expires_at) VALUES(?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? DAY))',[hash('sha256',$token),$a['organization_id'],$a['id'],$id,$csrf,$days]);
+ setcookie('mmb_session',$token,['expires'=>time()+$days*86400,'path'=>'/','secure'=>!($GLOBALS['config']['test_http']??false),'httponly'=>true,'samesite'=>'Strict']);$_COOKIE['mmb_session']=$token;authenticate();audit('login',$id);json_out(session_response());
+}
+function authenticate():void{$token=$_COOKIE['mmb_session']??'';if(strlen($token)!==64)fail(401,'Sign in required');$s=one('SELECT * FROM sessions WHERE token_hash=? AND expires_at>UTC_TIMESTAMP()',[hash('sha256',$token)]);if(!$s)fail(401,'Sign in required');$a=one('SELECT * FROM accounts WHERE organization_id=? AND id=? AND enabled=1',[$s['organization_id'],$s['account_id']]);$d=one('SELECT * FROM devices WHERE organization_id=? AND id=? AND revoked=0',[$s['organization_id'],$s['device_id']]);if(!$a||!$d)fail(401,'Sign in required');if($a['location_id']&&!one('SELECT id FROM locations WHERE organization_id=? AND id=? AND enabled=1',[$a['organization_id'],$a['location_id']]))fail(401,'Location disabled');unset($a['password_hash']);$a['can_create_templates']=(bool)$a['can_create_templates'];$GLOBALS['actor']=$a;$GLOBALS['session']=$s;$GLOBALS['device']=$d;query('UPDATE devices SET last_seen=UTC_TIMESTAMP(6) WHERE organization_id=? AND id=?',[$s['organization_id'],$s['device_id']]);}
+function session_response():array{$a=actor();if($a['location_id'])$a['location_name']=one('SELECT name FROM locations WHERE organization_id=? AND id=?',[org(),$a['location_id']])['name'];return ['account'=>$a,'device'=>$GLOBALS['device'],'organization'=>one('SELECT id,name,timezone,settings FROM organizations WHERE id=?',[org()]),'csrf'=>$GLOBALS['session']['csrf']];}

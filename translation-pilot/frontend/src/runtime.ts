@@ -157,7 +157,7 @@ export async function logout() {
 export async function discardExpiredMedia(hashes: string[]) {
   if (!hashes.length) return;
   const database = await openMediaDatabase();
-  for (const hash of hashes) await database.delete("assets", hash);
+  for (const hash of hashes) {await database.delete("assets", hash);await db.remove("blobs",hash);}
 }
 function stable(v: any): string {
   if (v === undefined) return "null";
@@ -337,8 +337,12 @@ export const repository = {
         }
       }
     }
-    for (const meeting of next.meetings) {
+    for (const [meetingIndex, meeting] of next.meetings.entries()) {
       const prior = before?.meetings.find((r) => r.id === meeting.id);
+      // Read-only history from another account/device must never enter this device's outbox.
+      if(hosted&&prior&&(prior.account_id!==session?.account.id||prior.device_id!==session?.device.id)) {
+        next.meetings[meetingIndex]=prior;continue;
+      }
       // Builder saves and presentation exit can contain an older React snapshot.
       // Preserve already-persisted speech and topic snapshots on every write.
       if (prior) {
@@ -354,14 +358,14 @@ export const repository = {
         if (prior.presentedTopics || meeting.presentedTopics) meeting.presentedTopics = [...new Map([...(prior.presentedTopics ?? []), ...(meeting.presentedTopics ?? [])]
           .map((topic: Row) => [topic.slideId, topic])).values()];
       }
-      if (JSON.stringify(prior) !== JSON.stringify(meeting)) {
+      if (stable(prior) !== stable(meeting)) {
         meeting.location_id =
           meeting.location_id ??
           session?.account.location_id ??
           (await db.get("meta", "location")) ??
           next.device.id;
         meeting.account_id ??= session?.account.id;
-        meeting.device_id ??= next.device.id;
+        meeting.device_id ??= session?.device.id ?? next.device.id;
         meeting.organization_id ??= session?.account.organization_id;
         if (hosted)
           await db.put("outbox", meeting.id, {
@@ -383,7 +387,7 @@ export const repository = {
           before?.meetings.find((p) => p.id === m.id)?.status !== "completed",
       )
     )
-      void sync();
+      void sync().catch(()=>{});
     return next;
   },
 };
@@ -433,6 +437,7 @@ async function doSync() {
           await db.remove("outbox", id);
       }
     }
+    const priorMeetingAssets=(await db.all("assets")).filter(asset=>asset.scope==="meeting-only"&&asset.organization_id);
     let after = (await db.get("meta", "cursor")) ?? 0;
     let more = true;
     let page: string | null = null;
@@ -462,8 +467,10 @@ async function doSync() {
         ],
         "readwrite",
       );
-      const localAssets = (await tx.objectStore("assets").getAll()).filter(
-        (a: Row) => a.scope === "meeting-only",
+      const previousAssets:Row[]=await tx.objectStore("assets").getAll();
+      const deletedHashes:string[]=[];
+      const localAssets = previousAssets.filter(
+        (a: Row) => a.scope === "meeting-only" && !a.organization_id,
       );
       if (result.reset)
         for (const name of [
@@ -482,17 +489,20 @@ async function doSync() {
       for (const r of result.changes) {
         const name = r.kind;
         if (!tx.objectStoreNames.contains(name)) continue;
-        if (r.deleted) await tx.objectStore(name).delete(r.id);
+        if (r.deleted) {
+          if(name==="assets"){const asset=previousAssets.find(row=>row.id===r.id);if(asset?.scope==="meeting-only")deletedHashes.push(asset.hash);}
+          await tx.objectStore(name).delete(r.id);
+        }
         else {
           if (name === "meetings") {
             const local = await tx.objectStore(name).get(r.id);
-            if (local && r.data.device_id === session?.device.id) {
+            if (local && !r.data.mediaExpiredAt && r.data.device_id === session?.device.id) {
               for (const slide of r.data.slides ?? []) {
                 const original = local.slides.find(
                   (s: Row) => s.id === slide.id,
                 );
                 slide.items = slide.items.map((item: Row) =>
-                  item.scope === "meeting-only"
+                  item.scope === "meeting-only" && !item.assetId
                     ? (original?.items.find((i: Row) => i.id === item.id) ??
                       item)
                     : item,
@@ -512,10 +522,14 @@ async function doSync() {
       if (!result.next)
         await tx.objectStore("meta").put(result.cursor, "cursor");
       await tx.done;
+      const retainedHashes=new Set((await db.all("assets")).map(asset=>asset.hash));
+      await discardExpiredMedia(deletedHashes.filter(hash=>!retainedHashes.has(hash)));
       if (!result.next) after = result.cursor;
       page = result.next ?? null;
       more = result.more;
     }
+    const currentHashes=new Set((await db.all("assets")).map(asset=>asset.hash));
+    await discardExpiredMedia(priorMeetingAssets.filter(asset=>!currentHashes.has(asset.hash)).map(asset=>asset.hash));
     lastSync = new Date().toISOString();
     await db.put("meta", "lastSync", lastSync);
     status = "Synced";
@@ -722,7 +736,7 @@ declare global {
 }
 globalThis.MMB = {
   appVersion: APP_VERSION,
-  isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
+  claimSavedMeeting, isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
   hosted,
   translationPilot,
   startTranslation,
@@ -742,6 +756,9 @@ globalThis.MMB = {
   captionGap,
   toggleFullscreen,
   expireMeetingState: expireSavedMedia,
+  completeMeetingState: (state:State)=>{
+    const result=expireSavedMedia(state);void discardExpiredMedia(result.hashes);return result.state;
+  },
   isMeetingExpired,
   discardExpiredMedia,
   canUse: (t: Row) =>
@@ -872,22 +889,21 @@ export async function cleanDownloads() {
 globalThis.MMB.readiness = readiness;
 
 function publicMeeting(meeting: Row): Row {
-  const copy = structuredClone(meeting);
-  for (const slide of copy.slides)
-    slide.items = slide.items.map((item: Row) => {
-      if (item.scope !== "meeting-only") return item;
-      const clean: Row = {
-        ...item,
-        description: "Meeting-only content retained on the originating device.",
-        url: "",
-      };
-      delete clean.assetId;
-      delete clean.thumbnailAssetId;
-      return clean;
-    });
+  const copy=structuredClone(meeting);
+  for(const slide of copy.slides)slide.items=slide.items.map((item:Row)=>{
+    if(item.scope!=="meeting-only"||!item.assetId||assets.some(asset=>asset.id===item.assetId&&asset.organization_id))return item;
+    const clean:Row={...item,url:""};delete clean.assetId;delete clean.thumbnailAssetId;return clean;
+  });
   return copy;
 }
-export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
+export async function claimSavedMeeting(meeting:Row):Promise<Row> {
+  if(!hosted||meeting.device_id===session?.device.id)return meeting;
+  if(!navigator.onLine)throw new Error(translateUI("Connect to the internet once to open this meeting on a different device."));
+  await sync();
+  const result=await api(`meetings/${meeting.id}/claim`,{expected_device_id:meeting.device_id});
+  await db.put("meetings",meeting.id,result.meeting);await sync();return result.meeting;
+}
+export async function meetingMedia(maxFiles = 12, meetingId?:string): Promise<Row[]> {
   const files = await new Promise<File[]>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -983,27 +999,32 @@ export async function meetingMedia(maxFiles = 12): Promise<Row[]> {
       readyFiles.push(file);
     }
   }
-  const result: Row[] = [];
-  const assets: Row[] = [];
-  for (const file of readyFiles) {
-    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))]
-      .map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    const asset = {
-      id: crypto.randomUUID(), hash, name: file.name, mime: file.type,
-      size: file.size, createdAt: new Date().toISOString(), scope: "meeting-only",
-    };
-    await media.write(hash, file);
-    assets.push(asset);
-    result.push({
-      ...globalThis.MMB.meetingOnly(file.name, "", "00000000-0000-4000-8000-000000000006"),
-      type: file.type.startsWith("video/") ? "video" : "image-text",
-      assetId: asset.id,
-    });
+  if(hosted) {
+    if(!navigator.onLine)throw new Error(translateUI("Connect to upload meeting media. Download the saved meeting before presenting offline."));
+    if(!meetingId)throw new Error(translateUI("Save this meeting before adding media."));
+    await sync();
+  }
+  const result:Row[]=[];const uploaded:Row[]=[];
+  for(const file of readyFiles) {
+    let asset:Row;
+    if(hosted) {
+      const body=new FormData();body.append("image",file);body.append("scope","meeting-only");body.append("meeting_id",meetingId!);
+      asset=await api("media",body);assets.push(asset);
+      // Cache the exact server bytes (the host may resize a JPEG to WebP).
+      const response=await fetch(`./api/v1/media/${asset.id}`,{credentials:"same-origin",cache:"no-store"});
+      if(!response.ok)throw new Error(translateUI("Media uploaded, but its download failed. Sync and retry."));
+      await media.write(asset.hash,await response.blob());
+    }else {
+      const hash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,"0")).join("");
+      await media.write(hash,file);asset={id:crypto.randomUUID(),hash,name:file.name,mime:file.type,size:file.size,createdAt:new Date().toISOString(),scope:"meeting-only"};
+    }
+    uploaded.push(asset);
+    result.push({...globalThis.MMB.meetingOnly(file.name,"","00000000-0000-4000-8000-000000000006"),type:file.type.startsWith("video/")?"video":"image-text",assetId:asset.id});
   }
   // Save metadata only after every selected file has been written. Rewriting the
   // whole app state here could overwrite a draft being saved at the same time.
-  if (globalThis.MMB.addMediaAssets) await globalThis.MMB.addMediaAssets(assets);
-  else for (const asset of assets) await db.put("assets", asset.id, asset);
+  if (globalThis.MMB.addMediaAssets) await globalThis.MMB.addMediaAssets(uploaded);
+  else for (const asset of uploaded) await db.put("assets", asset.id, asset);
   globalThis.MMB.refresh?.();
   return result;
 }

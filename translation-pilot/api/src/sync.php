@@ -8,7 +8,17 @@ function store_meeting(array $m):void{
  if($old&&($old['account_id']!==actor()['id']||$old['device_id']!==$GLOBALS['device']['id']))fail(403,'Meeting belongs to another device');
  $m['organization_id']=org();$m['account_id']=actor()['id'];$m['device_id']=$GLOBALS['device']['id'];
  validate_meeting_history($m);
- if($old&&$old['status']==='completed')$m=append_completed_history(payload($old),$m);
+ if($old&&$old['status']==='completed') {
+  $prior=payload($old);
+  if(!empty($prior['mediaCleanupConfirmed'])){$m=remove_meeting_upload_references($m);$m['mediaExpiredAt']=$prior['mediaExpiredAt'];$m['mediaCleanupConfirmed']=true;}
+  $m=append_completed_history($prior,$m);
+ }
+ if($m['status']!=='completed')validate_meeting_uploads($m);
+ if($m['status']==='completed'&&(!$old||$old['status']!=='completed')) {
+  $uploads=one("SELECT COUNT(*) AS total FROM media_assets WHERE organization_id=? AND meeting_id=? AND scope='meeting-only'",[org(),$id]);
+  if((int)$uploads['total']>0&&empty($m['mediaCleanupConfirmed']))fail(422,'Confirm completion to remove Personal Share Images');
+  $m=finalize_meeting_uploads($m);
+ }
  foreach($m['slides']??[] as $s){require_id($s['id']??'');if(!empty($s['broadcast_id'])){$broadcast=record_row('broadcasts',$s['broadcast_id']);if(!$broadcast||!visible('broadcasts',payload($broadcast)))fail(403,'Broadcast unavailable');$version=one('SELECT payload FROM record_versions WHERE organization_id=? AND kind=? AND record_id=? AND version=?',[org(),'broadcasts',$s['broadcast_id'],$s['broadcast_version']??0]);if(!$version)fail(422,'Unknown broadcast version');$b=payload($version);if($b['importance']==='required'){if(empty($s['required'])||!empty($s['skipped']))fail(422,'Required broadcast cannot be removed or skipped in draft');if(count($s['items']??[])!==1||($s['items'][0]['id']??'')!==$b['content']['id']||($s['items'][0]['description']??'')!==($b['content']['description']??'')||($s['items'][0]['assetId']??null)!==($b['content']['assetId']??null))fail(422,'Required broadcast content cannot be changed');}}}
  // Enforce required slides known at this device's last synchronization, without retroactively
  // adding broadcasts that arrived while the device was offline.
@@ -46,8 +56,17 @@ function store_event(array $e):void{
  $e['event_key']=implode(':',[$m['id'],$slide['id']??'',$type,$content['id']??'']);$existing=one('SELECT id FROM usage_events WHERE organization_id=? AND event_key=?',[org(),$e['event_key']]);if($existing)return;
  query('INSERT INTO usage_events(id,organization_id,location_id,account_id,device_id,meeting_id,event_key,event_type,content_id,broadcast_id,occurred_at_utc,server_received_at,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6),?)',[$id,org(),$m['location_id'],actor()['id'],$GLOBALS['device']['id'],$m['id'],$e['event_key'],$type,$content['id']??null,$slide['broadcast_id']??null,gmdate('Y-m-d H:i:s',$when),encoded($e)]);change('events',$id);
 }
+if(preg_match('#^meetings/([a-f0-9-]{36})/claim$#',$path,$matches)&&$method==='POST') {
+ role(['administrator','content_manager','location']);begin_write();
+ $saved=one('SELECT * FROM meetings WHERE organization_id=? AND id=? FOR UPDATE',[org(),$matches[1]]);
+ if(!$saved||$saved['account_id']!==actor()['id'])fail(403,'Sign into the account that saved this meeting');
+ location_scope($saved['location_id']);if($saved['status']==='completed')fail(409,'This meeting is already completed');
+ if($saved['device_id']!==($body['expected_device_id']??''))fail(409,'This meeting was opened on another device. Sync and retry');
+ $m=payload($saved);$m['device_id']=$GLOBALS['device']['id'];
+ query('UPDATE meetings SET device_id=?,payload=? WHERE organization_id=? AND id=?',[$GLOBALS['device']['id'],encoded($m),org(),$saved['id']]);change('meetings',$saved['id']);audit('meeting_device_handoff',$saved['id']);$pdo->commit();json_out(['meeting'=>$m]);
+}
 if($path==='sync/push'&&$method==='POST'){
- $writes=$body['writes']??[];if(!is_array($writes)||count($writes)>50)fail(422,'Maximum batch size is 50');usort($writes,fn($a,$b)=>($a['kind']==='meeting'?0:1)<=>($b['kind']==='meeting'?0:1));begin_write();$accepted=[];foreach($writes as $w){if(($w['kind']??'')==='meeting')store_meeting($w['data']);elseif(($w['kind']??'')==='event')store_event($w['data']);else fail(422,'Unsupported outbox record');$accepted[]=$w['id'];}$pdo->commit();json_out(['accepted'=>$accepted]);
+ $writes=$body['writes']??[];if(!is_array($writes)||count($writes)>50)fail(422,'Maximum batch size is 50');usort($writes,fn($a,$b)=>($a['kind']==='meeting'?0:1)<=>($b['kind']==='meeting'?0:1));begin_write();$accepted=[];foreach($writes as $w){if(($w['kind']??'')==='meeting')store_meeting($w['data']);elseif(($w['kind']??'')==='event')store_event($w['data']);else fail(422,'Unsupported outbox record');$accepted[]=$w['id'];}$pdo->commit();purge_completed_uploads();json_out(['accepted'=>$accepted]);
 }
 function sync_row(string $kind,string $id):array{
  $data=null;
@@ -66,6 +85,7 @@ function bootstrap_position(string $token):array{
  $value=json_decode(hex2bin($parts[0]),true);if(!is_array($value))fail(422,'Invalid synchronization continuation');return $value;
 }
 if(in_array($path,['sync/bootstrap','sync/changes'],true)&&$method==='GET'){
+ purge_completed_uploads();
  // Keep transaction locks short: both snapshot and incremental responses contain at most 250 records.
  begin_write();$o=one('SELECT sequence,permission_epoch FROM organizations WHERE id=?',[org()]);$after=max(0,(int)($_GET['after']??0));$reset=$path==='sync/bootstrap'||$after<(int)$o['permission_epoch'];$changes=[];$next=null;
  if($reset){

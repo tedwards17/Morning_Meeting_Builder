@@ -1,7 +1,7 @@
 import { confirmUI, promptUI, alertUI } from "../src/dialogs";
 import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
 import { openMediaDatabase } from "../src/media-db";
-import { isMeetingExpired, meetingExpiresAt } from "../src/retention";
+import { isMeetingExpired } from "../src/retention";
 (function () {
   const i = document.createElement("link").relList;
   if (i && i.supports && i.supports("modulepreload")) return;
@@ -20167,7 +20167,7 @@ function hE({ onBuild: n, onNavigate: i, onResume: r }) {
                       className: "status-chip",
                       children:
                         isMeetingExpired(v)
-                          ? translateUI("Expired")
+                          ? translateUI("Presented")
                           : v.status === "completed"
                           ? translateUI("Completed")
                           : v.status === "presenting"
@@ -23173,6 +23173,7 @@ function NumericInput({ value, min, max, onChange }) {
   });
 }
 function MeetingReadiness({ meeting }) {
+  const {run,notify,busy}=qt();
   const [status, set] = ae.useState(translateUI("Checking offline images…"));
   ae.useEffect(() => {
     const update = () =>
@@ -23183,11 +23184,9 @@ function MeetingReadiness({ meeting }) {
     window.addEventListener("mmb-readiness", update);
     return () => window.removeEventListener("mmb-readiness", update);
   }, [meeting]);
-  return d.jsx("p", {
-    className: "status-chip",
-    role: "status",
-    children: uiText(status),
-  });
+  return d.jsxs("div", {className:"actions",children:[d.jsx("p", {
+    className: "status-chip",role:"status",children:uiText(status),
+  }), !isMeetingExpired(meeting)&&d.jsx("button",{disabled:busy||!navigator.onLine,onClick:()=>run(async()=>{notify(await globalThis.MMB.download(meeting),3000);}),children:translateUI("Download meeting media")})]});
 }
 function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false }) {
   const { state: s, update: c, run: f, notify: h, busy: m } = qt(),
@@ -23283,7 +23282,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
         slides: H.slides.map((ue, fe) => (fe === N ? { ...ue, ...te } : ue)),
       }),
     q = async () => {
-      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation has passed its scheduled replay window."));
+      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation is completed. Its personal media was removed."));
       const te = {
         ...H,
         presenter: H.presenter.trim(),
@@ -23300,13 +23299,14 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
           ? ue.meetings.map((fe) => (fe.id === te.id ? te : fe))
           : [...ue.meetings, te],
       })),
+        await globalThis.MMB.sync(),
         v(te),
         V(!1),
         h(translateUI("Presentation saved for future use."), 3000),
         onSaved?.(te));
     },
     start = async () => {
-      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation has passed its scheduled replay window."));
+      if (isMeetingExpired(H)) throw new Error(translateUI("This presentation is completed. Its personal media was removed."));
       if (!H.presenter.trim()) throw new Error(translateUI("Enter the presenter’s name before starting."));
       if (G.length) throw new Error(G.join(" "));
       if (!C.length) throw new Error(translateUI("Choose at least one slide to present."));
@@ -23395,7 +23395,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 },
                 children: [d.jsx(nu, { size: 18 }), H.status === "completed" ? translateUI(" Present again") : canPresent ? translateUI(" Present saved meeting") : translateUI(" Present meeting")],
               }),
-            ie && d.jsx("span", { className: "status-chip", children: translateUI("Replay window ended · meeting media removed") }),
+            ie && d.jsx("span", { className: "status-chip", children: translateUI("Completed · personal media removed") }),
           ],
         }),
       }),
@@ -23603,7 +23603,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     d.jsx("button", {
                       disabled: le.items.length >= 12,
                       onClick: () => f(async () => {
-                        const items = await globalThis.MMB.meetingMedia(12 - le.items.length);
+                        const items = await globalThis.MMB.meetingMedia(12 - le.items.length, g.id);
                         if (items.length) E(_, { items: [...le.items, ...items] });
                       }),
                       children: translateUI("Upload images / videos"),
@@ -24020,7 +24020,7 @@ function EE({ meeting: n, onExit: i }) {
     [translationStatus, setTranslationStatus] = ae.useState("off"),
     [translationError, setTranslationError] = ae.useState(""),
     [captureMode, setCaptureMode] = ae.useState("translation"),
-    [caption, setCaption] = ae.useState(null),
+    [caption, setCaption] = ae.useState([]),
     [controlsHeight, setControlsHeight] = ae.useState(0),
     [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
     [fullscreenMessage, setFullscreenMessage] = ae.useState(""),
@@ -24035,6 +24035,7 @@ function EE({ meeting: n, onExit: i }) {
     M = ae.useCallback(async () => {
       (await confirmUI(translateUI("Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded."))) && i("paused");
     }, [i]),
+    finish = ae.useCallback(async () => { if(await confirmUI(translateUI("Finish this presentation? Personal Share Images will not be saved. Uploaded meeting photos and videos will be deleted; the transcript and meeting notes will stay."))) i("finished"); },[i]),
     L = ae.useCallback(
       (V, reveal = true) => {
         h((ne) => Math.max(0, Math.min(S.length - 1, ne + V)));
@@ -24071,7 +24072,7 @@ function EE({ meeting: n, onExit: i }) {
       translationSession.current?.stop();
       translationSession.current = null;
       clearTimeout(captionTimer.current);
-      setCaption(null);
+      setCaption([]);
       setTranslationError("");
       setTranslationStatus("off");
     }, []),
@@ -24092,9 +24093,7 @@ function EE({ meeting: n, onExit: i }) {
           },
           onCaption: (next) => {
             if (translationGeneration.current !== generation) return;
-            setCaption(next);
-            clearTimeout(captionTimer.current);
-            captionTimer.current = setTimeout(() => setCaption(null), 5500);
+            setCaption(events => [...events, next]);
           },
           onError: (message) => {
             if (translationGeneration.current !== generation) return;
@@ -24181,7 +24180,7 @@ function EE({ meeting: n, onExit: i }) {
       );
     }, [r.settings.wakeLock]),
     d.jsxs("div", {
-      className: `presentation ${caption ? "has-caption" : ""}`,
+      className: `presentation ${caption.length ? "has-caption" : ""}`,
       style: { "--caption-gap": `${globalThis.MMB.captionGap}px`, "--controls-height": `${controlsHeight}px` },
       onPointerMove: () => {
         (_(Date.now()), g(!0));
@@ -24218,15 +24217,7 @@ function EE({ meeting: n, onExit: i }) {
           role: "status",
           children: uiError(translationError) || ({ connecting: translateUI("Connecting microphone…"), listening: captureMode === "transcript" ? translateUI("Transcript ON · Saving speech text…") : translateUI("Translation ON · Saving transcript…"), translating: translateUI("Translating · Saving transcript…"), unavailable: translateUI("Speech capture unavailable") })[translationStatus],
         }),
-        caption && d.jsxs("div", {
-          className: "translation-caption",
-          role: "status",
-          "aria-live": "polite",
-          children: [
-            d.jsx("span", { children: caption.source === "es" ? translateUI("ES → EN") : translateUI("EN → ES") }),
-            d.jsx("p", { children: caption.text }),
-          ],
-        }),
+        d.jsx(globalThis.MMB.RollingCaptions, {events: caption}),
         d.jsxs("div", {
           className: `presentation-controls ${m ? "visible" : ""}`,
           onFocusCapture: () => g(!0),
@@ -24263,9 +24254,9 @@ function EE({ meeting: n, onExit: i }) {
             !globalThis.MMB.hosted && globalThis.MMB.translationEnabled && d.jsx("button", {
               className: "translation-preview",
               onClick: () => {
-                setCaption({ source: "en", text: "Asegurémonos de que este camión pase por control de calidad antes del almuerzo." });
+                setCaption(events => [...events, {source:"en",text:"Asegurémonos de que este camión pase por control de calidad antes del almuerzo."}]);
                 clearTimeout(captionTimer.current);
-                captionTimer.current = setTimeout(() => setCaption(null), 5500);
+
               },
               children: translateUI("Preview captions"),
             }),
@@ -24276,7 +24267,7 @@ function EE({ meeting: n, onExit: i }) {
                     const reason = (await promptUI(translateUI("Reason for skipping this required broadcast:")));
                     if (!reason?.trim()) return;
                     await globalThis.MMB.skip(n, A, reason.trim());
-                    f === S.length - 1 ? i("finished") : L(1);
+                    f === S.length - 1 ? await finish() : L(1);
                   }),
                 children: translateUI("Skip required slide with reason"),
               }),
@@ -24296,7 +24287,7 @@ function EE({ meeting: n, onExit: i }) {
                       className: "primary control-icon",
                       "aria-label": translateUI("Finish meeting"),
                       title: translateUI("Finish meeting"),
-                      onClick: () => i("finished"),
+                      onClick: finish,
                       children: d.jsx(ew, { size: 24 }),
                     })
                   : d.jsx("button", {
@@ -26086,18 +26077,6 @@ function rz() {
       }
     );
   }, []);
-  ae.useEffect(() => {
-    const upcoming = n.meetings
-      .filter((meeting) => meeting.status === "completed" && !meeting.mediaExpiredAt)
-      .map((meeting) => meetingExpiresAt(meeting.date))
-      .filter(Number.isFinite);
-    if (!upcoming.length) return;
-    const remaining = Math.min(...upcoming) - Date.now();
-    const timer = setTimeout(() => {
-      r(() => globalThis.MMB.expireSavedMeetings());
-    }, Math.max(0, Math.min(remaining, 2_147_483_647)));
-    return () => clearTimeout(timer);
-  }, [n.meetings, r]);
   const L = (H) => {
       c(H); _(!1); M((ie) => ie + 1);
       if (H === "meeting") { h(void 0); setFromSaved(!1); }
@@ -26126,12 +26105,12 @@ function rz() {
             const latest = ie.meetings.find((meeting) => meeting.id === m.id) ?? m;
             H = outcome === "finished" ? { ...latest, status: "completed", endedAt: gt() }
               : { ...latest, status: "presenting" };
-            return {
-            ...ie,
-            meetings: ie.meetings.map((le) => (le.id === H.id ? H : le)),
-          }; });
+            const updated={...ie,meetings:ie.meetings.map((le)=>(le.id===H.id?{...H,...(outcome==="finished"?{mediaCleanupConfirmed:true}:{} )}:le))};
+            const result=outcome==="finished" ? globalThis.MMB.completeMeetingState(updated) : updated;
+            H=result.meetings.find(meeting=>meeting.id===H.id);return result; });
           if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
           g(void 0); h(H); c("meeting"); M((ie) => ie + 1);
+          await globalThis.MMB.sync();
         });
     }, [m, r, i]);
   return m
@@ -26139,12 +26118,12 @@ function rz() {
     : d.jsxs("div", {
         className: "app-shell",
         children: [
-          d.jsx("button", {
+          d.jsx("div", {className:"mobile-navigation",children:d.jsx("button", {
             className: "mobile-menu icon-button",
             "aria-label": translateUI("Open navigation"),
             onClick: () => _((H) => !H),
             children: v ? d.jsx(iy, {}) : d.jsx(Cw, {}),
-          }),
+          })}),
           d.jsxs("aside", {
             className: `sidebar ${v ? "open" : ""}`,
             children: [
@@ -26217,12 +26196,11 @@ function rz() {
                 d.jsx(hE, {
                   onBuild: O,
                   onNavigate: L,
-                  onResume: (H) => {
-                    (h(structuredClone(n.meetings.find((ie) => ie.id === H))),
-                      setFromSaved(!0),
-                      c("meeting"),
-                      M((ie) => ie + 1));
-                  },
+                  onResume: (H) => r(async () => {
+                    const saved=n.meetings.find((ie)=>ie.id===H);
+                    const fresh=await globalThis.MMB.claimSavedMeeting(saved);
+                    h(structuredClone(fresh));setFromSaved(!0);c("meeting");M((ie)=>ie+1);
+                  }),
                 }),
               s === "templates" && d.jsx(mE, { onUse: O }),
               s === "meetings" && d.jsx(globalThis.MMB.Meetings, { onBuild: O, onOpen: (meeting) => {

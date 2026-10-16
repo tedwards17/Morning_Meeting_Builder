@@ -37,7 +37,7 @@ beforeEach(() => {
     const body = JSON.parse(String(init.body));
     const data = action==='status' ? {enabled:true,authenticated:true,csrf:'csrf-test'}
       : action==='session' ? {access_token:'temporary-grant',sessionId:'session-test',expiresAt:Math.floor(Date.now()/1000)+2700}
-      : action==='text' ? {text:body.source==='en'?'Buenos días':'Good morning'} : {ok:true};
+      : action==='text' ? (body.items?{translations:body.items.map((item:{id:string})=>({id:item.id,text:body.source==='en'?'Buenos días':'Good morning'}))}:{text:body.source==='en'?'Buenos días':'Good morning'}) : {ok:true};
     return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
   });
   vi.stubGlobal('fetch',fetchMock);
@@ -125,4 +125,17 @@ test('disabled captions do not access providers or microphone; zero gap is suppo
   const {startTranslation}=await import('../../frontend/src/translation');
   await expect(startTranslation({onStatus:vi.fn(),onCaption:vi.fn(),onError:vi.fn()})).rejects.toThrow('disabled');
   expect(fetchMock).not.toHaveBeenCalled(); expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+});
+test('does not drop queued phrases during a slow translation request',async()=>{
+ const normal=fetchMock.getMockImplementation()!;let release!:()=>void;let first=true;
+ fetchMock.mockImplementation(async(url:string,init:RequestInit)=>{
+   if(url.includes('action=text')&&first){first=false;await new Promise<void>(resolve=>{release=resolve;});}
+   return normal(url,init);
+ });
+ const {session,callbacks}=await start();result('en');await vi.waitFor(()=>expect(release).toBeTypeOf('function'));
+ result('en');result('en');result('es');release();
+ await vi.waitFor(()=>expect(callbacks.onCaption).toHaveBeenCalledTimes(4));
+ expect(callbacks.onCaption.mock.calls.map(([caption])=>caption.source)).toEqual(['en','en','en','es']);
+ expect(fetchMock.mock.calls.some(([url,init])=>url.includes('action=text')&&JSON.parse(String(init.body)).items?.length===2)).toBe(true);
+ session.stop();
 });
