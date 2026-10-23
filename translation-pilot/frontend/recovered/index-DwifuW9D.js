@@ -1,5 +1,6 @@
 import { confirmUI, promptUI, alertUI } from "../src/dialogs";
 import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
+import { contentPermissionMessage, formError } from "../src/content-feedback";
 import { openMediaDatabase } from "../src/media-db";
 import { isMeetingExpired } from "../src/retention";
 (function () {
@@ -22375,6 +22376,24 @@ function SE() {
     [H, ie] = ae.useState(new Set()),
     [le, C] = ae.useState(null),
     [G, x] = ae.useState(!1),
+    [libraryDraft, setLibraryDraft] = ae.useState({name:""}),
+    [librarySuccess, setLibrarySuccess] = ae.useState(""),
+    [libraryFeedback, setLibraryFeedback] = ae.useState(""),
+    libraryFeedbackRef = ae.useRef(null),
+    libraryPending = ae.useRef(false),
+    libraryRun = (action) => {
+      if (libraryPending.current) return;
+      libraryPending.current = true;
+      return r(async () => {
+        setLibraryFeedback(""); setLibrarySuccess(""); globalThis.MMB.clearError();
+        try { globalThis.MMB.requireContentEdit(); await action(); }
+        catch (error) {
+          setLibraryFeedback(formError(error));
+          requestAnimationFrame(() => { libraryFeedbackRef.current?.scrollIntoView({block:"nearest"}); libraryFeedbackRef.current?.focus(); });
+        } finally { libraryPending.current = false; }
+      });
+    },
+    canEdit = globalThis.MMB.canEditContent(),
     E = ae.useRef(null),
     q = ae.useRef(null),
     J = () => {
@@ -22382,6 +22401,7 @@ function SE() {
         (ie(await Uo(n.assets)), s(translateUI("Media availability checked.")));
       });
     };
+  ae.useEffect(() => G ? globalThis.MMB.holdContentDraft() : undefined, [G]);
   ae.useEffect(() => {
     let w = !0;
     return (
@@ -22462,24 +22482,25 @@ function SE() {
         actions: d.jsxs(d.Fragment, {
           children: [
             d.jsx("button", {
-              disabled: c || !N,
+              disabled: c || !N || !canEdit,
               onClick: () => q.current?.click(),
               children: translateUI("Import CSV"),
             }),
             d.jsxs("button", {
-              disabled: c || !N,
+              disabled: c || !N || !canEdit,
               onClick: () => E.current?.click(),
               children: [d.jsx(af, { size: 18 }), translateUI(" Import media")],
             }),
             d.jsxs("button", {
               className: "primary",
-              disabled: !N,
+              disabled: c || !N || !canEdit,
               onClick: () => ne(Xs(N)),
               children: [d.jsx(ai, { size: 18 }), translateUI(" Add content")],
             }),
           ],
         }),
       }),
+      !canEdit && d.jsx("p", {className:"panel", role:"note", children:contentPermissionMessage()}),
       d.jsx(globalThis.MMB.FilePicker, {
         ref: E,
         hidden: !0,
@@ -22697,7 +22718,7 @@ function SE() {
           ". Images and videos are copied into this app. Maximum 150 MB per file.",
         ],
       }),
-      V && d.jsx(xE, { item: V, onClose: () => ne(null) }),
+      V && d.jsx(xE, { item: V, onClose: () => ne(null), onSaved: (item) => {h(item.libraryId); g(""); _(""); S(""); M(item.archived);} }),
       le &&
         d.jsxs(Ii, {
           title: translateUI("Review CSV import"),
@@ -22759,8 +22780,11 @@ function SE() {
       G &&
         d.jsxs(Ii, {
           title: translateUI("Manage content libraries"),
-          onClose: () => x(!1),
+          onClose: () => { if (!libraryPending.current) x(!1); },
           children: [
+            librarySuccess && d.jsx("p", {className:"form-feedback", role:"status", children:librarySuccess}),
+            libraryFeedback && d.jsx("p", {className:"form-feedback warning", role:"alert", tabIndex:-1, ref:libraryFeedbackRef, children:libraryFeedback}),
+            !canEdit && d.jsx("p", {role:"note", children:contentPermissionMessage()}),
             d.jsx("div", {
               className: "scroll-box",
               children: n.libraries.map((w) =>
@@ -22773,25 +22797,15 @@ function SE() {
                         children: [w.name, w.archived ? translateUI(" (archived)") : ""],
                       }),
                       d.jsx("button", {
-                        onClick: async () => {
-                          const $ = (await promptUI(translateUI("Library name"), w.name))?.trim();
-                          $ &&
-                            r(async () => {
-                              await i((W) => ({
-                                ...W,
-                                libraries: W.libraries.map((F) =>
-                                  F.id === w.id ? { ...F, name: $ } : F,
-                                ),
-                              }));
-                            });
-                        },
+                        disabled: c || !canEdit,
+                        onClick: () => { setLibraryFeedback(""); setLibraryDraft({id:w.id, name:w.name}); },
                         children: translateUI("Rename"),
                       }),
                       d.jsx("button", {
-                        disabled: [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)),
+                        disabled: c || !canEdit || [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)),
                         title: [2, 3, 5, 6, 8].some((number) => w.id === Fl(number)) ? translateUI("Default libraries remain available") : undefined,
                         onClick: () => {
-                          r(async () => {
+                          libraryRun(async () => {
                             await i(($) => ({
                               ...$,
                               libraries: $.libraries.map((W) =>
@@ -22800,6 +22814,7 @@ function SE() {
                                   : W,
                               ),
                             }));
+                            setLibrarySuccess(translateUI("Library saved.")); s(translateUI("Library saved."));
                           });
                         },
                         children: w.archived ? translateUI("Restore") : translateUI("Archive"),
@@ -22846,49 +22861,75 @@ function SE() {
                 ),
               ),
             }),
-            d.jsxs("button", {
-              className: "primary",
-              onClick: async () => {
-                const w = (await promptUI(translateUI("Name your content library")))?.trim();
-                w &&
-                  r(async () => {
-                    const $ = Bt();
-                    (await i((W) => ({
-                      ...W,
-                      libraries: [
-                        ...W.libraries,
-                        { id: $, name: w, description: "", archived: !1 },
-                      ],
-                    })),
-                      h($));
-                  });
+            d.jsxs("form", {
+              onInvalidCapture: (event) => setLibraryFeedback(translateUI("Check {arg0}: {arg1}", {arg0:translateUI("Library name"),arg1:event.target.validationMessage})),
+              onSubmit: (event) => {
+                event.preventDefault();
+                libraryRun(async () => {
+                  const name = libraryDraft.name.trim();
+                  if (!name) throw new Error(translateUI("Library name is required."));
+                  const id = libraryDraft.id || Bt();
+                  // Keep the same ID after an ambiguous network failure so a retry cannot create a duplicate.
+                  setLibraryDraft({...libraryDraft,id});
+                  await i((state) => ({...state, libraries: libraryDraft.id && state.libraries.some(lib=>lib.id===id)
+                    ? state.libraries.map(lib=>lib.id===id?{...lib,name}:lib)
+                    : [...state.libraries,{id,name,description:"",archived:false}]}));
+                  setLibraryDraft({name:""}); h(id); setLibrarySuccess(translateUI("Library saved.")); s(translateUI("Library saved."));
+                });
               },
-              children: [d.jsx(ai, { size: 18 }), translateUI(" Create library")],
+              children: [
+                d.jsx(Ne, {label:translateUI("Library name"), children:d.jsx("input", {required:true,maxLength:300,value:libraryDraft.name,
+                  onChange:event=>setLibraryDraft({...libraryDraft,name:event.target.value}), disabled:c || !canEdit})}),
+                d.jsxs("div", {className:"modal-actions",children:[
+                  libraryDraft.id && d.jsx("button",{type:"button",disabled:c,onClick:()=>setLibraryDraft({name:""}),children:translateUI("Cancel")}),
+                  d.jsx("button", {type:"submit",className:"primary",disabled:c || !canEdit,
+                    children:c?translateUI("Saving…"):libraryDraft.id?translateUI("Save library"):translateUI("Create library")}),
+                ]}),
+              ],
             }),
           ],
         }),
     ],
   });
 }
-function xE({ item: n, onClose: i }) {
-  const { state: r, update: s, run: c, busy: f, notify: h } = qt(),
+function xE({ item: n, onClose: i, onSaved }) {
+  const { state: r, update: s, run: runGlobal, busy: f, notify: h } = qt(),
     [m, g] = ae.useState(n),
     [v, _] = ae.useState(n.tags.join(", ")),
     [b, S] = ae.useState(!1),
+    [feedback, setFeedback] = ae.useState(""),
+    feedbackRef = ae.useRef(null),
+    pending = ae.useRef(false),
+    showError = (error) => {
+      setFeedback(formError(error));
+      requestAnimationFrame(() => { feedbackRef.current?.scrollIntoView({block:"nearest"}); feedbackRef.current?.focus(); });
+    },
+    c = (action) => {
+      if (pending.current) return;
+      pending.current = true;
+      return runGlobal(async () => {
+        setFeedback(""); globalThis.MMB.clearError();
+        try { globalThis.MMB.requireContentEdit(); await action(); }
+        catch (error) { showError(error); }
+        finally { pending.current = false; }
+      });
+    },
     A = r.items.some((O) => O.id === n.id),
     M = (O) => {
       (g((V) => ({ ...V, ...O })), S(!0));
     },
     L = async () => {
-      (!b || (await confirmUI(translateUI("Discard these unsaved content changes?")))) && i();
+      !pending.current && (!b || (await confirmUI(translateUI("Discard these unsaved content changes?")))) && i();
     };
   return (
+    ae.useEffect(() => globalThis.MMB.holdContentDraft(), []),
     au(b),
     d.jsx(Ii, {
       title: A ? translateUI("Edit content") : translateUI("Add content"),
       onClose: L,
       wide: !0,
       children: d.jsxs("form", {
+        onInvalidCapture: (event) => showError(new Error(translateUI("Check {arg0}: {arg1}", {arg0:event.target.getAttribute("aria-label") || translateUI("the form"), arg1:event.target.validationMessage}))),
         onSubmit: (O) => {
           (O.preventDefault(),
             c(async () => {
@@ -22924,11 +22965,15 @@ function xE({ item: n, onClose: i }) {
                     ? H.items.map((ie) => (ie.id === V.id ? V : ie))
                     : [...H.items, V],
                 })),
+                globalThis.MMB.clearError(),
                 h(translateUI("Content saved.")),
+                onSaved?.(V),
                 i());
             }));
         },
         children: [
+          feedback && d.jsx("p", {className:"form-feedback warning", role:"alert", tabIndex:-1, ref:feedbackRef, children:feedback}),
+          !globalThis.MMB.canEditContent() && d.jsx("p", {role:"note", children:contentPermissionMessage()}),
           d.jsxs("div", {
             className: "form-row",
             children: [
@@ -22997,6 +23042,7 @@ function xE({ item: n, onClose: i }) {
                 : translateUI("Select an image or video to copy into this app."),
               children: d.jsx(globalThis.MMB.FilePicker, {
                 type: "file",
+                disabled: f || !globalThis.MMB.canEditContent(),
                 accept:
                   m.type !== "video"
                     ? "image/jpeg,image/png,image/webp"
@@ -23094,6 +23140,7 @@ function xE({ item: n, onClose: i }) {
                   children: [
                     d.jsxs("button", {
                       type: "button",
+                      disabled: f || !globalThis.MMB.canEditContent(),
                       onClick: () => {
                         c(async () => {
                           (await s((O) => ({
@@ -23151,9 +23198,9 @@ function xE({ item: n, onClose: i }) {
               }),
               d.jsx("button", {
                 className: "primary",
-                disabled: f,
+                disabled: f || !globalThis.MMB.canEditContent(),
                 type: "submit",
-                children: translateUI("Save content"),
+                children: f ? translateUI("Saving…") : translateUI("Save content"),
               }),
             ],
           }),

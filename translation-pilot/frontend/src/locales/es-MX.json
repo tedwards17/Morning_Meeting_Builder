@@ -1105,5 +1105,22 @@
   "Presentation controls hide after 5 seconds. Tap the screen or move the pointer to show them again.": "Los controles se ocultan después de 5 segundos. Toque la pantalla o mueva el puntero para mostrarlos de nuevo.",
   "Media attached and saved to this meeting.": "Archivos adjuntados y guardados en esta reunión.",
   "Media attached and saved to this meeting. Offline download is incomplete; stay connected or try Download meeting media again.": "Archivos adjuntados y guardados en esta reunión. La descarga sin conexión está incompleta; mantén la conexión o intenta de nuevo Descargar archivos de la reunión.",
-  "Preparing and uploading media…": "Preparando y subiendo archivos…"
+  "Preparing and uploading media…": "Preparando y subiendo archivos…",
+  "Only Administrator and Content Manager accounts can create or edit libraries and shared content. Ask an administrator to update your account role.": "Solo las cuentas de Administrador y Gestor de contenido pueden crear o editar bibliotecas y contenido compartido. Pida a un administrador que actualice el rol de su cuenta.",
+  "{arg0} Request ID: {arg1}": "{arg0} ID de solicitud: {arg1}",
+  "Validation: {arg0}": "Validación: {arg0}",
+  "Sign in again before saving. Your entered values are still here.": "Inicie sesión de nuevo antes de guardar. Los valores que ingresó siguen aquí.",
+  "Permission denied: {arg0}": "Permiso denegado: {arg0}",
+  "Save conflict: {arg0}": "Conflicto al guardar: {arg0}",
+  "Save failed: {arg0}": "Error al guardar: {arg0}",
+  "Check before saving: {arg0}": "Revise antes de guardar: {arg0}",
+  "Cannot reach the server. Check your connection and try saving again.": "No se puede conectar con el servidor. Revise su conexión e intente guardar de nuevo.",
+  "The server returned an unreadable response. Try again or contact your administrator.": "El servidor devolvió una respuesta ilegible. Inténtelo de nuevo o contacte a su administrador.",
+  "The server could not complete the request. Try again or contact your administrator.": "El servidor no pudo completar la solicitud. Inténtelo de nuevo o contacte a su administrador.",
+  "Library saved.": "Biblioteca guardada.",
+  "Library name is required.": "Se requiere el nombre de la biblioteca.",
+  "Save library": "Guardar biblioteca",
+  "Saving…": "Guardando…",
+  "Enter a name of 1–300 characters": "Ingrese un nombre de 1 a 300 caracteres",
+  "Create library": "Crear biblioteca"
 }

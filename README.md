@@ -1,17 +1,15 @@
-# Morning Meeting Builder — Round 5 (v0.5.4)
+# Morning Meeting Builder — Round 6, Batch 1 (v0.6.0)
 
-Branch: **Round-5-Development**, based on the tested Round 4 v0.4.18 (`c7e413d`).
+Branch: **Round-6-Development**, from the latest Round 5 v0.5.4 commit **7b1e113**. Round-5-Development remains available for rollback. No default-branch merge or live deployment is performed.
 
-For the real PHP/MySQL website, download this branch as ZIP and use **hosting-upload/public_html**. It is already built: upload its contents through cPanel File Manager or FileZilla. **Do not upload the repository root demo as the real account website.**
+**Existing PHP/MySQL website:** download this branch as ZIP and upload only the contents of **hosting-update/public_html** into the existing domain document root. Follow [the cPanel update and manual test guide](hosting-update/docs/ROUND6_BATCH1_UPGRADE.md). The files are prebuilt; no production Node service is needed. No new SQL migration is required on v0.5.4.
 
-**Already running the website? Use [the 0.5.4 cPanel update guide](hosting-update/docs/ROUND5_0_5_4_UPGRADE.md) and `hosting-update/public_html`. No new SQL is needed if migration 4 is installed. This update preserves public paths/config and the root .htaccess. Keep browser storage: stuck completed-history saves recover automatically online.**
+This batch fixes readable, in-form save/validation errors, clearer role restrictions, library create/rename input retention, successful-save confirmation and list updates, request IDs for unexpected server failures, and global warnings hidden by the sidebar. It preserves the current permission rules and the working presentation, accounts, translation, saved meetings and server-held media.
 
-This patch adds rolling blue/green captions, temporary meeting photos/videos stored privately on the server until confirmed completion, same-account device handoff, and a hamburger beside the account name with a separate scrollable drawer. Version 0.5.2 repairs blocked meeting creation and makes presentation controls hide after five seconds. Version 0.5.3 repairs upload attachment failure paths, uses server previews when browser caching fails, and saves media attachments immediately. Version 0.5.4 adds a FileReader decoding fallback and lets PHP validate standard images rejected by browser preparation.
+The update folder excludes **server-paths.php**, **config.js** and the root **.htaccess**. Keep the live copies, all private configs/API keys, the database and the manually corrected media-directory path/permissions. **Do not upload hosting-upload or the repository root demo over the existing site.**
 
-Start with [the Round 5 setup guide](hosting-upload/docs/ROUND5_SETUP.md), covering the database, private PHP configuration, first administrator, meeting-area accounts and Deepgram/Azure keys. [Development checkpoint](translation-pilot/docs/ROUND5_CHECKPOINT.md).
+[Development checkpoint: cause, decisions, verification and remaining host checks](translation-pilot/docs/ROUND6_CHECKPOINT.md). [Original setup guide for new installations](hosting-upload/docs/ROUND5_SETUP.md).
 
-The hosted app has a login front page, visible account and sign-out, Settings maintenance/password tools, authenticated company data, and account-authorized captions. Production runs static HTML/JavaScript plus PHP/MySQL; Node is development/build tooling only. No Next.js server is required.
+Editable source is in `translation-pilot/`. Development: `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build:demo`, `npm run build:hosted`, `npm run check:php`, `python3 scripts/check-migrations.py`, `npm run package`. PHP/MySQL API/browser tests require a disposable configured database; see the checkpoint and existing verification guide. The new focused tests are `tests/api/round6.py` and `tests/e2e/round6-content.cjs`.
 
-`hosting-upload/private`, `database`, `scripts`, `api` and `docs` are setup materials, **not public website content**. Real passwords, API keys and stored images stay outside the public document root and GitHub. The public server-paths.php contains only a path to that private directory.
-
-Editable project: `translation-pilot/`. Build with `npm ci`, `npm run build:demo`, `npm run build:hosted`, and `npm run package` there. The package command refreshes `hosting-upload` and creates ZIPs under `translation-pilot/artifacts`. The repository root remains a browser-local GitHub Pages preview; Pages cannot run PHP accounts or the database. Existing default branch/Pages settings are unchanged.
+Batch 1 only. Location-sharing/rotation, video previews, slide types, template redesign, captions and presentation navigation are separate batches.

@@ -1,3 +1,5 @@
+import { ApiError, contentPermissionMessage } from "./content-feedback";
+export { ApiError } from "./content-feedback";
 import { t as translateUI } from "./i18n";
 import { isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor } from "./slide-policy";
 import { remoteDirection } from "./remote";
@@ -44,17 +46,25 @@ function notifyAccountChange() {
 export function announce() {
   for (const f of listeners) f();
 }
-export class ApiError extends Error {
-  constructor(message:string,public status:number){super(message);this.name="ApiError";}
-}
 export function reportError(value:unknown){error=value instanceof Error?value.message:String(value);announce();}
 export function clearError(){error="";announce();}
+let contentDrafts = 0;
+let expiredWhileEditing = false;
+// Preserve an open content draft even if a save or background sync discovers an expired session.
+function holdContentDraft() {
+  contentDrafts++;
+  return () => {
+    contentDrafts--;
+    if (!contentDrafts && expiredWhileEditing) { expiredWhileEditing = false; session = null; announce(); }
+  };
+}
 export async function api(
   path: string,
   body?: unknown,
   method = body ? "POST" : "GET",
 ) {
-  const res = await fetch("./api/v1/" + path, {
+  let res: Response;
+  try { res = await fetch("./api/v1/" + path, {
     method,
     credentials: "same-origin",
     cache: "no-store",
@@ -70,16 +80,21 @@ export async function api(
         : JSON.stringify(body)
       : undefined,
   });
+  } catch { throw new ApiError(translateUI("Cannot reach the server. Check your connection and try saving again."), 0); }
+  const requestId = res.headers.get("X-Request-ID") ?? "";
   const type = res.headers.get("content-type") ?? "";
   if (!type.includes("application/json"))
-    throw new Error(translateUI("The account service is unavailable. Ask your administrator to check the PHP upload and database configuration."));
-  const data = await res.json();
+    throw new ApiError(translateUI("The account service is unavailable. Ask your administrator to check the PHP upload and database configuration."), res.status || 502, requestId);
+  let data;
+  try { data = await res.json(); }
+  catch { throw new ApiError(translateUI("The server returned an unreadable response. Try again or contact your administrator."), res.status >= 400 ? res.status : 502, requestId); }
   if (!res.ok) {
     if (res.status === 401) {
-      session = null;
-      announce();
+      if (contentDrafts) expiredWhileEditing = true;
+      else { session = null; announce(); }
     }
-    throw new ApiError(data.error?.message || translateUI("Request failed"),res.status);
+    const message = res.status >= 500 ? translateUI("The server could not complete the request. Try again or contact your administrator.") : data.error?.message || translateUI("Request failed");
+    throw new ApiError(message, res.status, data.error?.request_id || requestId);
   }
   return data;
 }
@@ -753,6 +768,12 @@ export async function saveRecord(kind: string, data: Row) {
   globalThis.MMB.refresh?.();
   announce();
 }
+export function canEditContent() {
+  return !hosted || !!session && ["administrator", "content_manager"].includes(session.account.role);
+}
+export function requireContentEdit() {
+  if (!canEditContent()) throw new ApiError(contentPermissionMessage(), 403);
+}
 export function canNavigate(page: string) {
   if (!session) return true;
   if (session.account.role === "report_viewer") return ["home", "meetings", "settings"].includes(page);
@@ -772,6 +793,7 @@ declare global {
 }
 globalThis.MMB = {
   appVersion: APP_VERSION,
+  canEditContent, requireContentEdit, holdContentDraft,
   reportError,clearError,
   claimSavedMeeting, isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
   hosted,

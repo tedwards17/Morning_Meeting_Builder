@@ -1,6 +1,8 @@
-# Morning Meeting Builder — Round 4 editable source
+# Morning Meeting Builder — editable source (Round 6, Batch 1)
 
 This is the editable reconstruction and hosted extension of the supplied DTB browser MVP. The original ZIP contained bundled JavaScript/CSS, not the former TypeScript sources or tests. `frontend/recovered/` preserves that working React UI and its bundled runtime in readable JavaScript. `frontend/src/` contains new TypeScript domain, IndexedDB, synchronization, account, reporting, and management code. This is not a claim that the original source or Git history was recovered exactly. The original native folders were absent; see `native/README.md`.
+
+For the current v0.6.0 update, read `docs/ROUND6_CHECKPOINT.md` and `docs/ROUND6_BATCH1_UPGRADE.md`. Existing live sites use the prebuilt `hosting-update/public_html` folder; the legacy setup/reconstruction details below remain reference material. No new SQL is required on v0.5.4.
 
 ## Start
 

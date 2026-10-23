@@ -345,3 +345,9 @@ body:has(.presentation) .toast { bottom: auto; top: max(72px, calc(env(safe-area
  .main-content{margin-left:0;padding:24px 18px 32px}
 }
 @media(max-width:680px){.translation-caption.rolling-captions{width:94%;font-size:clamp(17px,4vw,22px);padding:7px 10px}}
+/* Global messages occupy the content column, clear of the fixed desktop sidebar.
+   On mobile the warning stays above the open drawer, with room to close it. */
+.v2-error{position:relative;z-index:60;margin-left:238px;min-width:0}
+.form-feedback{overflow-wrap:anywhere;white-space:pre-line;border:1px solid #b86b15;border-radius:8px;padding:12px;line-height:1.5}
+@media(max-width:1200px){.v2-error{margin-left:205px}}
+@media(max-width:680px){.v2-error{margin-left:0}}
