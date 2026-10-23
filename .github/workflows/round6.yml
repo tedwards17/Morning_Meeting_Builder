@@ -38,7 +38,14 @@ jobs:
       - run: python3 scripts/check-migrations.py
       - run: python3 tests/api/history.py && python3 tests/api/translation.py && python3 tests/api/codespaces-origin.py
       - run: npm run build:demo && npm run build:hosted
-      - run: npx playwright install --with-deps chromium
+      - name: Prepare browser
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            printf 'CHROMIUM_PATH=%s\n' "$(command -v google-chrome)" >> "$GITHUB_ENV"
+            google-chrome --version
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Disposable database and hosted login checks
         env:
           MMB_TEST_ALLOW_RESET: '1'
