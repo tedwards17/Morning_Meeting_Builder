@@ -35,7 +35,9 @@ Date: 2026-10-23. Branch: Round-6-Development. Baseline: Round-5-Development **7
 
 ## GitHub verification follow-up
 
-The initial GitHub run passed type/lint/unit/PHP syntax/migration checks, then exposed an inherited test-runner defect: tests/api/history.py launched PHP with `-n` while the existing history validator uses `mb_strlen`. The test now explicitly enables `mbstring` in that isolated PHP process. Production PHP/history code is unchanged. The subsequent GitHub run verifies this correction plus the existing and Batch 1 checks.
+The initial GitHub run passed type/lint/unit/PHP syntax/migration checks, then exposed an inherited test-runner defect: tests/api/history.py launched PHP with `-n` while the existing history validator uses `mb_strlen`. The test now explicitly enables `mbstring` in that isolated PHP process. Production PHP/history code is unchanged. The later broad run reached MySQL and failed the inherited integration assertion “selected location edit allowed” for a shared template. That template-sharing PHP path is unchanged from 7b1e113 and is outside Batch 1; the exact server response/cause was not captured. PHP's strict access-array comparison versus MySQL JSON key ordering is a suspected cause, not a confirmed diagnosis. The same legacy suite passed on local MariaDB. This is an unresolved baseline compatibility finding; do not interpret the local pass as proof that this shared-template edit works on MySQL.
+
+To honor the requested scope and focused verification, Round 6 CI directly runs its 20 real MySQL content/role/transaction checks, 44 browser checks, package/config/captions authorization smoke checks, and static/history/mocked-provider checks. The inherited broad Round 5 workflow remains unchanged. No sharing permissions, template code or production throttling was changed to work around the legacy failure. New fixture teardown clears login counters only in the explicitly disposable test database so successive suites do not use each other's attempt allowance. The package smoke helper accepts a fixture-path environment override; default Round 5 behavior is preserved.
 
 ## Remaining host checks
 

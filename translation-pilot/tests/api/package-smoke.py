@@ -1,7 +1,7 @@
 """Smoke-test the packaged PHP files with private file configuration, no host env vars."""
 import os,json,pathlib,shutil,socket,subprocess,tempfile,time,urllib.request,urllib.error,http.cookiejar
 assert os.environ.get('MMB_TEST_ALLOW_RESET')=='1'
-root=pathlib.Path(__file__).resolve().parents[2];php=os.environ.get('PHP_BIN','php');fixture=json.load(open('/tmp/mmb-e2e-fixture.json'))
+root=pathlib.Path(__file__).resolve().parents[2];php=os.environ.get('PHP_BIN','php');fixture=json.load(open(os.environ.get('MMB_PACKAGE_FIXTURE','/tmp/mmb-e2e-fixture.json')))
 with tempfile.TemporaryDirectory() as directory:
  stage=pathlib.Path(directory);public=stage/'public_html';shutil.copytree(root.parent/'hosting-upload/public_html',public);private=stage/'morning-meeting-private';private.mkdir()
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
