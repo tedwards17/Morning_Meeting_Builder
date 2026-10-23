@@ -768,6 +768,10 @@ export async function saveRecord(kind: string, data: Row) {
   globalThis.MMB.refresh?.();
   announce();
 }
+export function canAddContent() { return !hosted || !!session; }
+export function requireContentAdd() {
+  if (!canAddContent()) throw new ApiError(translateUI("Sign in first."), 401);
+}
 export function canEditContent() {
   return !hosted || !!session && ["administrator", "content_manager"].includes(session.account.role);
 }
@@ -776,7 +780,7 @@ export function requireContentEdit() {
 }
 export function canNavigate(page: string) {
   if (!session) return true;
-  if (session.account.role === "report_viewer") return ["home", "meetings", "settings"].includes(page);
+  if (session.account.role === "report_viewer") return ["home", "meetings", "settings", "library"].includes(page);
   if (page === "templates")
     return (
       session.account.can_create_templates ||
@@ -793,7 +797,7 @@ declare global {
 }
 globalThis.MMB = {
   appVersion: APP_VERSION,
-  canEditContent, requireContentEdit, holdContentDraft,
+  canAddContent, requireContentAdd, canEditContent, requireContentEdit, holdContentDraft,
   reportError,clearError,
   claimSavedMeeting, isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,
   hosted,

@@ -1122,5 +1122,6 @@
   "Save library": "Guardar biblioteca",
   "Saving…": "Guardando…",
   "Enter a name of 1–300 characters": "Ingrese un nombre de 1 a 300 caracteres",
-  "Create library": "Crear biblioteca"
+  "Create library": "Crear biblioteca",
+  "Everyone signed in can add content. Administrator and Content Manager accounts manage libraries and edit existing shared content.": "Cualquier persona con sesión iniciada puede agregar contenido. Las cuentas de Administrador y Gestor de contenido administran las bibliotecas y editan el contenido compartido existente."
 }

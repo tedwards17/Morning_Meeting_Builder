@@ -34,9 +34,22 @@ for u,c in zip(users[:2],clients[:2]):
  item=res['records'][0]['data'];status,res=c.write('items',{**item,'description':'Updated text.'},item['version']);check(u['role']+' edits text content',status==200)
  check(u['role']+' content appears in API list',any(r['id']==item['id'] and r['description']=='Updated text.' for r in c.req('content')[1]['records']))
 for u,c in zip(users[2:],clients[2:]):
+ for kind in ['lesson','external-video']:
+  added={**item,'id':uid(),'type':kind,'title':u['role']+' contribution '+kind,'url':'https://youtu.be/dQw4w9WgXcQ' if kind=='external-video' else ''}
+  status,res=c.write('items',added);check(u['role']+' adds '+kind+' to another account library',status==200)
  status,res=c.write('libraries',{'id':uid(),'name':'Denied','description':'','archived':False});check(u['role']+' creation denied with role guidance',status==403 and 'Administrator and Content Manager' in res['error']['message'])
  status,res=c.write('items',item,item['version']);check(u['role']+' edit denied with role guidance',status==403 and 'Administrator and Content Manager' in res['error']['message'])
 c=clients[0]
+# Independent company movement and Safety libraries plus a template for builder regression.
+f['stretchLibrary']='00000000-0000-4000-8000-000000000002';f['safetyLibrary']='00000000-0000-4000-8000-000000000003'
+for key,name in [('stretchLibrary','Stretches'),('safetyLibrary','Safety')]:
+ status,res=c.write('libraries',{'id':f[key],'name':name,'description':'','archived':False});check(name+' fixture library saved',status==200)
+f['stretchText']='Movement instructions from company library';f['stretchVideo']='Movement video from company library'
+for title,kind,url in [(f['stretchText'],'lesson',''),(f['stretchVideo'],'external-video','https://youtu.be/dQw4w9WgXcQ')]:
+ status,res=clients[2].write('items',{**item,'id':uid(),'libraryId':f['stretchLibrary'],'title':title,'type':kind,'url':url});check('location adds '+kind+' to company Stretches',status==200)
+slide={'id':'00000000-0000-4000-8000-000000001002','title':'Morning movement','type':'stretch','layout':'center','text':'','notes':'','optional':False,'duration':30,'contentIds':[],'selection':'oldest','count':1,'allowRepeat':False,'libraryId':f['stretchLibrary']}
+f['templateId']=uid()
+status,res=c.write('templates',{'id':f['templateId'],'name':'Batch 1 movement regression','description':'','theme':{'background':'#143650','foreground':'#ffffff','accent':'#71b5ff'},'groups':[],'slides':[slide],'archived':False,'company_visible':True,'access':[],'createdAt':'2026-10-23T00:00:00.000Z','updatedAt':'2026-10-23T00:00:00.000Z'});check('company movement template saved',status==200)
 status,res=c.write('libraries',{'id':uid(),'name':'á'*300,'description':'','archived':False});check('300-character Unicode library name accepted',status==200)
 status,res=c.write('libraries',{'id':uid(),'name':'á'*301,'description':'','archived':False});check('301-character name rejected as validation',status==422)
 status,res=c.write('libraries',{'id':uid(),'name':'   ','description':'','archived':False});check('blank library name rejected as validation',status==422)

@@ -49,7 +49,7 @@ function validate_meeting_uploads(array $meeting):void {
 }
 if($path==='media'&&$method==='POST') {
  $temporary=($_POST['scope']??'')==='meeting-only';
- role($temporary?['administrator','content_manager','location']:['administrator','content_manager']);
+ role($temporary?['administrator','content_manager','location']:['administrator','content_manager','location','report_viewer']);
  $meetingId=$temporary?require_id($_POST['meeting_id']??''):null;
  $f=$_FILES['image']??null;if(!$f||$f['error']!==UPLOAD_ERR_OK)fail(422,'Media upload failed; check PHP upload limits');
  $limit=$temporary?($config['max_meeting_media_bytes']??150*1024*1024):$config['max_image_bytes'];

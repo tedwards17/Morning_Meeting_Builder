@@ -1,5 +1,6 @@
 import { confirmUI, promptUI, alertUI } from "../src/dialogs";
 import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
+import { matchesSlideContent } from "../src/content-selection";
 import { contentPermissionMessage, formError } from "../src/content-feedback";
 import { openMediaDatabase } from "../src/media-db";
 import { isMeetingExpired } from "../src/retention";
@@ -19383,26 +19384,7 @@ function kf(n, i) {
         ir(n.createdAt, i.createdAt) ||
         ir(n.id, i.id);
 }
-function Cf(n, i) {
-  return i.filter(
-    (r) =>
-      !r.archived &&
-      (!n.libraryId || r.libraryId === n.libraryId) &&
-      (n.type === "gallery" || n.type === "image" || n.type === "image-text"
-        ? r.type === "image"
-        : n.type === "video"
-          ? r.type === "video"
-          : n.type === "external"
-            ? ["link", "external-video"].includes(r.type)
-            : n.type === "stretch"
-              ? r.type === "stretch"
-              : n.type === "vocabulary"
-                ? r.type === "vocabulary"
-                : n.type === "recognition"
-                  ? r.type === "recognition"
-                  : !0),
-  );
-}
+function Cf(n, i) { return i.filter(item => matchesSlideContent(n, item)); }
 function ry(n, i, r) {
   const s = Cf(n, i).filter((f) => n.allowRepeat || !r.has(f.id)),
     c =
@@ -19429,7 +19411,7 @@ function iu(n, i) {
   const r = new Set(),
     s = globalThis.MMB.templateDefaults(n).slides.map((c) => {
       const f =
-        c.type !== "intro" && c.type !== "stretch" && (c.libraryId || c.contentIds.length)
+        c.type !== "intro" && (c.libraryId || c.contentIds.length)
           ? ry(c, i, r)
           : [];
       return (
@@ -22394,6 +22376,7 @@ function SE() {
       });
     },
     canEdit = globalThis.MMB.canEditContent(),
+    canAdd = globalThis.MMB.canAddContent(),
     E = ae.useRef(null),
     q = ae.useRef(null),
     J = () => {
@@ -22482,25 +22465,25 @@ function SE() {
         actions: d.jsxs(d.Fragment, {
           children: [
             d.jsx("button", {
-              disabled: c || !N || !canEdit,
+              disabled: c || !N || !canAdd,
               onClick: () => q.current?.click(),
               children: translateUI("Import CSV"),
             }),
             d.jsxs("button", {
-              disabled: c || !N || !canEdit,
+              disabled: c || !N || !canAdd,
               onClick: () => E.current?.click(),
               children: [d.jsx(af, { size: 18 }), translateUI(" Import media")],
             }),
             d.jsxs("button", {
               className: "primary",
-              disabled: c || !N || !canEdit,
+              disabled: c || !N || !canAdd,
               onClick: () => ne(Xs(N)),
               children: [d.jsx(ai, { size: 18 }), translateUI(" Add content")],
             }),
           ],
         }),
       }),
-      !canEdit && d.jsx("p", {className:"panel", role:"note", children:contentPermissionMessage()}),
+
       d.jsx(globalThis.MMB.FilePicker, {
         ref: E,
         hidden: !0,
@@ -22909,12 +22892,13 @@ function xE({ item: n, onClose: i, onSaved }) {
       pending.current = true;
       return runGlobal(async () => {
         setFeedback(""); globalThis.MMB.clearError();
-        try { globalThis.MMB.requireContentEdit(); await action(); }
+        try { if (A) globalThis.MMB.requireContentEdit(); else globalThis.MMB.requireContentAdd(); await action(); }
         catch (error) { showError(error); }
         finally { pending.current = false; }
       });
     },
     A = r.items.some((O) => O.id === n.id),
+    allowed = A ? globalThis.MMB.canEditContent() : globalThis.MMB.canAddContent(),
     M = (O) => {
       (g((V) => ({ ...V, ...O })), S(!0));
     },
@@ -22973,7 +22957,7 @@ function xE({ item: n, onClose: i, onSaved }) {
         },
         children: [
           feedback && d.jsx("p", {className:"form-feedback warning", role:"alert", tabIndex:-1, ref:feedbackRef, children:feedback}),
-          !globalThis.MMB.canEditContent() && d.jsx("p", {role:"note", children:contentPermissionMessage()}),
+          !allowed && d.jsx("p", {role:"note", children:contentPermissionMessage()}),
           d.jsxs("div", {
             className: "form-row",
             children: [
@@ -23042,7 +23026,7 @@ function xE({ item: n, onClose: i, onSaved }) {
                 : translateUI("Select an image or video to copy into this app."),
               children: d.jsx(globalThis.MMB.FilePicker, {
                 type: "file",
-                disabled: f || !globalThis.MMB.canEditContent(),
+                disabled: f || !allowed,
                 accept:
                   m.type !== "video"
                     ? "image/jpeg,image/png,image/webp"
@@ -23140,7 +23124,7 @@ function xE({ item: n, onClose: i, onSaved }) {
                   children: [
                     d.jsxs("button", {
                       type: "button",
-                      disabled: f || !globalThis.MMB.canEditContent(),
+                      disabled: f || !allowed,
                       onClick: () => {
                         c(async () => {
                           (await s((O) => ({
@@ -23198,7 +23182,7 @@ function xE({ item: n, onClose: i, onSaved }) {
               }),
               d.jsx("button", {
                 className: "primary",
-                disabled: f || !globalThis.MMB.canEditContent(),
+                disabled: f || !allowed,
                 type: "submit",
                 children: f ? translateUI("Saving…") : translateUI("Save content"),
               }),

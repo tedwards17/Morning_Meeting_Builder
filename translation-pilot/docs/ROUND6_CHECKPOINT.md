@@ -1,3 +1,13 @@
+# v0.6.1 correction checkpoint
+
+User clarified that **everyone may add content to company libraries**. The v0.6.0 restriction on creating content was not the intended product behavior and is superseded here. All four authenticated roles may create new content records and upload shared images. Authentication, organization isolation, existing-record edit permissions, library management, temporary-media permissions, private hosting configuration and SQL schema remain intact. Report Viewer can now navigate to Content library to contribute. This is an explicit user-authorized permission change, not a new location-sharing system.
+
+Stretches cause: recovered meeting generation explicitly excluded `stretch` slides from automatic selection; the shared matching helper also filtered that slide to items with type `stretch`. Normal text lessons, images and YouTube entries in the connected library therefore disappeared from its picker. Both paths are repaired without changing the stored content type. The known standard movement slide also gets its standard library connection restored if missing, for new/unstarted meetings only. Custom timer-only slides and started/completed meetings remain unchanged. Existing drafts use Change content/Auto-select to refresh their selection.
+
+Changes: separate add-content capability from content/library management in UI and PHP; allow authenticated shared-image upload for contributors; reusable tested content matching; connect standard movement slide; select matching movement content during generation; retain Batch 1 inline feedback and safe update packaging. No migration, deployment, credentials or media path changes.
+
+Verification: 77 frontend unit checks, typecheck/lint/localization and both builds passed locally. Expanded real MySQL/browser verification covers all four roles, Location/Report Viewer text and image additions, retained management restrictions, and text/YouTube Stretches selection in the actual meeting builder. The correction's GitHub verification result is available with the Round 6 branch checks; the historical v0.6.0 results below are not a claim that its former permission policy remains current.
+
 # Round 6 checkpoint — Batch 1, v0.6.0
 
 Date: 2026-10-23. Branch: Round-6-Development. Baseline: Round-5-Development **7b1e113**, v0.5.4. No AGENTS.md was present in the repository or parent workspace. Read README, Round 5 checkpoint, source, four migrations, and packaging/verification scripts before editing. Round 5/default branch/live hosting remain unchanged. Stop after Batch 1.

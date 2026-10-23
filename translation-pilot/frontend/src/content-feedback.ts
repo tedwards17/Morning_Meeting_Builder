@@ -1,6 +1,6 @@
 import { t, uiError } from "./i18n";
 
-export const contentPermissionMessage = () => t("Only Administrator and Content Manager accounts can create or edit libraries and shared content. Ask an administrator to update your account role.");
+export const contentPermissionMessage = () => t("Everyone signed in can add content. Administrator and Content Manager accounts manage libraries and edit existing shared content.");
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public requestId = "") {

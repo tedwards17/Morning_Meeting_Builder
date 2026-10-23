@@ -3,11 +3,13 @@ export function isPersonalShare(slide:Row):boolean {
   return slide.personalShare===true || slide.id==="00000000-0000-4000-8000-000000001001" || slide.title?.trim().toLowerCase()==="personal share";
 }
 export function slidePolicy(slide:Row):Row {
+  if (slide.type === "stretch" && slide.id === "00000000-0000-4000-8000-000000001002" && !slide.libraryId)
+    return {...slide,libraryId:"00000000-0000-4000-8000-000000000002"};
   return isPersonalShare(slide)?{...slide,personalShare:true,optional:false,mediaOptional:true,defaultSkipped:false}:slide;
 }
 export function normalizeUnstartedMeeting(meeting:Row):Row {
-  if(meeting.startedAt)return meeting;
-  return {...meeting,slides:meeting.slides.map((slide:Row)=>isPersonalShare(slide.definition)?{...slide,definition:slidePolicy(slide.definition),skipped:false}:slide)};
+  if(meeting.startedAt || meeting.status === "completed" || meeting.status === "presenting")return meeting;
+  return {...meeting,slides:meeting.slides.map((slide:Row)=>isPersonalShare(slide.definition)?{...slide,definition:slidePolicy(slide.definition),skipped:false}:{...slide,definition:slidePolicy(slide.definition)})};
 }
 
 export function templateDefaults(template:Row):Row {
