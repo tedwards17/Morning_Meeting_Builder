@@ -33,6 +33,10 @@ Date: 2026-10-23. Branch: Round-6-Development. Baseline: Round-5-Development **7
 - **13 existing Round 5 browser checks** passed, including starter installation, saved-meeting persistence, sign-out/account switching, Settings and stable device identity.
 - Two successive packaging runs produced identical checksums. Source and prebuilt update/full-install folders are delivered together on Round-6-Development; no merge, release to default Pages or live deployment is part of this batch. All database tests use a disposable local MariaDB 10.11 instance and PHP 8.3, never production. Browser tests use Chromium 134 at desktop 1280×844 and mobile 390×844 widths, not physical tablets/phones. Forced HTTP failures are explicitly separate from real successful API/MySQL saves. No paid provider requests are made.
 
+## GitHub verification follow-up
+
+The initial GitHub run passed type/lint/unit/PHP syntax/migration checks, then exposed an inherited test-runner defect: tests/api/history.py launched PHP with `-n` while the existing history validator uses `mb_strlen`. The test now explicitly enables `mbstring` in that isolated PHP process. Production PHP/history code is unchanged. The subsequent GitHub run verifies this correction plus the existing and Batch 1 checks.
+
 ## Remaining host checks
 
 Thomas uploads the prebuilt update and runs ROUND6_BATCH1_UPGRADE.md's checklist using the live roles/device. Actual cPanel/MySQL version, TLS/rewrite behavior, physical browser/keyboard behavior and provider credentials remain deployment checks. If a save still fails on the live host, capture the inline message/request ID, action, role, content type and file size. Do not clear site storage or overwrite the corrected private media path. Batch 2–9 remain unstarted.

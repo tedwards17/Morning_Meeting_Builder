@@ -20,7 +20,7 @@ def request(m, prior=None, actor=None):
     body={'meeting':m}
     if prior is not None: body['prior']=prior
     if actor is not None: body['actor']=actor
-    result=subprocess.run([php,'-n','-r',code],cwd=root,input=json.dumps(body),text=True,capture_output=True,check=True)
+    result=subprocess.run([php,'-n','-d','extension=mbstring','-r',code],cwd=root,input=json.dumps(body),text=True,capture_output=True,check=True)
     return json.loads(result.stdout)
 checks=[]
 def check(name, condition):
