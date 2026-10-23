@@ -50,5 +50,8 @@ try:
 finally:sql("$p->exec('RENAME TABLE batch1_record_versions TO record_versions');")
 check('failed transaction left no library record',not any(r['id']==failed_id for r in c.req('libraries')[1]['records']))
 status,res=c.write('libraries',{'id':failed_id,'name':'Retry works','description':'','archived':False});check('retry saves after server recovers',status==200)
+# Keep this fixture suite from consuming the next suite's shared-IP login budget.
+# Production throttle behavior is unchanged; this database is explicitly disposable.
+sql("$p->exec('DELETE FROM login_attempts');")
 open('/tmp/mmb-round6-fixture.json','w').write(json.dumps(f))
 print('Round 6 API:',checks,'checks passed')
