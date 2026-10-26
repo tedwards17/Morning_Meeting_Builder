@@ -1,4 +1,4 @@
-import { refreshContentContext, loadContentContext, chooseContentLocation, setContentMeetingLocation, isContentAvailable, isInRotation } from "./content-runtime";
+import { contentLocation, refreshContentContext, loadContentContext, chooseContentLocation, setContentMeetingLocation, isContentAvailable, isInRotation } from "./content-runtime";
 import { ApiError, contentPermissionMessage } from "./content-feedback";
 export { ApiError } from "./content-feedback";
 import { t as translateUI } from "./i18n";
@@ -351,6 +351,7 @@ export const repository = {
         for (let start = 0; start < writes.length; start += 50) {
           const result = await api("records/batch", {
             records: writes.slice(start, start + 50),
+            rotation_location_id: contentLocation(),
           });
           response.records.push(...result.records);
         }
@@ -406,6 +407,10 @@ export const repository = {
         if (meeting.status === "completed" && prior?.status !== "completed")
           await record(meeting, null, "meeting_completed");
       }
+    }
+    if(!hosted&&before){
+      const rotation=await db.get("meta","demoRotation");
+      if(rotation){const added=next.items.filter(item=>!before.items.some(old=>old.id===item.id)&&!item.archived&&(!item.locations?.length||item.locations.includes(next.device.id))).map(item=>item.id);if(added.length)await db.put("meta","demoRotation",[...new Set([...rotation,...added])]);}
     }
     await db.saveState(next);
     if (

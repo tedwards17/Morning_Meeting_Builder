@@ -52,7 +52,7 @@ def create(client,title='New text',**fields):
  row={**base,'id':uid(),'title':title,'type':'lesson','allLocations':True,'locations':[],**fields};code,res=client.write('items',row);assert code==200,(code,res);return res['records'][0]['data']
 new=create(asm)
 check('new shared content visible at Assembly and Paint',new['id'] in asm.context(a)['available'] and new['id'] in paint.context(b)['available'])
-check('new content starts outside every rotation',new['id'] not in asm.context(a)['enabled'] and new['id'] not in paint.context(b)['enabled'])
+check('new content automatically joins only the creator location rotation',new['id'] in asm.context(a)['enabled'] and new['id'] not in paint.context(b)['enabled'])
 check('normal account opts into its own rotation',asm.rotation(a,new['id'],True)[0]==200)
 check('Assembly enrollment does not enroll Paint',new['id'] in asm.context(a)['enabled'] and new['id'] not in paint.context(b)['enabled'])
 check('Paint manages same item independently',paint.rotation(b,new['id'],True)[0]==200)
@@ -67,7 +67,14 @@ partial=create(asm,'Paint only',allLocations=False,locations=[b]);check('individ
 check('cannot enroll unavailable item',asm.rotation(a,partial['id'],True)[0]==403)
 check('ordinary creator cannot alter another location access through editing',asm.write('items',{**new,'allLocations':False,'locations':[a]})[0]==403)
 invalid={**base,'id':uid(),'title':'Invalid sharing','type':'lesson','allLocations':False,'locations':[]};check('at least one receiving location required',asm.write('items',invalid)[0]==422)
-for client,name in [(manager,'content manager'),(viewer,'report viewer')]:check(name+' can still contribute',bool(create(client,name+' contribution')))
+for client,name in [(manager,'content manager'),(viewer,'report viewer')]:
+ contribution=create(client,name+' contribution');check(name+' can still contribute without gaining rotation rights',contribution['id'] not in asm.context(a)['enabled'] and contribution['id'] not in paint.context(b)['enabled'])
+# Fixed-location identity overrides a crafted cross-location enrollment target.
+forged={**base,'id':uid(),'title':'Crafted enrollment','type':'lesson','allLocations':True,'locations':[]}
+code,res=asm.req('records/batch',{'rotation_location_id':b,'records':[{'id':forged['id'],'kind':'items','data':forged,'expected_version':0}]});check('creation cannot enroll a different location via a crafted request',code==200 and forged['id'] in asm.context(a)['enabled'] and forged['id'] not in paint.context(b)['enabled'])
+admin_new={**forged,'id':uid(),'title':'Admin selected location'}
+code,res=admin.req('records/batch',{'rotation_location_id':b,'records':[{'id':admin_new['id'],'kind':'items','data':admin_new,'expected_version':0}]});check('administrator contribution enrolls only selected location',code==200 and admin_new['id'] in paint.context(b)['enabled'] and admin_new['id'] not in asm.context(a)['enabled'])
+
 link=create(asm,'Website',type='link',url='https://example.org/reference',description='');check('link accepts optional body text',link['description']=='')
 check('unsafe URL rejected',asm.write('items',{**base,'id':uid(),'title':'Bad URL','type':'link','url':'javascript:alert(1)'})[0]==422)
 check('text body required',asm.write('items',{**base,'id':uid(),'title':'No text','type':'lesson','description':''})[0]==422)
@@ -86,12 +93,26 @@ check('save presentation with shared image',asm.req('sync/push',{'writes':[{'id'
 check('ordinary account cannot delete company content',asm.req('content/'+image_item['id']+'/delete',{'expected_version':image_item['version']})[0]==403)
 check('content manager cannot archive company-wide through generic record save',manager.write('items',{**image_item,'archived':True})[0]==403)
 admin.rotation(a,image_item['id'],True);admin.rotation(b,image_item['id'],True)
-check('administrator archives company content',admin.req('content/'+image_item['id']+'/delete',{'expected_version':image_item['version']})[0]==200)
+code,res=admin.req('content/'+image_item['id']+'/delete',{'expected_version':image_item['version'],'mode':'archive'});check('administrator archives company content',code==200);archived=res['record']['data']
 check('deleted content absent from all future location pools',all(image_item['id'] not in c.context(loc)['available'] and image_item['id'] not in c.context(loc)['enabled'] for c,loc in [(asm,a),(paint,b)]))
 check('saved presentation snapshot preserved',asm.req('meetings/'+meeting['id'])[1]['meeting']['slides'][0]['items'][0]['id']==image_item['id'])
 check('referenced media remains downloadable after deletion',asm.req('media/'+image['id'])[0]==200)
 meeting['status']='completed';check('completed snapshot remains savable after content deletion',asm.req('sync/push',{'writes':[{'id':meeting['id'],'kind':'meeting','data':meeting}]})[0]==200)
 check('completed history retains archived content and shared media',asm.req('meetings/'+meeting['id'])[1]['meeting']['slides'][0]['items'][0]['assetId']==image['id'] and asm.req('media/'+image['id'])[0]==200)
+# Actual permanent deletion removes current/version records and emits a sync tombstone.
+check('ordinary account cannot permanently delete archived content',asm.req('content/'+image_item['id']+'/delete',{'expected_version':archived['version'],'mode':'permanent'})[0]==403)
+check('permanent deletion checks version conflicts',admin.req('content/'+image_item['id']+'/delete',{'expected_version':1,'mode':'permanent'})[0]==409)
+f['permanentId']=image_item['id'];cursor=sql("$q=$p->prepare('SELECT sequence FROM organizations WHERE id=?');$q->execute([$f['org']]);echo $q->fetchColumn();").stdout
+check('administrator permanently deletes archived content',admin.req('content/'+image_item['id']+'/delete',{'expected_version':archived['version'],'mode':'permanent'})[0]==200)
+check('permanent deletion clears content and its edit versions',sql("$q=$p->prepare('SELECT COUNT(*) FROM records WHERE id=?');$q->execute([$f['permanentId']]);$total=$q->fetchColumn();$q=$p->prepare('SELECT COUNT(*) FROM record_versions WHERE record_id=?');$q->execute([$f['permanentId']]);echo $total+$q->fetchColumn();").stdout=='0')
+check('permanent deletion synchronizes a tombstone',any(row['id']==image_item['id'] and row['deleted'] for row in admin.req('sync/changes?after='+cursor)[1]['changes']))
+check('permanent deletion preserves completed snapshots and media',asm.req('meetings/'+meeting['id'])[1]['meeting']['slides'][0]['items'][0]['assetId']==image['id'] and asm.req('media/'+image['id'])[0]==200)
+active=create(asm,'Delete active directly');check('administrator can permanently delete active content',admin.req('content/'+active['id']+'/delete',{'expected_version':active['version'],'mode':'permanent'})[0]==200)
+# Explicit fixed template references are removed; the rest of the template remains editable.
+fixed=create(asm,'Fixed template test');tpl={**f['template'],'slides':[{**movement,'selection':'manual','contentIds':[fixed['id']]},slide]}
+code,res=admin.write('templates',tpl);assert code==200;f['template']=res['records'][0]['data']
+check('permanent deletion clears live template references',admin.req('content/'+fixed['id']+'/delete',{'expected_version':fixed['version'],'mode':'permanent'})[0]==200 and not next(t for t in admin.req('templates')[1]['records'] if t['id']==tpl['id'])['slides'][0]['contentIds'])
+f['template']=next(t for t in admin.req('templates')[1]['records'] if t['id']==tpl['id']);f['template']['slides'][0]['selection']='oldest';code,res=admin.write('templates',f['template']);assert code==200;f['template']=res['records'][0]['data']
 # Adding a location shares All content but does not opt it into any rotation.
 c=uid();check('administrator creates a future location',admin.req('admin/locations',{'id':c,'name':'Future location','enabled':True})[0]==200)
 ctx=admin.context(c);check('All includes a new location without enrolling it',new['id'] in ctx['available'] and not ctx['enabled']);check('partial sharing excludes new location',partial['id'] not in ctx['available'])
@@ -102,6 +123,9 @@ check('re-sharing does not restore revoked location enrollment',new['id'] not in
 f['new']=res['records'][0]['data'];f['partial']=partial;f['c']=c
 # Movement fixture: new text and YouTube are available, outside rotation until chosen.
 f['movementText']=create(asm,'Movement instructions',libraryId=f['stretch']);f['movementVideo']=create(asm,'Movement video',libraryId=f['stretch'],type='external-video',url='https://www.youtube.com/watch?v=dQw4w9WgXcQ',description='')
+f['movementImage']=create(asm,'Movement image',libraryId=f['stretch'],type='image',assetId=image['id'],description='')
+f['movementLink']=create(asm,'Movement website',libraryId=f['stretch'],type='link',url='https://example.org/movement',description='')
+asm.rotation(a,f['movementVideo']['id'],False)
 # Fresh browser fixture with no login-counter dependency on this API suite.
 sql("$p->exec('DELETE FROM login_attempts');")
 pathlib.Path('/tmp/mmb-combined-fixture.json').write_text(json.dumps(f))

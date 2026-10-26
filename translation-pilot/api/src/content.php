@@ -22,8 +22,21 @@ if(str_starts_with($path,'content/rotation')) {
  }
 }
 if(preg_match('#^content/([a-f0-9-]{36})/delete$#',$path,$match)&&$method==='POST'){
- role(['administrator']);begin_write();$row=record_row('items',$match[1]);if(!$row)fail(404,'Content unavailable');
+ role(['administrator']);$mode=$body['mode']??'archive';if(!in_array($mode,['archive','permanent'],true))fail(422,'Choose archive or permanent deletion.');begin_write();$row=record_row('items',$match[1]);if(!$row)fail(404,'Content unavailable');
  if((int)($body['expected_version']??-1)!==(int)$row['version'])fail(409,'This record changed elsewhere. Refresh and retry your edit.');
+ if($mode==='permanent'){
+  foreach(rows("SELECT * FROM records WHERE organization_id=? AND kind='templates'",[org()]) as $template){
+   $data=payload($template);$changed=false;
+   foreach($data['slides']??[] as $index=>$slide){$ids=$slide['contentIds']??[];$next=array_values(array_filter($ids,fn($id)=>$id!==$match[1]));if($ids!==$next){$data['slides'][$index]['contentIds']=$next;$changed=true;}}
+   if($changed)save_record(['kind'=>'templates','id'=>$data['id'],'data'=>$data,'expected_version'=>(int)$template['version']]);
+  }
+  query('DELETE FROM content_rotation WHERE organization_id=? AND content_id=?',[org(),$match[1]]);
+  query("DELETE FROM record_versions WHERE organization_id=? AND kind='items' AND record_id=?",[org(),$match[1]]);
+  query("DELETE FROM records WHERE organization_id=? AND kind='items' AND id=?",[org(),$match[1]]);
+  change('items',$match[1]);audit('delete_content_permanently',$match[1]);
+  // Saved meeting snapshots, usage history and shared media have independent lifetimes.
+  $pdo->commit();json_out(['deleted'=>true,'id'=>$match[1]]);
+ }
  $data=payload($row);$data['archived']=true;
  $result=save_record(['kind'=>'items','id'=>$match[1],'data'=>$data,'expected_version'=>(int)$row['version']]);
  query('DELETE FROM content_rotation WHERE organization_id=? AND content_id=?',[org(),$match[1]]);

@@ -21,22 +21,22 @@ function useAssetUrl(item:Row,assets:Row[],thumbnail=false):string|undefined {
  React.useEffect(()=>{if(runtime.hosted||!asset)return;let closed=false,objectUrl:string|undefined;void media.url(asset.hash,asset.mime,asset.id).then((url:string|null)=>{objectUrl=url??undefined;if(closed){if(url?.startsWith("blob:"))URL.revokeObjectURL(url);}else setLocal(url?{id:asset.id,url}:null);}).catch(()=>setLocal(null));return()=>{closed=true;if(objectUrl?.startsWith("blob:"))URL.revokeObjectURL(objectUrl);};},[asset?.id,asset?.hash,asset?.mime]);
  return asset?runtime.hosted?`./api/v1/media/${asset.id}${thumbnail&&asset.mime.startsWith("image/")?"?thumbnail=1":""}`:local?.id===asset.id?local.url:undefined:undefined;
 }
-function Thumbnail({item}:{item:Row}){
+function Thumbnail({item,onPreview}:{item:Row;onPreview:()=>void}){
  const {state}=app();const [failed,fail]=React.useState(false);const video=item.type==="video"||!!youtubeId(item.url??"");
  const localImage=useAssetUrl(item,state.assets,true);
  const image=youtubeId(item.url??"")?`https://i.ytimg.com/vi/${youtubeId(item.url)}/mqdefault.jpg`:item.type==="video"&&!item.thumbnailAssetId?undefined:localImage;
- return <div className="content-visual">{image&&!failed?<img src={image} alt={t("Thumbnail for {arg0}",{arg0:item.title})} loading="lazy" referrerPolicy="no-referrer" onError={()=>fail(true)}/>:<span>{video?t("Video"):contentCategory(item)==="media"?t("Image"):contentCategory(item)==="link"?t("Web link"):t("Text")}</span>}{video&&<span className="video-indicator" aria-label={t("Video")}>▶</span>}{failed&&<small>{t("Thumbnail unavailable")}</small>}</div>;
+ return <div className="content-visual">{image&&!failed?<img src={image} alt={t("Thumbnail for {arg0}",{arg0:item.title})} loading="lazy" referrerPolicy="no-referrer" onError={()=>fail(true)}/>:<span>{video?t("Video"):contentCategory(item)==="media"?t("Image"):contentCategory(item)==="link"?t("Web link"):t("Text")}</span>}{video&&<button type="button" className="video-indicator" aria-label={t("Play preview · {arg0}",{arg0:item.title})} onClick={onPreview}>▶</button>}{failed&&<small>{t("Thumbnail unavailable")}</small>}</div>;
 }
 function RotationControl({item}:{item:Row}){
  const ctx=useContext();const [busy,setBusy]=React.useState(false),[error,setError]=React.useState("");
  const enrolled=isInRotation(item),available=isContentAvailable(item);const reason=!ctx.location?t("Choose a meeting location before managing rotation."):!ctx.canManage?t("Only this location account or an administrator can change its rotation."):!available?t("Content is not available at this location."):"";
- return <div className="rotation-control"><span className={`status-chip ${enrolled?"green":""}`}>{item.archived?t("Archived"):enrolled?t("In our rotation"):t("Available only")}</span><button type="button" disabled={busy||!!reason} title={reason} onClick={async()=>{setError("");setBusy(true);try{await setRotation(item,!enrolled);}catch(e){setError(formError(e));}finally{setBusy(false);}}}>{busy?t("Saving…"):enrolled?t("Remove from our rotation"):t("Add to our rotation")}</button>{error&&<p role="alert" className="form-feedback warning">{error}</p>}</div>;
+ return <div className="rotation-control"><span className={`status-chip ${enrolled?"green":""}`}>{item.archived?t("Archived"):enrolled?t("In our rotation"):t("Available only")}</span><button type="button" hidden={!!item.archived} disabled={busy||!!reason} title={reason} onClick={async()=>{setError("");setBusy(true);try{await setRotation(item,!enrolled);}catch(e){setError(formError(e));}finally{setBusy(false);}}}>{busy?t("Saving…"):enrolled?t("Remove from our rotation"):t("Add to our rotation")}</button>{error&&<p role="alert" className="form-feedback warning">{error}</p>}</div>;
 }
 function Preview({item,onClose}:{item:Row;onClose:()=>void}){
  const {state}=app();const media=React.useRef<HTMLVideoElement>(null),ready=React.useRef(false),[error,setError]=React.useState(""),[loading,setLoading]=React.useState(true);
  const kind=contentCategory(item),youtube=youtubeId(item.url??""),url=useAssetUrl(item,state.assets),poster=useAssetUrl(item,state.assets,true),isVideo=item.type==="video";
  React.useEffect(()=>{const el=media.current;const timer=setTimeout(()=>{if((youtube||isVideo)&&!ready.current)setError(t("Video did not load. Check your connection, codec, or use the original link."));},10000);return()=>{clearTimeout(timer);if(el){el.pause();el.removeAttribute("src");el.load();}};},[item.id]);
- return <Modal title={t("Preview · {arg0}",{arg0:item.title})} wide onClose={onClose}><div className="content-preview" data-preview-id={item.id}>
+ return <Modal title={t(kind==="text"?"Full text · {arg0}":"Preview · {arg0}",{arg0:item.title})} wide onClose={onClose}><div className="content-preview" data-preview-id={item.id}>
   {kind==="media"?(url?isVideo?<video ref={media} controls playsInline preload="metadata" src={url} poster={item.thumbnailAssetId?poster:undefined} onLoadedData={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("This video cannot play here. Try H.264 MP4 or VP8/VP9 WebM."))}/>:<img src={url} alt={item.title} onError={()=>setError(t("Image unavailable. Ask the contributor to check the file."))}/>:<p role="alert">{t("Media unavailable")}</p>):youtube?<Player item={{...item,type:"external-video"}} onReady={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("Video did not load. Check your connection, codec, or use the original link."))}/>:null}
   {loading&&(youtube||isVideo)&&!error&&<p role="status">{t("Loading video…")}</p>}
   {error&&<p role="alert" className="form-feedback warning">{error}</p>}
@@ -46,13 +46,51 @@ function Preview({item,onClose}:{item:Row;onClose:()=>void}){
   <button type="button" onClick={onClose}>{t("Back to content")}</button>
  </div></Modal>;
 }
-function Card({item,children}:{item:Row;children?:RT.ReactNode}){
- const {state}=app();return <article className="visual-content-card"><Thumbnail item={item}/><div className="visual-content-details"><h3>{item.title}</h3><p className="muted">{state.libraries.find(l=>l.id===item.libraryId)?.name} · <Category item={item}/></p>{item.description&&<p className="content-excerpt">{item.description}</p>}{contentCategory(item)==="link"&&!youtubeId(item.url??"")&&<small className="link-address">{item.url}</small>}<RotationControl item={item}/>{children}</div></article>;
+function Card({item,onPreview,children}:{item:Row;onPreview:(item:Row)=>void;children?:RT.ReactNode}){
+ const {state}=app();const kind=contentCategory(item);
+ return <article className={`visual-content-card category-${kind}`}>
+  {kind==="media"||youtubeId(item.url??"")?<Thumbnail item={item} onPreview={()=>onPreview(item)}/>:null}
+  <div className="visual-content-details"><h3>{item.title}</h3><p className="muted">{state.libraries.find(l=>l.id===item.libraryId)?.name} · <Category item={item}/></p>
+  {item.description&&<p className="content-excerpt">{item.description}</p>}
+  {kind==="text"&&<button type="button" className="text-button" onClick={()=>onPreview(item)}>{t("See Full Text")}</button>}
+  {kind==="link"&&!youtubeId(item.url??"")&&<a href={item.url} target="_blank" rel="noopener noreferrer">{t("Open web page")}</a>}
+  {children}</div></article>;
 }
-export function ContentCards({items,onEdit,layout="grid"}:{items:Row[];onEdit:(item:Row)=>void;layout?:string}){
- const ctx=useContext();const {notify}=app();const [preview,setPreview]=React.useState<Row|null>(null),[error,setError]=React.useState(""),[view,setView]=React.useState("available");
- async function remove(item:Row){if(!await confirmUI(t("Delete “{arg0}” for every location? It will leave active libraries and future selection. Saved meetings and their media will remain.",{arg0:item.title})))return;try{setError("");await deleteCompanyContent(item);notify(t("Content deleted for every location. Saved meetings remain available."));}catch(e){setError(formError(e));}}
- return <>{ctx.location&&<p className="muted">{t("Content for {arg0}",{arg0:ctx.locations.find(l=>l.id===ctx.location)?.name??ctx.location})}</p>}<div className="tabs"><button type="button" aria-pressed={view==="available"} onClick={()=>setView("available")}>{t("Available content")}</button><button type="button" aria-pressed={view==="rotation"} onClick={()=>setView("rotation")}>{t("Our rotation")}</button></div>{view==="rotation"&&!items.some(isInRotation)&&<p role="status" className="empty-rotation">{t("Our rotation is empty. Browse available content and choose Add to our rotation. Manual choices do not enroll content.")}</p>}{!ctx.location&&<p className="panel">{t("Choose a meeting location to see its availability and rotation.")}</p>}{ctx.location&&!ctx.canManage&&<p className="muted">{t("Only this location account or an administrator can change its rotation.")}</p>}{error&&<p role="alert" className="form-feedback warning">{error}</p>}<div className={`visual-content-grid ${layout}`}>{items.filter(item=>view!=="rotation"||isInRotation(item)).map(item=><Card item={item} key={item.id}><div className="actions"><button type="button" onClick={()=>setPreview(item)}>{t("Preview")}</button><button type="button" onClick={()=>onEdit(structuredClone(item))}>{runtime.canEditContent()?t("Edit content"):t("View content")}</button>{ctx.canDelete&&!item.archived&&<button type="button" className="danger-text" onClick={()=>void remove(item)}>{t("Delete content for everyone")}</button>}</div></Card>)}</div>{preview&&<Preview key={preview.id} item={preview} onClose={()=>setPreview(null)}/>}</>;
+function DeleteChoice({item,onClose,onDeleted}:{item:Row;onClose:()=>void;onDeleted:()=>void}){
+ const [busy,setBusy]=React.useState(false),[error,setError]=React.useState("");const {notify}=app();
+ async function remove(mode:"archive"|"permanent"){
+  setBusy(true);setError("");try{await deleteCompanyContent(item,mode);notify(t(mode==="archive"?"Content archived for every location.":"Content permanently deleted. Saved meetings and referenced media remain."));onDeleted();}catch(e){setError(formError(e));setBusy(false);}
+ }
+ return <Modal title={item.archived?t("Permanently delete content"):t("Archive or delete content")} onClose={()=>{if(!busy)onClose();}}>
+  <p>{item.archived?t("Permanently delete “{arg0}” from the content library?",{arg0:item.title}):t("Would you like to archive “{arg0}”?",{arg0:item.title})}</p>
+  <p className="muted">{t("This affects every location. Permanent deletion cannot be undone. Saved meeting snapshots and referenced media remain available.")}</p>
+  {error&&<p role="alert" className="form-feedback warning">{error}</p>}
+  <div className="modal-actions"><button type="button" autoFocus disabled={busy} onClick={onClose}>{t("Cancel")}</button>
+   {!item.archived&&<button type="button" disabled={busy} onClick={()=>void remove("archive")}>{t("Yes, archive")}</button>}
+   <button type="button" className="danger" disabled={busy} onClick={()=>void remove("permanent")}>{item.archived?t("Delete permanently"):t("No, delete permanently")}</button>
+  </div>
+ </Modal>;
+}
+export function ContentCards({items,onEdit,layout="list"}:{items:Row[];onEdit:(item:Row)=>void;layout?:string}){
+ const ctx=useContext(),{state}=app();const [preview,setPreview]=React.useState<Row|null>(null),[view,setView]=React.useState("available");
+ const rows=items.filter(item=>view!=="rotation"||isInRotation(item));
+ return <><div className="compact-library-filter"><label>{t("Rotation")} <select aria-label={t("Filter rotation")} value={view} onChange={e=>setView(e.target.value)}><option value="available">{t("Available content")}</option><option value="rotation">{t("Our rotation")}</option></select></label></div>
+  <div className={`compact-library ${layout==="grid"?"compact-grid":""}`}>
+   <div className="compact-library-head"><span>{t("CONTENT")}</span><span>{t("TAGS")}</span><span>{t("LAST USED")}</span><span>{t("USES")}</span><span/></div>
+   {rows.map(item=><article className="compact-library-row" key={item.id}>
+    <div className="compact-content-identity">{contentCategory(item)==="media"||youtubeId(item.url??"")?<Thumbnail item={item} onPreview={()=>setPreview(item)}/>:null}<div>
+     {contentCategory(item)==="text"?<button type="button" className="compact-content-title" title={t("See Full Text")} onClick={()=>setPreview(item)}>{item.title}</button>:<strong>{item.title}</strong>}
+     <small><Category item={item}/> · {state.libraries.find(l=>l.id===item.libraryId)?.name}</small>
+    </div></div>
+    <div className="tags">{item.tags?.slice(0,3).map((tag:string)=><span className="tag" key={tag}>{tag}</span>)}</div>
+    <span className="compact-last-used">{item.lastUsedAt?new Date(item.lastUsedAt).toLocaleDateString(getLanguage()==="es"?"es-MX":"en-US"):t("Never used")}</span>
+    <span className="compact-use-count">{item.useCount??0}</span>
+    <button type="button" className="compact-edit" onClick={()=>onEdit(structuredClone(item))}>{runtime.canEditContent()?t("Edit content"):t("View content")}</button>
+   </article>)}
+  </div>
+  {!rows.length&&<p role="status">{view==="rotation"?t("Our rotation is empty. Manage rotation from Edit content in the content library."):t("No matching content")}</p>}
+  {!ctx.location&&<p className="muted">{t("Choose a meeting location to see its availability and rotation.")}</p>}
+  {preview&&<Preview key={preview.id} item={preview} onClose={()=>setPreview(null)}/>}</>;
 }
 export function LocationsField({all,ids,onChange,disabled}:{all:boolean;ids:string[];onChange:(all:boolean,ids:string[])=>void;disabled?:boolean}){
  const ctx=useContext(),locations=ctx.locations.filter(l=>Boolean(Number(l.enabled)));const ref=React.useRef<HTMLInputElement>(null);
@@ -73,6 +111,7 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
  const {state,update,notify}=app();const ctx=useContext();const exists=state.items.some(i=>i.id===item.id),allowed=exists?runtime.canEditContent():runtime.canAddContent();
  const [draft,setDraft]=React.useState<Row>(structuredClone(item)),[kind,setKind]=React.useState<ContentCategory>(contentCategory(item)),[tags,setTags]=React.useState((item.tags??[]).join(", "));
  const [all,setAll]=React.useState(item.allLocations??!item.locations?.length),[locations,setLocations]=React.useState<string[]>(item.locations??[]),[busy,setBusy]=React.useState(false),[dirty,setDirty]=React.useState(false),[error,setError]=React.useState("");
+ const [deleting,setDeleting]=React.useState(false);
  const feedback=React.useRef<HTMLParagraphElement>(null),pending=React.useRef(false);React.useEffect(()=>globalThis.MMB.holdContentDraft(),[]);
  const change=(values:Partial<Row>)=>{setDraft(d=>({...d,...values}));setDirty(true);};
  const fail=(e:unknown)=>{setError(formError(e));requestAnimationFrame(()=>{feedback.current?.scrollIntoView({block:"nearest"});feedback.current?.focus();});};
@@ -102,7 +141,7 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
   if(saved.tags.length>40)throw new Error(t("Use no more than 40 subject tags."));
   if(state.items.some(i=>i.id!==saved.id&&i.libraryId===saved.libraryId&&(i.title.toLowerCase()===saved.title.toLowerCase()||(saved.url&&i.url===saved.url)))&&!await confirmUI(t("This title or link already exists in this library. Save another item?")))return;
   await update(s=>({...s,items:exists?s.items.map(i=>i.id===saved.id?saved:i):[...s.items,saved]}));
-  await runtime.sync();if(!runtime.hosted)await refreshContentContext();notify(t("Content saved. Rotation enrollment is separate."));onSaved?.(saved);setDirty(false);onClose();
+  await runtime.sync();if(!runtime.hosted){await refreshContentContext();if(!exists&&isContentAvailable(saved))await setRotation(saved,true);}notify(t("Content saved. Shared locations keep independent rotations."));onSaved?.(saved);setDirty(false);onClose();
  }catch(e){fail(e);}finally{pending.current=false;setBusy(false);}}
  return <Modal title={exists?allowed?t("Edit content"):t("View content"):t("Add content")} wide onClose={()=>void close()}><form onSubmit={e=>void save(e)} onInvalidCapture={e=>fail(new Error((e.target as HTMLInputElement).validationMessage))}>
   {error&&<p className="form-feedback warning" role="alert" tabIndex={-1} ref={feedback}>{error}</p>}{!allowed&&<p role="note">{contentPermissionMessage()}</p>}
@@ -118,27 +157,27 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
    <label className="field">{t("Subject tags (separated by commas)")}<input aria-label={t("Subject tags (separated by commas)")} value={tags} onChange={e=>{setTags(e.target.value);setDirty(true);}}/></label>
    <label className="field">{t("Source / credit")}<input aria-label={t("Source / credit")} value={draft.source??""} maxLength={300} onChange={e=>change({source:e.target.value})}/></label>
   </fieldset>
-  {exists&&<RotationControl item={item}/>}<p className="muted">{t("Sharing makes content available. Add it to each location’s rotation separately.")}</p>
-  <div className="modal-actions"><button type="button" onClick={()=>void close()} disabled={busy}>{t("Cancel")}</button><button className="primary" type="submit" disabled={busy||!allowed}>{busy?t("Saving…"):t("Save content")}</button></div>
- </form></Modal>;
+  {exists&&<RotationControl item={item}/>}<p className="muted">{t("New content joins your location’s rotation when shared with it. Other locations choose their own rotation.")}</p>{!runtime.session?.account.location_id&&!ctx.canManage&&runtime.hosted&&<p className="muted">{t("This account has no assigned rotation. An administrator or location account can enroll the content.")}</p>}
+  <div className="modal-actions">{exists&&ctx.canDelete&&<button type="button" className="danger-text" disabled={busy} onClick={()=>setDeleting(true)}>{item.archived?t("Delete permanently"):t("Delete content")}</button>}<button type="button" onClick={()=>void close()} disabled={busy}>{t("Cancel")}</button><button className="primary" type="submit" disabled={busy||!allowed}>{busy?t("Saving…"):t("Save content")}</button></div>
+ </form>{deleting&&<DeleteChoice item={item} onClose={()=>setDeleting(false)} onDeleted={()=>{setDeleting(false);onClose();}}/>}</Modal>;
 }
 export function ContentSelector({slide,used,onClose,onChoose}:{slide:Row;used:Set<string>;onClose:()=>void;onChoose:(items:Row[])=>void}){
- const {state}=app();const ctx=useContext();const [query,setQuery]=React.useState(""),[kind,setKind]=React.useState(""),[tab,setTab]=React.useState("available"),[preview,setPreview]=React.useState<Row|null>(null),[selected,setSelected]=React.useState<string[]>(slide.items.map((i:Row)=>i.id)),[limit,setLimit]=React.useState(30);
+ const {state}=app();const ctx=useContext();const [query,setQuery]=React.useState(""),[kind,setKind]=React.useState(""),[tab,setTab]=React.useState("available"),[preview,setPreview]=React.useState<Row|null>(null),[limit,setLimit]=React.useState(30);
  React.useEffect(()=>{void refreshContentContext().catch(runtime.reportError);},[]);
  const container=React.useRef<HTMLDivElement>(null),scroll=React.useRef(0);
  const openPreview=(item:Row)=>{scroll.current=container.current?.closest("dialog")?.scrollTop??0;setPreview(item);};
  const closePreview=()=>{setPreview(null);requestAnimationFrame(()=>requestAnimationFrame(()=>{const dialog=container.current?.closest("dialog");if(dialog)dialog.scrollTop=scroll.current;}));};
  const available=state.items.filter(i=>matchesSlideContent(slide.definition,i)&&isContentAvailable(i));
  const rows=available.filter(i=>(tab!=="rotation"||isInRotation(i))&&(!kind||contentCategory(i)===kind)&&`${i.title} ${i.description} ${(i.tags??[]).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
- const chosen=selected.flatMap(id=>state.items.find(i=>i.id===id&&isContentAvailable(i))??[]);
- return <Modal title={t("Choose content · {arg0}",{arg0:slide.definition.title})} wide onClose={onClose}><div ref={container} className="content-selector">{ctx.location&&<p className="muted">{t("Content for {arg0}",{arg0:ctx.locations.find(l=>l.id===ctx.location)?.name??ctx.location})}</p>}
+ return <Modal title={t("Choose content · {arg0}",{arg0:slide.definition.title})} wide onClose={onClose}><div ref={container} className="content-selector">
   <div className="toolbar"><label className="search"><input aria-label={t("Search replacement content")} placeholder={t("Search content…")} value={query} onChange={e=>{setQuery(e.target.value);setLimit(30);}}/></label><select aria-label={t("Filter content type")} value={kind} onChange={e=>{setKind(e.target.value);setLimit(30);}}><option value="">{t("All content types")}</option>{(["text","media","link"] as ContentCategory[]).map(k=><option key={k} value={k}>{t(categoryLabel(k))}</option>)}</select></div>
   <div className="tabs"><button type="button" aria-pressed={tab==="available"} onClick={()=>{setTab("available");setLimit(30);}}>{t("Available content")}</button><button type="button" aria-pressed={tab==="rotation"} onClick={()=>{setTab("rotation");setLimit(30);}}>{t("Our rotation")}</button></div>
   {!ctx.location&&<p role="note">{t("Choose a meeting location to see its availability and rotation.")}</p>}
-  {!available.some(isInRotation)&&<p className="empty-rotation" role="status">{t("Our rotation is empty. Browse available content and choose Add to our rotation. Manual choices do not enroll content.")}</p>}
-  <p>{t("Select up to {arg0} items.",{arg0:slide.definition.count})}</p>
-  <div className="visual-content-grid">{rows.slice(0,limit).map(item=><Card key={item.id} item={item}><div className="actions"><button type="button" onClick={()=>openPreview(item)}>{t("Preview")}</button><label className="content-choice"><input type="checkbox" aria-label={t("Use {arg0}",{arg0:item.title})} checked={selected.includes(item.id)} disabled={used.has(item.id)&&!slide.definition.allowRepeat&&!slide.items.some((i:Row)=>i.id===item.id)} onChange={e=>setSelected(ids=>e.target.checked?slide.definition.count===1?[item.id]:[...ids,item.id].slice(-slide.definition.count):ids.filter(id=>id!==item.id))}/>{t("Use this content")}</label></div></Card>)}</div>
+  {tab==="rotation"&&!rows.length&&<p role="status">{t("Our rotation is empty. Manage rotation from Edit content in the content library.")}</p>}
+  <div className="visual-content-grid">{rows.slice(0,limit).map(item=><Card key={item.id} item={item} onPreview={openPreview}>
+   <div className="actions"><button type="button" className="primary" disabled={used.has(item.id)&&!slide.definition.allowRepeat&&!slide.items.some((i:Row)=>i.id===item.id)} onClick={()=>{setPreview(null);onChoose([structuredClone(item)]);}}>{t("Use content")}</button></div>
+  </Card>)}</div>
   {!rows.length&&<p>{t("No matching content. Try Available content or change the filters.")}</p>}{rows.length>limit&&<button type="button" onClick={()=>setLimit(n=>n+30)}>{t("Show more content")}</button>}
-  <div className="modal-actions"><button type="button" onClick={onClose}>{t("Cancel")}</button><button className="primary" type="button" onClick={()=>{setPreview(null);onChoose(chosen);}}>{t("Use {arg0} selected",{arg0:chosen.length})}</button></div>
+  <div className="modal-actions"><button type="button" onClick={onClose}>{t("Cancel")}</button></div>
  </div>{preview&&<Preview key={preview.id} item={preview} onClose={closePreview}/>}</Modal>;
 }

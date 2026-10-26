@@ -72,7 +72,7 @@ jobs:
           php -S 127.0.0.1:8081 -t build/hosted tests/api/router.php > /tmp/mmb-api.log 2>&1 &
           sleep 1
           python3 tests/api/round6-combined.py
-          node tests/e2e/round6-combined.cjs
+          node tests/e2e/round6-compact.cjs
           npm run package
           MMB_PACKAGE_FIXTURE=/tmp/mmb-combined-fixture.json python3 tests/api/package-smoke.py
       - uses: actions/upload-artifact@v4
@@ -81,4 +81,4 @@ jobs:
           path: |
             hosting-upload/
             hosting-update/
-            translation-pilot/artifacts/morning-meeting-builder-update-0.6.2.zip
+            translation-pilot/artifacts/morning-meeting-builder-update-0.6.3.zip

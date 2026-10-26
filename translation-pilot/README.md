@@ -1,3 +1,7 @@
+# v0.6.3 correction — compact library, immediate selection, creator rotation and deletion
+
+Current instructions: [cPanel update](docs/ROUND6_0_6_3_UPGRADE.md). No SQL beyond installed migration 005. Earlier release notes below are historical where behavior differs.
+
 # Round 6 combined Batches 2 and 3 — v0.6.2
 
 Current upgrade: [cPanel instructions and migration 005](docs/ROUND6_BATCH2_3_UPGRADE.md). [Development checkpoint](docs/ROUND6_CHECKPOINT.md). Source and prebuilt files are on Round-6-Development; production remains PHP/MySQL with static frontend assets.

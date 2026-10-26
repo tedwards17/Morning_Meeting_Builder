@@ -48,8 +48,8 @@ export async function setRotation(item:Row,enabled:boolean){
  else await db.put("meta","demoRotation",enabled?[...new Set([...current.enabled,item.id])]:current.enabled.filter(id=>id!==item.id));
  await refreshContentContext();
 }
-export async function deleteCompanyContent(item:Row){
- if(runtime.hosted) {await runtime.api(`content/${item.id}/delete`,{expected_version:item.version??0});await runtime.sync();}
- else {const state=await runtime.repository.load();state.items=state.items.map(i=>i.id===item.id?{...i,archived:true}:i);await runtime.repository.save(state);await refreshContentContext();}
+export async function deleteCompanyContent(item:Row,mode:"archive"|"permanent"="archive"){
+ if(runtime.hosted) {await runtime.api(`content/${item.id}/delete`,{expected_version:item.version??0,mode});await runtime.sync();}
+ else {const state=await runtime.repository.load();state.items=mode==="permanent"?state.items.filter(i=>i.id!==item.id):state.items.map(i=>i.id===item.id?{...i,archived:true}:i);await db.put("meta","demoRotation",current.enabled.filter(id=>id!==item.id));await runtime.repository.save(state);await refreshContentContext();}
  await globalThis.MMB.refresh?.();
 }

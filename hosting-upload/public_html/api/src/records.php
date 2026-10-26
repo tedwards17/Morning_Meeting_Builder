@@ -36,6 +36,11 @@ function save_record(array $write):array{
  query('INSERT INTO records(organization_id,kind,id,owner_id,version,archived,payload,updated_at) VALUES(?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE version=VALUES(version),archived=VALUES(archived),payload=VALUES(payload),updated_at=VALUES(updated_at)',[org(),$kind,$id,$data['owner_id'],$data['version'],(int)$data['archived'],encoded($data)]);
  query('INSERT INTO record_versions(organization_id,kind,record_id,version,payload,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP(6))',[org(),$kind,$id,$data['version'],encoded($data)]);
  if($kind==='items'&&$prior)foreach(rows('SELECT location_id FROM content_rotation WHERE organization_id=? AND content_id=?',[org(),$id]) as $membership)if(!content_location_visible($data,$membership['location_id']))query('DELETE FROM content_rotation WHERE organization_id=? AND content_id=? AND location_id=?',[org(),$id,$membership['location_id']]);
+ // A new contribution joins only the creator's fixed location (or an administrator's selected location).
+ if($kind==='items'&&!$prior&&empty($data['archived'])){
+  $location=actor()['category']==='location'?actor()['location_id']:(actor()['role']==='administrator'?($GLOBALS['body']['rotation_location_id']??''):'');
+  if($location!==''){$location=content_rotation_location($location);if(content_location_visible($data,$location))query('INSERT INTO content_rotation(organization_id,location_id,content_id,enabled) VALUES(?,?,?,1)',[org(),$location,$id]);}
+ }
  change($kind,$id);foreach(rows('SELECT id FROM media_assets WHERE organization_id=?',[org()]) as $media)if(str_contains(encoded($data),$media['id']))change('assets',$media['id']);audit($data['archived']?'archive':'save_'.$kind,$id,['version'=>$data['version']]);
  // Access changes cause all clients to re-evaluate visibility on next pull.
  if($kind==='templates'||isset($data['locations']))query('UPDATE organizations SET permission_epoch=sequence WHERE id=?',[org()]);
