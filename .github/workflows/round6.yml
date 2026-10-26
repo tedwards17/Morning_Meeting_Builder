@@ -1,4 +1,4 @@
-name: Round 6 Batch 1 hosting checks
+name: Round 6 combined batches 2 and 3 hosting checks
 on:
   push:
     branches: [Round-6-Development]
@@ -15,13 +15,20 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ci-disposable-only
+          MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
           MYSQL_DATABASE: mmb_test
         ports: ['3306:3306']
         options: >-
-          --health-cmd="mysqladmin ping -pci-disposable-only"
+          --health-cmd="mysqladmin ping -h127.0.0.1 --silent"
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
+      - name: Read and mask generated disposable database credential
+        shell: bash
+        run: |
+          mmb_ci_db_password="$(docker logs '${{ job.services.mysql.id }}' 2>&1 | sed -n 's/^.*GENERATED ROOT PASSWORD: //p' | tail -1)"
+          test -n "$mmb_ci_db_password"
+          echo "::add-mask::$mmb_ci_db_password"
+          printf 'MMB_CI_DB_PASSWORD=%s\n' "$mmb_ci_db_password" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -54,24 +61,24 @@ jobs:
         run: |
           mkdir -p /tmp/mmb-ci-media
           cat > /tmp/mmb-ci.php <<'PHP'
-          <?php return ['dsn'=>'mysql:host=127.0.0.1;port=3306;dbname=mmb_test;charset=utf8mb4','user'=>'root','password'=>'ci-disposable-only','media_dir'=>'/tmp/mmb-ci-media','origin'=>'http://127.0.0.1:8081','max_image_bytes'=>15728640,'max_storage_bytes'=>10737418240,'test_http'=>true];
+          <?php return ['dsn'=>'mysql:host=127.0.0.1;port=3306;dbname=mmb_test;charset=utf8mb4','user'=>'root','password'=>getenv('MMB_CI_DB_PASSWORD'),'media_dir'=>'/tmp/mmb-ci-media','origin'=>'http://127.0.0.1:8081','max_image_bytes'=>15728640,'max_storage_bytes'=>10737418240,'test_http'=>true];
           PHP
           cat > /tmp/mmb-captions-ci.php <<'PHP'
           <?php return ['enabled'=>true,'auth_mode'=>'account','origin'=>'http://127.0.0.1:8081','state_dir'=>'/tmp/mmb-ci-captions','test_http'=>true];
           PHP
           php scripts/migrate.php /tmp/mmb-ci.php
           php scripts/migrate.php /tmp/mmb-ci.php
-          MYSQL_PWD=ci-disposable-only mysql -h127.0.0.1 -uroot mmb_test < database/seed/001_dtb.sql
+          MYSQL_PWD="$MMB_CI_DB_PASSWORD" mysql -h127.0.0.1 -uroot mmb_test < database/seed/001_dtb.sql
           php -S 127.0.0.1:8081 -t build/hosted tests/api/router.php > /tmp/mmb-api.log 2>&1 &
           sleep 1
-          python3 tests/api/round6.py
-          node tests/e2e/round6-content.cjs
+          python3 tests/api/round6-combined.py
+          node tests/e2e/round6-combined.cjs
           npm run package
-          MMB_PACKAGE_FIXTURE=/tmp/mmb-round6-fixture.json python3 tests/api/package-smoke.py
+          MMB_PACKAGE_FIXTURE=/tmp/mmb-combined-fixture.json python3 tests/api/package-smoke.py
       - uses: actions/upload-artifact@v4
         with:
-          name: morning-meeting-builder-round6-batch1-hosting
+          name: morning-meeting-builder-round6-combined-hosting
           path: |
             hosting-upload/
             hosting-update/
-            translation-pilot/artifacts/morning-meeting-builder-update-0.6.1.zip
+            translation-pilot/artifacts/morning-meeting-builder-update-0.6.2.zip

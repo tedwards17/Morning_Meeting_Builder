@@ -15,12 +15,13 @@ function save_record(array $write):array{
   role(['administrator','content_manager']);
  }
  if((int)($write['expected_version']??-1)!==(int)($old['version']??0))fail(409,'This record changed elsewhere. Refresh and retry your edit.');
+ if($kind==='items')validate_content_sharing($data,$prior);
  verify_targets($data);
  $validateMedia=function(array $node) use (&$validateMedia):void{foreach($node as $key=>$value){if(is_array($value))$validateMedia($value);elseif(in_array($key,['assetId','backgroundAssetId','logoAssetId','thumbnailAssetId'],true)&&$value){if(!one("SELECT id FROM media_assets WHERE organization_id=? AND id=? AND scope='shared'",[org(),require_id($value)])||!media_allowed($value))fail(403,'Image access denied');}elseif(in_array($key,['background','foreground','accent'],true)&&$value&&!preg_match('/^#[a-f0-9]{6}$/i',$value))fail(422,'Invalid theme color');}};$validateMedia($data);
  if($kind==='templates'&&(strlen($data['name']??'')<1||strlen($data['name'])>300))fail(422,'Name required');
  if($kind==='libraries'&&(trim($data['name']??'')===''||mb_strlen($data['name'],'UTF-8')>300))fail(422,'Enter a name of 1–300 characters');
 
- if($kind==='items'){require_content($data);$lib=record_row('libraries',require_id($data['libraryId']??''));if(!$lib)fail(422,'Library unavailable');}
+ if($kind==='items'){if(empty($data['archived']))validate_library_content($data);else require_content($data);$lib=record_row('libraries',require_id($data['libraryId']??''));if(!$lib)fail(422,'Library unavailable');if(empty($data['archived'])){$receivers=rows('SELECT id FROM locations WHERE organization_id=? AND enabled=1',[org()]);if(!array_filter($receivers,fn($l)=>content_location_visible($data,$l['id'])))fail(422,'Select a receiving location with access to this library.');}}
  if($kind==='broadcasts'){
   if(!empty($data['announcement'])||!empty($prior['announcement']))role(['administrator']);
   if(!empty($data['announcement'])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$data['announcementDate']??''))fail(422,'Announcement date required');if(($data['allAccounts']??true)===false&&empty($data['accounts']))fail(422,'Select receiving meeting accounts');$data['slot']='Announcements';$data['importance']='required';$data['recurrence']='every';}
@@ -34,6 +35,7 @@ function save_record(array $write):array{
  $data['archived']=(bool)($data['archived']??false);$data['updatedAt']=gmdate('Y-m-d\TH:i:s.000\Z');
  query('INSERT INTO records(organization_id,kind,id,owner_id,version,archived,payload,updated_at) VALUES(?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE version=VALUES(version),archived=VALUES(archived),payload=VALUES(payload),updated_at=VALUES(updated_at)',[org(),$kind,$id,$data['owner_id'],$data['version'],(int)$data['archived'],encoded($data)]);
  query('INSERT INTO record_versions(organization_id,kind,record_id,version,payload,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP(6))',[org(),$kind,$id,$data['version'],encoded($data)]);
+ if($kind==='items'&&$prior)foreach(rows('SELECT location_id FROM content_rotation WHERE organization_id=? AND content_id=?',[org(),$id]) as $membership)if(!content_location_visible($data,$membership['location_id']))query('DELETE FROM content_rotation WHERE organization_id=? AND content_id=? AND location_id=?',[org(),$id,$membership['location_id']]);
  change($kind,$id);foreach(rows('SELECT id FROM media_assets WHERE organization_id=?',[org()]) as $media)if(str_contains(encoded($data),$media['id']))change('assets',$media['id']);audit($data['archived']?'archive':'save_'.$kind,$id,['version'=>$data['version']]);
  // Access changes cause all clients to re-evaluate visibility on next pull.
  if($kind==='templates'||isset($data['locations']))query('UPDATE organizations SET permission_epoch=sequence WHERE id=?',[org()]);

@@ -1,3 +1,4 @@
+import {ContentEditor, ContentSelector, ContentCards} from "./content-ui";
 import { confirmUI } from "./dialogs";
 import { t as translateUI, getLanguage, getLocale, subscribeLanguage, uiText, uiError, uiLabel } from "./i18n";
 import { LanguageSelector } from "./language-selector";
@@ -23,6 +24,9 @@ import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
 import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
+globalThis.MMB.ContentEditor = ContentEditor;
+globalThis.MMB.ContentSelector = ContentSelector;
+globalThis.MMB.ContentCards = ContentCards;
 globalThis.MMB.FilePicker = FilePicker;
 globalThis.MMB.LanguageSelector = LanguageSelector;
 const Original = OriginalApp as RT.ComponentType<{navigationOpen:boolean;onCloseNavigation:()=>void}>;
@@ -1053,11 +1057,10 @@ function Workspace() {
         {runtime.hosted && role !== "location" && (
           <label>
             {translateUI("Meeting location")}<select aria-label={translateUI("Meeting location")}
-              defaultValue={globalThis.MMB.location??""}
-              onChange={(e) => (
-                (globalThis.MMB.location = e.target.value),
-                db.put("meta", "location", e.target.value)
-              )}
+              value={globalThis.MMB.meetingLocation || globalThis.MMB.location || ""}
+              disabled={Boolean(globalThis.MMB.meetingLocation)}
+              title={globalThis.MMB.meetingLocation?translateUI("Close the current meeting before choosing another location."):undefined}
+              onChange={(e) => { void globalThis.MMB.chooseContentLocation(e.target.value).catch(runtime.reportError); }}
             >
               <option value="">{translateUI("Choose before building")}</option>
               {(globalThis.MMB.locations ?? []).filter((l:Row)=>l.enabled).map((l: Row) => (

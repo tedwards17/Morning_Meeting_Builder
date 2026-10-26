@@ -1,3 +1,4 @@
+import { refreshContentContext, loadContentContext, chooseContentLocation, setContentMeetingLocation, isContentAvailable, isInRotation } from "./content-runtime";
 import { ApiError, contentPermissionMessage } from "./content-feedback";
 export { ApiError } from "./content-feedback";
 import { t as translateUI } from "./i18n";
@@ -155,6 +156,7 @@ export async function initialize() {
       else if (!String(e).includes("Sign in required")) error = String(e);
     }
   }
+  await loadContentContext();
   const loaded = await repository.load();
   if (!hosted) {
     const expired = expireSavedMedia(loaded);
@@ -427,6 +429,7 @@ export function sync(): Promise<void> {
 }
 async function doSync() {
   if (!hosted) {
+    await refreshContentContext();
     status = navigator.onLine
       ? translationPilot ? translateUI("Local pilot · Deepgram + Azure captions") : translateUI("Demo / Local data only")
       : translateUI("Offline · local data");
@@ -588,6 +591,7 @@ async function doSync() {
     globalThis.MMB.events = await db.all("events");
     globalThis.MMB.locations = await db.all("locations");
     globalThis.MMB.location = await db.get("meta", "location");
+    await refreshContentContext();
     globalThis.MMB.refresh?.();
   } catch (e) {
     status = "Needs attention";
@@ -797,6 +801,7 @@ declare global {
 }
 globalThis.MMB = {
   appVersion: APP_VERSION,
+  refreshContentContext, chooseContentLocation, setContentMeetingLocation, isContentAvailable, isInRotation,
   canAddContent, requireContentAdd, canEditContent, requireContentEdit, holdContentDraft,
   reportError,clearError,
   claimSavedMeeting, isPersonalShare, slidePolicy, normalizeUnstartedMeeting, templateDefaults, builderColors, builderColor,

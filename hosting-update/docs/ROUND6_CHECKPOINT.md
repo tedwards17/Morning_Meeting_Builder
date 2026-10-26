@@ -1,3 +1,27 @@
+# v0.6.2 — combined Batches 2 and 3 checkpoint
+
+2026-10-26. Continued Round-6-Development from verified v0.6.1 `d7971bf`; no restart from Round 5. Read repository/README/checkpoint/source/migration/package history; no AGENTS.md present. User's attached combined prompt supersedes earlier Batch 1-only scope for these changes. No default merge or deployment.
+
+## Completed and decisions
+
+Three-category editor with relevant required fields, preserved failed drafts, subject tags separate from location sharing; legacy category mapping preserves stored IDs/history/snapshots. Text body required; media/link accompanying body becomes optional as explicitly requested. All sharing is canonical empty locations plus allLocations=true (includes future locations); partial sharing uses database IDs. Parent-library targeting still applies. Ordinary contributors cannot edit an existing item's sharing.
+
+Migration 005 adds content_rotation and seeds only existing active visible content for enabled locations, once. New records and future locations have no membership. Per-location API checks organization, account category/assigned location, availability and migration version. Admin may manage selected location; location accounts only their own; unassigned CM/viewers do not inherit management rights. Revoke sharing prunes memberships; re-share requires re-enrollment. Current meeting location pins selection context; stale async location responses cannot replace newer context. Empty automatic pools never fall back; explicit/manual template choices may use available unenrolled items.
+
+Admin deletion reuses record archival/version/sync infrastructure and clears rotation memberships; existing snapshots and shared media retained. Generic archive/restore transitions also require admin. No new media deletion job. Temporary-upload cleanup unchanged.
+
+Visual cards, category/search filters and explicit Preview/Use actions; preview retains filters/scroll, pauses/unloads native video and destroys YouTube player on unmount. No usage callback. Ordinary URLs remain anchors. Lazy thumbnails, optional browser-generated posters, MP4/WebM PHP/protected storage/range playback, browser codec check and PHP/application cap feedback; no production transcoding. Demo still uses existing local media store. EN/ES text added; no user-authored content translation.
+
+All signed-in contribution rights and existing management/edit rights retained. No caption styling, presentation navigation, template redesign/distribution or wider slide-type change. Private config, keys, corrected media path and data preserved; update excludes live server-paths.php/config.js/root .htaccess. See ROUND6_BATCH2_3_UPGRADE.md for SQL/cPanel/rollback and manual checks.
+
+## Verification
+
+80 frontend unit tests passed; TypeScript, ESLint, localization checks and both builds passed. 22 PHP syntax checks and five numbered migration checks passed. Disposable PHP 8.3/MariaDB 10.11 API checks: **41 passed**. Real hosted Chromium 134 browser checks: **35 passed**, covering all three editor categories, All/partial/individual sharing, inline failed draft retention, independent persistent rotations, no implied unassigned-manager rights, reusable image/video/poster/preview cleanup, thumbnail fallback, YouTube destruction, no preview usage, manual enrollment independence, empty/opted-in Morning movement selection, meeting-location pinning, named administrator deletion, mobile overflow and EN/ES controls. **Four actual-package checks passed**, including preserved live config/path/root rewrite files and private-config/account/captions lookup. Portrait inline error and portrait/landscape card/selector screenshots were inspected.
+
+Focused investigation caught and fixed preview return scroll movement, native video cleanup running on load state instead of unmount, location-switch response races and meeting-location mismatch. A rerun initially reused an enrolled disposable fixture; resetting the test fixture fixed that test setup. Generated-folder copy collisions in this synchronized workspace were resolved by rerunning packaging independently after build completion; the package validation then passed. Library context loads libraries once per request, avoiding an item-by-item database query. Existing list/grid controls remain functional with the visual cards.
+
+GitHub MySQL 8 verification is recorded in a follow-up below after publication. No live database or paid providers used. Browser YouTube iframe API is mocked only for deterministic playback cleanup; actual YouTube/device/codec/cPanel behavior remains a manual host check. Earlier v0.6.1 baseline findings below remain historical, including the unrelated MySQL shared-template edit comparison issue; template permission code was not changed here.
+
 # v0.6.1 correction checkpoint
 
 User clarified that **everyone may add content to company libraries**. The v0.6.0 restriction on creating content was not the intended product behavior and is superseded here. All four authenticated roles may create new content records and upload shared images. Authentication, organization isolation, existing-record edit permissions, library management, temporary-media permissions, private hosting configuration and SQL schema remain intact. Report Viewer can now navigate to Content library to contribute. This is an explicit user-authorized permission change, not a new location-sharing system.

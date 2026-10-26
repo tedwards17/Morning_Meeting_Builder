@@ -1,3 +1,7 @@
+# Round 6 combined Batches 2 and 3 — v0.6.2
+
+Current upgrade: [cPanel instructions and migration 005](docs/ROUND6_BATCH2_3_UPGRADE.md). [Development checkpoint](docs/ROUND6_CHECKPOINT.md). Source and prebuilt files are on Round-6-Development; production remains PHP/MySQL with static frontend assets.
+
 # Morning Meeting Builder — editable source (Round 6, Batch 1)
 
 This is the editable reconstruction and hosted extension of the supplied DTB browser MVP. The original ZIP contained bundled JavaScript/CSS, not the former TypeScript sources or tests. `frontend/recovered/` preserves that working React UI and its bundled runtime in readable JavaScript. `frontend/src/` contains new TypeScript domain, IndexedDB, synchronization, account, reporting, and management code. This is not a claim that the original source or Git history was recovered exactly. The original native folders were absent; see `native/README.md`.

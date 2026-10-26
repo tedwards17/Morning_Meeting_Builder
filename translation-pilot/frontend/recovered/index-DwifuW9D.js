@@ -1,5 +1,6 @@
 import { confirmUI, promptUI, alertUI } from "../src/dialogs";
 import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
+import { contentCategory, categoryLabel, playableContent } from "../src/content-selection";
 import { matchesSlideContent } from "../src/content-selection";
 import { contentPermissionMessage, formError } from "../src/content-feedback";
 import { openMediaDatabase } from "../src/media-db";
@@ -18068,6 +18069,7 @@ const Vi = 1,
   vn = el().max(300),
   sr = el().max(2e4),
   wf = [
+    "text",
     "image-text",
     "image",
     "video",
@@ -19384,9 +19386,9 @@ function kf(n, i) {
         ir(n.createdAt, i.createdAt) ||
         ir(n.id, i.id);
 }
-function Cf(n, i) { return i.filter(item => matchesSlideContent(n, item)); }
+function Cf(n, i) { return i.filter(item => matchesSlideContent(n, item) && (!globalThis.MMB.isContentAvailable || globalThis.MMB.isContentAvailable(item))); }
 function ry(n, i, r) {
-  const s = Cf(n, i).filter((f) => n.allowRepeat || !r.has(f.id)),
+  const s = Cf(n, i).filter((f) => (n.selection === "manual" || globalThis.MMB.isInRotation(f)) && (n.allowRepeat || !r.has(f.id))),
     c =
       n.selection === "manual"
         ? n.contentIds.flatMap((f) => s.find((h) => h.id === f) ?? [])
@@ -19399,7 +19401,7 @@ function ry(n, i, r) {
 }
 function rotationOrder(slide, items, usedElsewhere) {
   const available = Cf(slide, items).filter((item) =>
-    slide.allowRepeat || !usedElsewhere.has(item.id));
+    globalThis.MMB.isInRotation(item) && (slide.allowRepeat || !usedElsewhere.has(item.id)));
   const never = available.filter((item) => !item.lastUsedAt);
   for (let index = never.length - 1; index > 0; index--) {
     const swap = Math.floor(Math.random() * (index + 1));
@@ -19703,7 +19705,7 @@ function Qs(n) {
   );
 }
 let youtubeReady;
-function YouTubePlayer({ item, onEvent }) {
+function YouTubePlayer({ item, onEvent, onReady, onError }) {
   const ref = ae.useRef(null);
   ae.useEffect(() => {
     let player,
@@ -19720,7 +19722,7 @@ function YouTubePlayer({ item, onEvent }) {
         : url.searchParams.get("v") || url.pathname.split("/").pop();
     if (!/^[a-zA-Z0-9_-]{11}$/.test(id ?? "")) return;
     if (!youtubeReady)
-      youtubeReady = new Promise((resolve) => {
+      youtubeReady = new Promise((resolve, reject) => {
         if (window.YT?.Player) {
           resolve(window.YT);
           return;
@@ -19728,6 +19730,7 @@ function YouTubePlayer({ item, onEvent }) {
         window.onYouTubeIframeAPIReady = () => resolve(window.YT);
         const script = document.createElement("script");
         script.src = "https://www.youtube.com/iframe_api";
+        script.onerror=()=>{youtubeReady=null;reject(new Error("YouTube unavailable"));};
         document.head.append(script);
       });
     youtubeReady.then((YT) => {
@@ -19736,13 +19739,15 @@ function YouTubePlayer({ item, onEvent }) {
         videoId: id,
         playerVars: { playsinline: 1, origin: location.origin, fs: 0 },
         events: {
+          onReady: () => onReady?.(),
+          onError: () => onError?.(),
           onStateChange: (e) => {
             if (e.data === 1) onEvent?.("video_started");
             if (e.data === 0) onEvent?.("video_completed");
           },
         },
       });
-    });
+    }).catch(()=>{if(!cancelled)onError?.();});
     return () => {
       cancelled = true;
       player?.destroy();
@@ -19754,6 +19759,7 @@ function YouTubePlayer({ item, onEvent }) {
   });
 }
 function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
+  n = playableContent(n);
   const s = Qs(n.assetId),
     [c, f] = ae.useState(null);
   return n.type === "image" || n.type === "image-text" || n.type === "video"
@@ -19852,7 +19858,7 @@ function Fi({
     S = v.background ?? b.background,
     A = Qs(v.backgroundAssetId ?? b.backgroundAssetId),
     M = Qs(b.logoAssetId),
-    L = h === void 0 ? n.items : n.items.slice(h, h + 1),
+    L = (h === void 0 ? n.items : n.items.slice(h, h + 1)).map(playableContent),
     O = ["intro", "closing", "divider"].includes(v.type),
     V = L.some((ne) => ["image", "image-text", "video", "external-video"].includes(ne.type)),
     video = L.some((ne) => ["video", "external-video"].includes(ne.type));
@@ -19918,7 +19924,7 @@ function Fi({
                       children: [
                         L.length > 1 && !["gallery", "image", "image-text", "video"].includes(v.type) && d.jsx("h3", { children: ne.title }),
                         d.jsx(dE, { item: ne, interactive: f, onDisplayed: m }),
-                        ne.type === "image-text" &&
+                        ["image", "image-text", "video", "external-video"].includes(ne.type) && !!ne.description &&
                           d.jsx("p", {
                             className: "slide-body",
                             children: ne.description,
@@ -22402,9 +22408,9 @@ function SE() {
     te = n.items
       .filter(
         (w) =>
-          w.archived === A &&
+          w.archived === A && (A || globalThis.MMB.isContentAvailable(w)) &&
           (!f || w.libraryId === f) &&
-          (!v || w.type === v) &&
+          (!v || contentCategory(w) === v) &&
           (!b || w.tags.includes(b)) &&
           `${w.title} ${w.description} ${w.tags.join(" ")}`
             .toLowerCase()
@@ -22490,7 +22496,7 @@ function SE() {
         type: "file",
         multiple: !0,
         accept:
-          "image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime",
+          "image/jpeg,image/png,image/webp,video/mp4,video/webm",
         onChange: (w) => {
           (fe(w.target.files), (w.target.value = ""));
         },
@@ -22559,7 +22565,7 @@ function SE() {
             onChange: (w) => _(w.target.value),
             children: [
               d.jsx("option", { value: "", children: translateUI("All content types") }),
-              wf.map((w) => d.jsx("option", { value: w, children: uiText(Zs[w]) }, w)),
+              ["text","media","link"].map((w) => d.jsx("option", { value: w, children: uiText(categoryLabel(w)) }, w)),
             ],
           }),
           d.jsxs("select", {
@@ -22613,92 +22619,14 @@ function SE() {
           }),
         ],
       }),
-      te.length
-        ? d.jsxs("div", {
-            className: L === "grid" ? "content-grid" : "content-table",
-            children: [
-              L === "list" &&
-                d.jsxs("div", {
-                  className: "content-table-head",
-                  children: [
-                    d.jsx("span", { children: translateUI("CONTENT") }),
-                    d.jsx("span", { children: translateUI("TAGS") }),
-                    d.jsx("span", { children: translateUI("LAST USED") }),
-                    d.jsx("span", { children: translateUI("USES") }),
-                  ],
-                }),
-              te.map((w) =>
-                d.jsxs(
-                  "button",
-                  {
-                    className: "content-row",
-                    title: w.source,
-                    onClick: () => ne(structuredClone(w)),
-                    children: [
-                      d.jsxs("div", {
-                        className: "content-identity",
-                        children: [
-                          d.jsx(Df, { item: w }),
-                          d.jsxs("span", {
-                            children: [
-                              d.jsx("strong", { children: w.title }),
-                              d.jsxs("small", {
-                                children: [
-                                  uiText(Zs[w.type]),
-                                  " ·",
-                                  " ",
-                                  n.libraries.find(($) => $.id === w.libraryId)
-                                    ?.name,
-                                ],
-                              }),
-                              d.jsx("small", {
-                                className:
-                                  w.assetId && H.has(w.assetId)
-                                    ? "danger-text"
-                                    : "",
-                                children: w.assetId
-                                  ? H.has(w.assetId)
-                                    ? translateUI("Missing local media")
-                                    : translateUI("Available offline")
-                                  : w.url
-                                    ? translateUI("Internet required")
-                                    : translateUI("Available offline"),
-                              }),
-                            ],
-                          }),
-                        ],
-                      }),
-                      d.jsx("div", {
-                        className: "tags",
-                        children: w.tags
-                          .slice(0, 3)
-                          .map(($) =>
-                            d.jsx("span", { className: "tag", children: $ }, $),
-                          ),
-                      }),
-                      d.jsx("span", {
-                        className: w.lastUsedAt ? "" : "unused",
-                        children: Pt(w.lastUsedAt),
-                      }),
-                      d.jsx("span", { children: w.useCount }),
-                    ],
-                  },
-                  w.id,
-                ),
-              ),
-            ],
-          })
-        : d.jsx(fr, {
-            title: translateUI("No matching content"),
-            text: translateUI("Change the filters or add a lesson, link, image, or video."),
-          }),
+      te.length ? d.jsx(globalThis.MMB.ContentCards, {items:te,onEdit:ne,layout:L}) : d.jsx("p",{className:"panel",children:translateUI("No matching content. Try Available content or change the filters.")}),
       d.jsxs("p", {
         className: "sample-note",
         children: [
           translateUI("Media imports go into"),
           " ",
           n.libraries.find((w) => w.id === N)?.name ?? translateUI("your selected library"),
-          ". Images and videos are copied into this app. Maximum 150 MB per file.",
+          translateUI(". Upload limits depend on the host. Shared videos use MP4 or WebM."),
         ],
       }),
       V && d.jsx(xE, { item: V, onClose: () => ne(null), onSaved: (item) => {h(item.libraryId); g(""); _(""); S(""); M(item.archived);} }),
@@ -22875,324 +22803,7 @@ function SE() {
     ],
   });
 }
-function xE({ item: n, onClose: i, onSaved }) {
-  const { state: r, update: s, run: runGlobal, busy: f, notify: h } = qt(),
-    [m, g] = ae.useState(n),
-    [v, _] = ae.useState(n.tags.join(", ")),
-    [b, S] = ae.useState(!1),
-    [feedback, setFeedback] = ae.useState(""),
-    feedbackRef = ae.useRef(null),
-    pending = ae.useRef(false),
-    showError = (error) => {
-      setFeedback(formError(error));
-      requestAnimationFrame(() => { feedbackRef.current?.scrollIntoView({block:"nearest"}); feedbackRef.current?.focus(); });
-    },
-    c = (action) => {
-      if (pending.current) return;
-      pending.current = true;
-      return runGlobal(async () => {
-        setFeedback(""); globalThis.MMB.clearError();
-        try { if (A) globalThis.MMB.requireContentEdit(); else globalThis.MMB.requireContentAdd(); await action(); }
-        catch (error) { showError(error); }
-        finally { pending.current = false; }
-      });
-    },
-    A = r.items.some((O) => O.id === n.id),
-    allowed = A ? globalThis.MMB.canEditContent() : globalThis.MMB.canAddContent(),
-    M = (O) => {
-      (g((V) => ({ ...V, ...O })), S(!0));
-    },
-    L = async () => {
-      !pending.current && (!b || (await confirmUI(translateUI("Discard these unsaved content changes?")))) && i();
-    };
-  return (
-    ae.useEffect(() => globalThis.MMB.holdContentDraft(), []),
-    au(b),
-    d.jsx(Ii, {
-      title: A ? translateUI("Edit content") : translateUI("Add content"),
-      onClose: L,
-      wide: !0,
-      children: d.jsxs("form", {
-        onInvalidCapture: (event) => showError(new Error(translateUI("Check {arg0}: {arg1}", {arg0:event.target.getAttribute("aria-label") || translateUI("the form"), arg1:event.target.validationMessage}))),
-        onSubmit: (O) => {
-          (O.preventDefault(),
-            c(async () => {
-              const V = eu.parse({
-                ...m,
-                tags: v
-                  .split(",")
-                  .map((H) => H.trim())
-                  .filter(Boolean),
-                updatedAt: gt(),
-              });
-              if (!V.description.trim()) throw new Error(translateUI("Description is required."));
-              if (
-                ["image", "image-text", "video"].includes(V.type) &&
-                !V.assetId
-              )
-                throw new Error(
-                  translateUI("Import a media file for image or local video content."),
-                );
-              if (["link", "external-video"].includes(V.type) && !V.url)
-                throw new Error(translateUI("Add a complete web link."));
-              (r.items.find(
-                (H) =>
-                  H.id !== V.id &&
-                  H.libraryId === V.libraryId &&
-                  ((V.url && H.url === V.url) ||
-                    H.title.toLowerCase() === V.title.toLowerCase()),
-              ) &&
-                !(await confirmUI(translateUI("This title or link already exists in this library. Save another item?")))) ||
-                (await s((H) => ({
-                  ...H,
-                  items: A
-                    ? H.items.map((ie) => (ie.id === V.id ? V : ie))
-                    : [...H.items, V],
-                })),
-                globalThis.MMB.clearError(),
-                h(translateUI("Content saved.")),
-                onSaved?.(V),
-                i());
-            }));
-        },
-        children: [
-          feedback && d.jsx("p", {className:"form-feedback warning", role:"alert", tabIndex:-1, ref:feedbackRef, children:feedback}),
-          !allowed && d.jsx("p", {role:"note", children:contentPermissionMessage()}),
-          d.jsxs("div", {
-            className: "form-row",
-            children: [
-              d.jsx(Ne, {
-                label: translateUI("Title *"),
-                children: d.jsx("input", {
-                  autoFocus: !0,
-                  required: !0,
-                  maxLength: 300,
-                  value: m.title,
-                  onChange: (O) => M({ title: O.target.value }),
-                }),
-              }),
-              d.jsx(Ne, {
-                label: translateUI("Type *"),
-                children: d.jsx("select", {
-                  value: m.type,
-                  onChange: (O) => M({ type: O.target.value }),
-                  children: wf
-                    .filter((O) => !globalThis.MMB.hosted || O !== "video")
-                    .map((O) =>
-                      d.jsx("option", { value: O, children: uiText(Zs[O]) }, O),
-                    ),
-                }),
-              }),
-            ],
-          }),
-          d.jsx(Ne, {
-            label: translateUI("Library *"),
-            children: d.jsx("select", {
-              required: !0,
-              value: m.libraryId,
-              onChange: (O) => M({ libraryId: O.target.value }),
-              children: r.libraries.map((O) =>
-                d.jsx("option", { value: O.id, children: O.name }, O.id),
-              ),
-            }),
-          }),
-          d.jsx(Ne, {
-            label: translateUI("Description *"),
-            children: d.jsx("textarea", {
-              required: !0,
-              rows: 6,
-              value: m.description,
-              maxLength: 2e4,
-              onChange: (O) => M({ description: O.target.value }),
-            }),
-          }),
-          ["link", "external-video"].includes(m.type) &&
-            d.jsx(Ne, {
-              label: translateUI("Web link"),
-              hint: translateUI("Online links need an internet connection."),
-              children: d.jsx("input", {
-                type: "url",
-                required: !0,
-                placeholder: "https://",
-                value: m.url,
-                onChange: (O) => M({ url: O.target.value }),
-              }),
-            }),
-          ["image", "image-text", "video"].includes(m.type) &&
-            d.jsx(Ne, {
-              label: translateUI("Local media file"),
-              hint: m.assetId
-                ? r.assets.find((O) => O.id === m.assetId)?.name
-                : translateUI("Select an image or video to copy into this app."),
-              children: d.jsx(globalThis.MMB.FilePicker, {
-                type: "file",
-                disabled: f || !allowed,
-                accept:
-                  m.type !== "video"
-                    ? "image/jpeg,image/png,image/webp"
-                    : "video/mp4,video/webm,video/quicktime",
-                onChange: (O) => {
-                  const V = O.target.files?.[0];
-                  V &&
-                    c(async () => {
-                      const { asset: ne } = await oy(V, r.assets);
-                      (await s((H) => ({
-                        ...H,
-                        assets: H.assets.some((ie) => ie.id === ne.id)
-                          ? H.assets
-                          : [...H.assets, ne],
-                      })),
-                        M({ assetId: ne.id }));
-                    });
-                },
-              }),
-            }),
-          d.jsxs("div", {
-            className: "form-row",
-            children: [
-              d.jsx(Ne, {
-                label: translateUI("Tags (separated by commas)"),
-                children: d.jsx("input", {
-                  value: v,
-                  onChange: (O) => {
-                    (_(O.target.value), S(!0));
-                  },
-                }),
-              }),
-              d.jsx(Ne, {
-                label: translateUI("Source / credit"),
-                children: d.jsx("input", {
-                  value: m.source,
-                  maxLength: 300,
-                  onChange: (O) => M({ source: O.target.value }),
-                }),
-              }),
-            ],
-          }),
-          A &&
-            d.jsxs("p", {
-              className: "muted",
-              children: [
-                translateUI("Used "),
-                n.useCount,
-                translateUI(" times ·"),
-                " ",
-                n.lastUsedAt ? translateUI("Last shown ") + Pt(n.lastUsedAt) : translateUI("Never used"),
-              ],
-            }),
-          d.jsxs("details", {
-            children: [
-              d.jsxs("summary", {
-                children: [
-                  translateUI("Usage history ("),
-                  r.usage.filter((O) => O.contentId === n.id).length,
-                  ")",
-                ],
-              }),
-              d.jsx("div", {
-                className: "scroll-box",
-                children: r.usage
-                  .filter((O) => O.contentId === n.id)
-                  .sort((O, V) => V.shownAt.localeCompare(O.shownAt))
-                  .map((O) =>
-                    d.jsxs(
-                      "p",
-                      {
-                        children: [
-                          Pt(O.shownAt),
-                          " ·",
-                          " ",
-                          r.meetings.find((V) => V.id === O.meetingId)
-                            ?.presenter || translateUI("Presenter"),
-                          " ·",
-                          " ",
-                          r.meetings.find((V) => V.id === O.meetingId)
-                            ?.templateName || translateUI("Meeting"),
-                        ],
-                      },
-                      O.id,
-                    ),
-                  ),
-              }),
-            ],
-          }),
-          d.jsxs("div", {
-            className: "modal-actions",
-            children: [
-              A &&
-                d.jsxs(d.Fragment, {
-                  children: [
-                    d.jsxs("button", {
-                      type: "button",
-                      disabled: f || !allowed,
-                      onClick: () => {
-                        c(async () => {
-                          (await s((O) => ({
-                            ...O,
-                            items: O.items.map((V) =>
-                              V.id === n.id
-                                ? {
-                                    ...V,
-                                    archived: !V.archived,
-                                    updatedAt: gt(),
-                                  }
-                                : V,
-                            ),
-                          })),
-                            i());
-                        });
-                      },
-                      children: [
-                        d.jsx(tu, { size: 16 }),
-                        n.archived ? translateUI("Restore") : translateUI("Archive"),
-                      ],
-                    }),
-                    d.jsxs("button", {
-                      type: "button",
-                      className: "danger-text",
-                      disabled:globalThis.MMB.hosted,
-                      title:globalThis.MMB.hosted?translateUI("Archive hosted records instead"):translateUI("Delete"),
-                      onClick: async () => {
-                        (await confirmUI(translateUI("Delete “{arg0}”? It will be removed from fixed template selections. Past meeting records stay available.", {arg0: n.title}))) &&
-                          c(async () => {
-                            (await s((O) => ({
-                              ...O,
-                              items: O.items.filter((V) => V.id !== n.id),
-                              templates: O.templates.map((V) => ({
-                                ...V,
-                                slides: V.slides.map((ne) => ({
-                                  ...ne,
-                                  contentIds: ne.contentIds.filter(
-                                    (H) => H !== n.id,
-                                  ),
-                                })),
-                              })),
-                            })),
-                              i());
-                          });
-                      },
-                      children: [d.jsx(Nf, { size: 16 }), translateUI(" Delete")],
-                    }),
-                  ],
-                }),
-              d.jsx("button", {
-                type: "button",
-                onClick: L,
-                children: translateUI("Cancel"),
-              }),
-              d.jsx("button", {
-                className: "primary",
-                disabled: f || !allowed,
-                type: "submit",
-                children: f ? translateUI("Saving…") : translateUI("Save content"),
-              }),
-            ],
-          }),
-        ],
-      }),
-    })
-  );
-}
+function xE(props) { return d.jsx(globalThis.MMB.ContentEditor, props); }
 function NumericInput({ value, min, max, onChange }) {
   const [text, setText] = ae.useState(String(value));
   ae.useEffect(() => setText(String(value)), [value]);
@@ -23265,6 +22876,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       V(false);
     }
   }, [s.meetings, g?.id, g?.mediaExpiredAt]);
+  ae.useEffect(()=>{globalThis.MMB.setContentMeetingLocation(g?.location_id??"");return()=>globalThis.MMB.setContentMeetingLocation("");},[g?.location_id]);
   const ne = s.templates.filter((N) => !N.archived && globalThis.MMB.canUse(N));
   if (!g)
     return d.jsxs(d.Fragment, {
@@ -23370,7 +22982,8 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       V(false); i(te);
       } catch (error) { starting.current = false; V(true); throw error; }
     },
-    J = (N) => {
+    J = async (N) => {
+      await globalThis.MMB.refreshContentContext();
       const te = H.slides[N].definition,
         ue = new Set(
           H.slides
@@ -23378,14 +22991,11 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
             .flatMap((fe) => fe.items.map((w) => w.id)),
         );
       const key = H.slides[N].id;
-      if (!rotations.current.has(key)) {
-        const all = rotationOrder(te, s.items, ue);
-        const selected = H.slides[N].items[0]?.id;
-        const current = all.find((item) => item.id === selected);
-        rotations.current.set(key, current ? [current, ...all.filter((item) => item.id !== selected)] : all);
-      }
-      const choices = rotations.current.get(key).filter((item) => !ue.has(item.id));
-      if (!choices.length) return;
+      const all = rotationOrder(te, s.items, ue);
+      const old = (rotations.current.get(key) ?? []).filter(item=>all.some(current=>current.id===item.id));
+      rotations.current.set(key,[...old,...all.filter(item=>!old.some(current=>current.id===item.id))]);
+      const choices = rotations.current.get(key);
+      if (!choices.length) { E(N,{items:[]}); h(translateUI("Our rotation is empty. Browse available content and choose Add to our rotation. Manual choices do not enroll content.")); return; }
       const previous = H.slides[N].items[0]?.id;
       const index = choices.findIndex((item) => item.id === previous);
       const next = choices[(index + 1) % choices.length];
@@ -23750,7 +23360,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           className: "actions",
                           children: [
                             d.jsxs("button", {
-                              onClick: () => J(_),
+                              onClick: () => f(() => J(_)),
                               children: [
                                 d.jsx(ny, { size: 16 }),
                                 translateUI(" Auto-select"),
@@ -23768,6 +23378,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         }),
                     ],
                   }),
+                  !!le.definition.libraryId && !s.items.some(item=>matchesSlideContent(le.definition,item)&&globalThis.MMB.isInRotation(item)) && d.jsx("p",{className:"empty-rotation",role:"status",children:translateUI("Our rotation is empty. Browse available content and choose Add to our rotation. Manual choices do not enroll content.")}),
                   le.items.map((N) =>
                     d.jsxs(
                       "div",
@@ -23944,140 +23555,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
     ],
   });
 }
-function wE({ slide: n, used: i, onClose: r, onChoose: s }) {
-  const { state: c } = qt(),
-    [f, h] = ae.useState(""),
-    [v, _] = ae.useState(n.items.map((S) => S.id)),
-    [visible, setVisible] = ae.useState(50),
-    [suggestions] = ae.useState(() => rotationOrder(n.definition, c.items, i)),
-    [history, setHistory] = ae.useState({ ids: [n.items[0]?.id ?? null], index: 0 }),
-    canAdvance = history.index < history.ids.length - 1 || suggestions.some((item) => !history.ids.includes(item.id)),
-    stepSuggestion = (direction) => {
-      if (direction < 0 && history.index === 0) return;
-      if (direction > 0 && !canAdvance) return;
-      const nextIndex = history.index + direction;
-      const id = history.ids[nextIndex] ?? suggestions.find((item) => !history.ids.includes(item.id))?.id;
-      if (!id) return;
-      _([id]); h("");
-      setHistory((current) => ({ ids: current.ids[nextIndex] ? current.ids : [...current.ids, id], index: nextIndex }));
-    },
-    b = Cf(n.definition, c.items)
-      .filter((S) =>
-        `${S.title} ${S.description} ${S.tags.join(" ")}`
-          .toLowerCase()
-          .includes(f.toLowerCase()),
-      )
-      .sort(
-        (a, b) =>
-          Number(v.includes(b.id)) - Number(v.includes(a.id)) || kf(a, b),
-      );
-  return d.jsxs(Ii, {
-    title: translateUI("Choose content · {arg0}", {arg0: n.definition.title}),
-    onClose: r,
-    wide: !0,
-    children: [
-      d.jsxs("div", {
-        className: "toolbar",
-        children: [
-          d.jsxs("label", {
-            className: "search",
-            children: [
-              d.jsx(ay, { size: 18 }),
-              d.jsx("input", {
-                autoFocus: !0,
-                "aria-label": translateUI("Search replacement content"),
-                placeholder: translateUI("Search content…"),
-                value: f,
-                onChange: (S) => { h(S.target.value); setVisible(50); },
-              }),
-            ],
-          }),
-        ],
-      }),
-      d.jsxs("p", {
-        className: "muted",
-        children: [
-          translateUI("Select up to "),
-          n.definition.count,
-          translateUI(" item"),
-          n.definition.count === 1 ? "" : "s",
-          ". Browse unused suggestions first, then the least recently used.",
-        ],
-      }),
-      d.jsxs("div", { className: "actions suggestion-actions", children: [
-        d.jsx("button", { disabled: history.index === 0, onClick: () => stepSuggestion(-1), children: translateUI("← Back") }),
-        d.jsx("button", { disabled: !canAdvance, onClick: () => stepSuggestion(1), children: translateUI("Next suggestion →") }),
-        d.jsx("span", { className: "muted", children: translateUI("{arg0} of {arg1} suggestions", {arg0: history.index, arg1: suggestions.length}) }),
-      ] }),
-      d.jsxs("div", {
-        className: "picker-list",
-        children: [
-          b.slice(0, visible).map((S) => {
-            const A = i.has(S.id) && !n.definition.allowRepeat;
-            return d.jsxs(
-              "label",
-              {
-                className: `picker-row ${A ? "muted" : ""}`,
-                children: [
-                  d.jsx("input", {
-                    type: "checkbox",
-                    checked: v.includes(S.id),
-                    disabled: A,
-                    onChange: (M) => {
-                      const next = M.target.checked
-                          ? n.definition.count === 1
-                            ? [S.id]
-                            : [...v, S.id].slice(-n.definition.count)
-                          : v.filter((L) => L !== S.id);
-                      _(next);
-                      setHistory({ ids: [next[0] ?? null], index: 0 });
-                    },
-                  }),
-                  d.jsx(Df, { item: S }),
-                  d.jsxs("span", {
-                    children: [
-                      d.jsx("strong", { children: S.title }),
-                      d.jsx("small", {
-                        children: A
-                          ? translateUI("Already selected elsewhere")
-                          : S.lastUsedAt
-                            ? translateUI("Last used ") + Pt(S.lastUsedAt)
-                            : translateUI("Never used"),
-                      }),
-                    ],
-                  }),
-                ],
-              },
-              S.id,
-            );
-          }),
-          !b.length &&
-            d.jsx(fr, {
-              title: translateUI("No matching items"),
-              text: translateUI("Add matching content to the connected library in Content Library."),
-            }),
-          b.length > visible && d.jsx("button", {
-            className: "full-width",
-            onClick: () => setVisible((count) => count + 50),
-            children: translateUI("Show more content ({arg0} of {arg1} shown)", {arg0: visible, arg1: b.length}),
-          }),
-        ],
-      }),
-      d.jsxs("div", {
-        className: "modal-actions",
-        children: [
-          d.jsx("button", { onClick: r, children: translateUI("Cancel") }),
-          d.jsxs("button", {
-            className: "primary",
-            onClick: () =>
-              s(v.flatMap((S) => c.items.find((A) => A.id === S) ?? [])),
-            children: [translateUI("Use "), v.length, translateUI(" selected")],
-          }),
-        ],
-      }),
-    ],
-  });
-}
+function wE(props) { return d.jsx(globalThis.MMB.ContentSelector, props); }
 function EE({ meeting: n, onExit: i }) {
   const { state: r, update: s, run: c } = qt(),
     [f, h] = ae.useState(0),
@@ -26294,12 +25772,15 @@ export {
   V1 as ReactDOM,
   $j as AppProvider,
   qt as useApp,
+  Ii as Modal,
+  YouTubePlayer,
   rz as OriginalApp,
   Kv as seed,
   ii as stateSchema,
   sy as recalculate,
   iu as generate,
   Ji as media,
+  oy as uploadContentMedia,
   Uj as BrowserRepository,
   Ms,
   Fi as Slide,

@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {matchesSlideContent} from "../../frontend/src/content-selection";
+import {matchesSlideContent,contentCategory,playableContent,youtubeId,sharedWith} from "../../frontend/src/content-selection";
 import {slidePolicy,normalizeUnstartedMeeting} from "../../frontend/src/slide-policy";
 
 describe("Stretches library selection",()=>{
@@ -24,5 +24,25 @@ describe("Stretches library selection",()=>{
   expect(slidePolicy({id:"custom",type:"stretch"}).libraryId).toBeUndefined();
   const started={startedAt:"2026-10-23",slides:[{definition:standard,items:[]}]};
   expect(normalizeUnstartedMeeting(started)).toBe(started);
+ });
+});
+
+describe("simplified editor categories preserve legacy content",()=>{
+ it("maps legacy text kinds and normal links without mutating stored records",()=>{
+  for(const type of ["lesson","text","vocabulary","recognition","stretch"]){
+   const item={id:"same-id",type,title:"User title",description:"Original body"};
+   expect(contentCategory(item)).toBe("text");expect(playableContent(item)).toBe(item);
+  }
+  for(const type of ["image","image-text","video"])expect(contentCategory({type,assetId:"asset"})).toBe("media");
+ });
+ it("recognizes supported YouTube paths and never treats arbitrary websites as video",()=>{
+  for(const url of ["https://youtu.be/dQw4w9WgXcQ?t=12","https://www.youtube.com/watch?v=dQw4w9WgXcQ","https://youtube.com/shorts/dQw4w9WgXcQ","https://www.youtube.com/embed/dQw4w9WgXcQ"])expect(youtubeId(url)).toBe("dQw4w9WgXcQ");
+  for(const url of ["https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ","https://example.org/video","not a URL"])expect(youtubeId(url)).toBeNull();
+  const link={id:"keep",type:"link",url:"https://youtu.be/dQw4w9WgXcQ",description:"Keep this"};expect(playableContent(link)).toMatchObject({...link,type:"external-video"});expect(link.type).toBe("link");
+ });
+ it("keeps scoped sharing separate from categories and preserves media slide eligibility",()=>{
+  expect(sharedWith({locations:[]},"new-location")).toBe(true);expect(sharedWith({locations:["a"]},"b")).toBe(false);
+  expect(matchesSlideContent({type:"gallery",libraryId:"library"},{type:"video",assetId:"media",libraryId:"library"})).toBe(true);
+  expect(matchesSlideContent({type:"image",libraryId:"library"},{type:"video",assetId:"media",libraryId:"library"})).toBe(false);
  });
 });

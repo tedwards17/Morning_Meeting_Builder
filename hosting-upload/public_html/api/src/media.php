@@ -52,12 +52,13 @@ if($path==='media'&&$method==='POST') {
  role($temporary?['administrator','content_manager','location']:['administrator','content_manager','location','report_viewer']);
  $meetingId=$temporary?require_id($_POST['meeting_id']??''):null;
  $f=$_FILES['image']??null;if(!$f||$f['error']!==UPLOAD_ERR_OK)fail(422,'Media upload failed; check PHP upload limits');
- $limit=$temporary?($config['max_meeting_media_bytes']??150*1024*1024):$config['max_image_bytes'];
+ $limit=$temporary?($config['max_meeting_media_bytes']??150*1024*1024):max($config['max_image_bytes'],$config['max_library_video_bytes']??52428800);
  if($f['size']<1||$f['size']>$limit)fail(413,'Media exceeds application upload limit');
  $mime=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
  $images=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];$videos=['video/mp4'=>'mp4','video/webm'=>'webm','video/quicktime'=>'mov'];
  $video=isset($videos[$mime]);$info=[0,0];
- if($video&&!$temporary)fail(422,'Shared library uploads accept images only');
+ if($video&&!$temporary&&!in_array($mime,['video/mp4','video/webm'],true))fail(422,'Library videos must be MP4 or WebM. Use H.264 MP4 or VP8/VP9 WebM.');
+ if(!$temporary&&$f['size']>($video?($config['max_library_video_bytes']??52428800):$config['max_image_bytes']))fail(413,'Media exceeds application upload limit');
  if(!$video){$info=@getimagesize($f['tmp_name']);if(!isset($images[$mime])||!$info||$info['mime']!==$mime)fail(422,'Upload a valid JPEG, PNG, WebP, MP4, WebM or MOV file');if($info[0]*$info[1]>40000000)fail(422,'Image dimensions exceed 40 megapixels');}
  begin_write();
  if($temporary) {
@@ -74,6 +75,7 @@ if($path==='media'&&$method==='POST') {
  }elseif(!move_uploaded_file($f['tmp_name'],$target))throw new RuntimeException('Media storage failed');
  chmod($target,0600);if($thumb)chmod($thumb,0600);$hash=hash_file('sha256',$target);$scope=$temporary?'meeting-only':'shared';
  $duplicate=one('SELECT * FROM media_assets WHERE organization_id=? AND sha256=? AND archived=0 AND scope=? AND meeting_id <=> ?',[org(),$hash,$scope,$meetingId]);
+ if($duplicate&&!media_allowed($duplicate['id']))$duplicate=false;
  if($duplicate){unlink($target);if($thumb)unlink($thumb);$pdo->commit();json_out(media_meta($duplicate));}
  $id=uuid();query('INSERT INTO media_assets(id,organization_id,creator_id,stored_path,thumbnail_path,sha256,mime,byte_size,width,height,name,created_at,scope,meeting_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6),?,?)',[ $id,org(),actor()['id'],$target,$thumb,$hash,$mime,filesize($target),$info[0],$info[1],substr(basename($f['name']),0,255),$scope,$meetingId]);change('assets',$id);audit('media_upload',$id);$pdo->commit();json_out(media_meta(one('SELECT * FROM media_assets WHERE organization_id=? AND id=?',[org(),$id])),201);
 }
