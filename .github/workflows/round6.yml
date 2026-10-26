@@ -22,6 +22,7 @@ jobs:
           --health-cmd="mysqladmin ping -h127.0.0.1 --silent"
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
+      - uses: actions/checkout@v4
       - name: Read and mask generated disposable database credential
         shell: bash
         run: |
@@ -29,7 +30,6 @@ jobs:
           test -n "$mmb_ci_db_password"
           echo "::add-mask::$mmb_ci_db_password"
           printf 'MMB_CI_DB_PASSWORD=%s\n' "$mmb_ci_db_password" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
