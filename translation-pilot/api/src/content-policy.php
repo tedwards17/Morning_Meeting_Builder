@@ -46,3 +46,13 @@ function content_upload_limit(int $configured):int {
  $bytes=function(string $value):int {$number=(float)$value;$unit=strtolower(substr(trim($value),-1));$power=['k'=>1,'m'=>2,'g'=>3][$unit]??0;return $number>0?(int)($number*(1024**$power)):PHP_INT_MAX;};
  return min($configured,$bytes(ini_get('upload_max_filesize')),max(0,$bytes(ini_get('post_max_size'))-65536));
 }
+
+function validate_slide_layout(mixed $layout,bool $contentOnly=false):void {
+ if($layout===null)return;
+ if(!is_array($layout)||array_is_list($layout)&&count($layout)>0)fail(422,'Choose a valid slide layout.');
+ foreach($layout as $key=>$value){
+  if($contentOnly&&$key==='titlePosition')fail(422,'Set title position in the template builder.');
+  if(!in_array($key,['titlePosition','textOnlyPosition','imageOnlyPosition','imageTextPosition','mediaPlacement'],true))fail(422,'Choose a valid slide layout.');
+  if(!is_string($value)||!in_array($value,$key==='mediaPlacement'?['left','right','top','bottom']:['top-left','top-center','top-right','middle-left','middle-center','middle-right','bottom-left','bottom-center','bottom-right'],true))fail(422,'Choose a valid slide layout.');
+ }
+}

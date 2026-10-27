@@ -19,7 +19,7 @@ shutil.copytree(root/'database',deploy/'database');shutil.copytree(root/'docs',d
 for name in ['migrate.php','create-admin.php','bootstrap-admin.php','presenter-hash.php']:shutil.copyfile(root/'scripts'/name,deploy/'scripts'/name)
 # CLI password tool depends on core.php; keep private copy outside public tree too.
 (deploy/'api/src').mkdir(parents=True);shutil.copyfile(root/'api/src/core.php',deploy/'api/src/core.php')
-(deploy/'README.txt').write_text('Upload ONLY the contents of public_html to the domain document root. Place private/config.example.php outside that root as config.php after editing it. Read docs/ROUND5_SETUP.md for a NEW install; existing sites use hosting-update and docs/ROUND6_BATCH4_5_UPGRADE.md. Database and scripts directories are private setup materials, not web content.\n')
+(deploy/'README.txt').write_text('Upload ONLY the contents of public_html to the domain document root. Place private/config.example.php outside that root as config.php after editing it. Read docs/ROUND5_SETUP.md for a NEW install; existing sites use hosting-update and docs/ROUND6_0_6_5_UPGRADE.md. Database and scripts directories are private setup materials, not web content.\n')
 def validate(folder):
  html=(folder/'index.html').read_text()
  for url in re.findall(r'(?:src|href)="([^"]+)"',html):
@@ -71,8 +71,8 @@ for name in ['server-paths.php','config.js','.htaccess']:(update/'public_html'/n
 (update/'database').mkdir()
 for name in ['004_meeting_media.sql','005_content_rotation.sql','006_video_text_cleanup.sql']:shutil.copyfile(root/'database/migrations'/name,update/'database'/name)
 (update/'docs').mkdir()
-for name in ['ROUND5_0_5_1_UPGRADE.md','ROUND5_0_5_2_UPGRADE.md','ROUND5_0_5_3_UPGRADE.md','ROUND5_0_5_4_UPGRADE.md','ROUND5_CHECKPOINT.md','ROUND6_BATCH1_UPGRADE.md','ROUND6_BATCH2_3_UPGRADE.md','ROUND6_0_6_3_UPGRADE.md','ROUND6_BATCH4_5_UPGRADE.md','ROUND6_CHECKPOINT.md']:shutil.copyfile(root/'docs'/name,update/'docs'/name)
-(update/'README.txt').write_text(f'EXISTING HOST UPDATE {version}. Read docs/ROUND6_BATCH4_5_UPGRADE.md. Apply data-only migration 006 once after 001–005, before uploading assets; skip installed 006. Merge public_html contents into the existing document root; keep private configs/media/database. Earlier installations need migration 005 once; follow the upgrade guide. Never re-run its initial pool snapshot. This update preserves server-paths.php, config.js and the root .htaccess. Do not clear browser storage; completed-history conflicts recover automatically online.\n')
+for name in ['ROUND5_0_5_1_UPGRADE.md','ROUND5_0_5_2_UPGRADE.md','ROUND5_0_5_3_UPGRADE.md','ROUND5_0_5_4_UPGRADE.md','ROUND5_CHECKPOINT.md','ROUND6_BATCH1_UPGRADE.md','ROUND6_BATCH2_3_UPGRADE.md','ROUND6_0_6_3_UPGRADE.md','ROUND6_BATCH4_5_UPGRADE.md','ROUND6_0_6_5_UPGRADE.md','ROUND6_CHECKPOINT.md']:shutil.copyfile(root/'docs'/name,update/'docs'/name)
+(update/'README.txt').write_text(f'EXISTING HOST UPDATE {version}. Read docs/ROUND6_0_6_5_UPGRADE.md. No new SQL when 006 is installed; older installations must follow the v0.6.4 guide first. Never rerun installed 006. Merge public_html contents into the existing document root; keep private configs/media/database. Earlier installations need migration 005 once; follow the upgrade guide. Never re-run its initial pool snapshot. This update preserves server-paths.php, config.js and the root .htaccess. Do not clear browser storage; completed-history conflicts recover automatically online.\n')
 assert not (update/'public_html/server-paths.php').exists()
 assert not (update/'public_html/config.js').exists()
 assert not (update/'public_html/.htaccess').exists()

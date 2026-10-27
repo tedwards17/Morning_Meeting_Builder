@@ -1,3 +1,7 @@
+# v0.6.5 — protected slide areas and media removal
+
+Current [cPanel upgrade](docs/ROUND6_0_6_5_UPGRADE.md). No SQL beyond installed 006. [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier release notes below are historical.
+
 # v0.6.4 — combined Batches 4 and 5
 
 Current [cPanel upgrade and mandatory one-time SQL 006](docs/ROUND6_BATCH4_5_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier notes below are historical.
