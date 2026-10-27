@@ -7,9 +7,14 @@ import deduplicatedVideos from "./round3-dedup-map.json";
 import type { State } from "./types";
 import { templateDefaults } from "./slide-policy";
 
-const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4] };
+// Keep the already-published source datasets unchanged. Normalize only new starter
+// copies; existing hosted records use one-time migration 006, not a reimport.
+const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4].map(item =>
+  ["00000000-0000-4000-8000-000000000003", "00000000-0000-4000-8000-000000000005"].includes(item.libraryId) &&
+  (["video", "external-video"].includes(item.type) || /https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(item.url))
+    ? {...item, description:"", summary:""} : item) };
 
-export const APP_VERSION = "0.6.3";
+export const APP_VERSION = "0.6.4";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;

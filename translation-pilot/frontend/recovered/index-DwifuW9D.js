@@ -4,6 +4,7 @@ import { contentCategory, categoryLabel, playableContent } from "../src/content-
 import { matchesSlideContent } from "../src/content-selection";
 import { contentPermissionMessage, formError } from "../src/content-feedback";
 import { openMediaDatabase } from "../src/media-db";
+import { slideKind } from "../src/slide-policy";
 import { isMeetingExpired } from "../src/retention";
 (function () {
   const i = document.createElement("link").relList;
@@ -18127,6 +18128,8 @@ const Vi = 1,
     notes: sr,
     optional: Na(),
     builderColor: Us.optional(),
+    textPosition: Ta(["top-left","top-center","top-right","middle-left","middle-center","middle-right","bottom-left","bottom-center","bottom-right"]).optional(),
+    mediaUrl: Aj.optional(),
     defaultSkipped: Na().optional(),
     mediaOptional: Na().optional(),
     personalShare: Na().optional(),
@@ -18268,7 +18271,8 @@ function zf() {
     contentIds: [],
     selection: "oldest",
     count: 1,
-    allowRepeat: !1,
+    allowRepeat: !0,
+    textPosition: "middle-center",
   };
 }
 function Xs(n) {
@@ -19388,7 +19392,7 @@ function kf(n, i) {
 }
 function Cf(n, i) { return i.filter(item => matchesSlideContent(n, item) && (!globalThis.MMB.isContentAvailable || globalThis.MMB.isContentAvailable(item))); }
 function ry(n, i, r) {
-  const s = Cf(n, i).filter((f) => (n.selection === "manual" || globalThis.MMB.isInRotation(f)) && (n.allowRepeat || !r.has(f.id))),
+  const s = Cf(n, i).filter((f) => (n.selection === "manual" || globalThis.MMB.isInRotation(f))),
     c =
       n.selection === "manual"
         ? n.contentIds.flatMap((f) => s.find((h) => h.id === f) ?? [])
@@ -19397,11 +19401,11 @@ function ry(n, i, r) {
               ? (f, h) => ir(h.createdAt, f.createdAt) || ir(f.id, h.id)
               : kf,
           );
-  return [...new Map(c.map((f) => [f.id, f])).values()].slice(0, n.count);
+  return [...new Map(c.map((f) => [f.id, f])).values()].slice(0, 1);
 }
 function rotationOrder(slide, items, usedElsewhere) {
   const available = Cf(slide, items).filter((item) =>
-    globalThis.MMB.isInRotation(item) && (slide.allowRepeat || !usedElsewhere.has(item.id)));
+    globalThis.MMB.isInRotation(item));
   const never = available.filter((item) => !item.lastUsedAt);
   for (let index = never.length - 1; index > 0; index--) {
     const swap = Math.floor(Math.random() * (index + 1));
@@ -19412,10 +19416,11 @@ function rotationOrder(slide, items, usedElsewhere) {
 function iu(n, i) {
   const r = new Set(),
     s = globalThis.MMB.templateDefaults(n).slides.map((c) => {
-      const f =
+      let f =
         c.type !== "intro" && (c.libraryId || c.contentIds.length)
           ? ry(c, i, r)
           : [];
+      if (!f.length && slideKind(c)==="media" && !c.libraryId && c.mediaUrl) f=[{id:Bt(),libraryId:c.id,title:c.title,description:"",type:"link",url:c.mediaUrl,tags:[],createdAt:gt(),updatedAt:gt(),lastUsedAt:null,useCount:0,archived:false,source:""}];
       return (
         f.forEach((h) => r.add(h.id)),
         {
@@ -19861,9 +19866,11 @@ function Fi({
     L = (h === void 0 ? n.items : n.items.slice(h, h + 1)).map(playableContent),
     O = ["intro", "closing", "divider"].includes(v.type),
     V = L.some((ne) => ["image", "image-text", "video", "external-video"].includes(ne.type)),
-    video = L.some((ne) => ["video", "external-video"].includes(ne.type));
+    video = L.some((ne) => ["video", "external-video"].includes(ne.type)),
+    positioned = Boolean(v.textPosition), movedBody = positioned || video;
   return d.jsx("div", {
-    className: `slide-canvas layout-${v.layout} ${O ? "title-slide" : ""} ${V ? "has-media" : ""} ${video ? "has-video" : ""} ${L[0]?.description?.length > 450 ? "dense-text" : ""}`,
+    "data-text-position":v.textPosition,
+    className: `slide-canvas ${positioned?"positioned-text":""} ${video&&L.some(item=>item.description)&&!positioned?"video-side-text":""} layout-${v.layout} ${O ? "title-slide" : ""} ${V ? "has-media" : ""} ${video ? "has-video" : ""} ${L[0]?.description?.length > 450 ? "dense-text" : ""}`,
     style: {
       background: S,
       color: b.foreground,
@@ -19899,6 +19906,7 @@ function Fi({
                   d.jsx("p", { className: "slide-topic", children: L[0].title }),
                 (v.text || (globalThis.MMB.isPersonalShare(v) && !L.length)) &&
                   d.jsx("p", { className: "slide-intro", children: v.text || "Share a quick personal update. A photo or video is optional." }),
+                movedBody && L.filter(item=>item.description).map(item=>d.jsx("p",{className:"slide-body",children:item.description},item.id)),
                 v.type === "intro" &&
                   d.jsxs("div", {
                     className: "presenter-line",
@@ -19923,8 +19931,8 @@ function Fi({
                       className: "slide-item",
                       children: [
                         L.length > 1 && !["gallery", "image", "image-text", "video"].includes(v.type) && d.jsx("h3", { children: ne.title }),
-                        d.jsx(dE, { item: ne, interactive: f, onDisplayed: m }),
-                        ["image", "image-text", "video", "external-video"].includes(ne.type) && !!ne.description &&
+                        (!movedBody || ["image","image-text","video","external-video","link"].includes(ne.type)) && d.jsx(dE, { item:movedBody?{...ne,description:""}:ne, interactive: f, onDisplayed: m }),
+                        !movedBody && ["image", "image-text", "video", "external-video"].includes(ne.type) && !!ne.description &&
                           d.jsx("p", {
                             className: "slide-body",
                             children: ne.description,
@@ -20213,28 +20221,7 @@ function Bg({ theme: n, onChange: i }) {
     s = r.items.filter((c) => c.type === "image" && c.assetId && !c.archived);
   return d.jsxs(d.Fragment, {
     children: [
-      d.jsx("div", {
-        className: "form-row colors",
-        children: ["background", "foreground", "accent"].map((c) =>
-          d.jsx(
-            Ne,
-            {
-              label:
-                c === "foreground"
-                  ? translateUI("Text color")
-                  : c === "accent"
-                    ? translateUI("Accent color")
-                    : translateUI("Background"),
-              children: d.jsx("input", {
-                type: "color",
-                value: n[c],
-                onChange: (f) => i({ ...n, [c]: f.target.value }),
-              }),
-            },
-            c,
-          ),
-        ),
-      }),
+      d.jsx(globalThis.MMB.ThemeColors, {theme:n,onChange:i}),
       d.jsxs("div", {
         className: "form-row",
         children: [
@@ -20720,7 +20707,7 @@ function pE({ template: n, onClose: i }) {
                           d.jsxs("span", {
                             children: [
                               C.title,
-                              d.jsx("small", { children: uiText(Zg[C.type]) }),
+                              d.jsx("small", { children: translateUI(slideKind(C)==="media"?"Media":slideKind(C)==="library"?"Library content":"Standard") }),
                             ],
                           }),
                         ],
@@ -20809,23 +20796,14 @@ function pE({ template: n, onClose: i }) {
                           onChange: (C) => V({ title: C.target.value }),
                         }),
                       }),
-                      d.jsx(Ne, {
-                        label: translateUI("Slide type"),
-                        children: d.jsx("select", {
-                          value: O.type,
-                          onChange: (C) => V({ type: C.target.value }),
-                          children: Hv.map((C) =>
-                            d.jsx("option", { value: C, children: uiText(Zg[C]) }, C),
-                          ),
-                        }),
-                      }),
+                      d.jsx(globalThis.MMB.SlideTypeControl,{slide:O,onChange:V}),
                     ],
                   }),
                   d.jsxs("div", {
                     className: "form-row",
                     children: [
                       d.jsx(Ne, {
-                        label: translateUI("Layout"),
+                        label: translateUI("Media layout"),
                         children: d.jsx("select", {
                           value: O.layout,
                           onChange: (C) => V({ layout: C.target.value }),
@@ -20934,65 +20912,8 @@ function pE({ template: n, onClose: i }) {
                       }),
                     ],
                   }),
-                  O.selection === "manual" &&
-                    d.jsxs("fieldset", {
-                      children: [
-                        d.jsx("legend", { children: translateUI("Fixed content") }),
-                        d.jsx("div", {
-                          className: "selection-checks",
-                          children: Cf(O, r.items).map((C) =>
-                            d.jsxs(
-                              "label",
-                              {
-                                className: "check",
-                                children: [
-                                  d.jsx("input", {
-                                    type: "checkbox",
-                                    checked: O.contentIds.includes(C.id),
-                                    onChange: (G) =>
-                                      V({
-                                        contentIds: G.target.checked
-                                          ? [...O.contentIds, C.id]
-                                          : O.contentIds.filter(
-                                              (x) => x !== C.id,
-                                            ),
-                                      }),
-                                  }),
-                                  C.title,
-                                ],
-                              },
-                              C.id,
-                            ),
-                          ),
-                        }),
-                      ],
-                    }),
-                  d.jsxs("div", {
-                    className: "form-row",
-                    children: [
-                      d.jsx(Ne, {
-                        label: translateUI("Items to select"),
-                        children: d.jsx(NumericInput, {
-                          min: 1,
-                          max: 12,
-                          value: O.count,
-                          onChange: (n) => V({ count: n }),
-                        }),
-                      }),
-                      d.jsx(Ne, {
-                        label:
-                          O.type === "stretch"
-                            ? translateUI("Seconds per stretch")
-                            : translateUI("Countdown seconds (0 = off)"),
-                        children: d.jsx(NumericInput, {
-                          min: 0,
-                          max: 3600,
-                          value: O.duration,
-                          onChange: (n) => V({ duration: n }),
-                        }),
-                      }),
-                    ],
-                  }),
+                  O.selection === "manual" && d.jsx("button",{type:"button",onClick:()=>M("content"),children:translateUI("Choose fixed content")}),
+                  A === "content" && d.jsx(globalThis.MMB.ContentSelector,{slide:{definition:O,items:Cf(O,r.items).filter(item=>O.contentIds.includes(item.id))},used:new Set(),onClose:()=>M(null),onChoose:(items)=>{V({contentIds:items.map(item=>item.id),count:1});M(null);}}),
                   d.jsxs("div", {
                     className: "form-row",
                     children: [
@@ -21017,32 +20938,12 @@ function pE({ template: n, onClose: i }) {
                           onChange: (C) => V({defaultSkipped:C.target.checked}),
                         }), translateUI("Skipped by default in new meetings")],
                       }),
-                      d.jsxs("label", {
-                        className: "check",
-                        children: [
-                          d.jsx("input", {
-                            type: "checkbox",
-                            checked: O.allowRepeat,
-                            onChange: (C) =>
-                              V({ allowRepeat: C.target.checked }),
-                          }),
-                          " ",
-                          translateUI("Allow repeated content in this slide"),
-                        ],
-                      }),
+
                     ],
                   }),
-                  d.jsx(Ne, {
-                    label: translateUI("Builder slide color"),
-                    hint: translateUI("A subtle highlight in the meeting builder’s slide list only."),
-                    children: d.jsxs("select", {
-                      "aria-label": translateUI("Builder slide color"),
-                      value: O.builderColor ?? "",
-                      onChange: (C) => V({builderColor:C.target.value || undefined}),
-                      children: [d.jsx("option", {value:"",children:translateUI("No highlight")}),
-                        ...globalThis.MMB.builderColors.map(color=>d.jsx("option",{value:color.value,children:translateUI(color.label)},color.value))],
-                    }),
-                  }),
+                  d.jsx(globalThis.MMB.ColorControl,{label:translateUI("Builder slide color"),value:O.builderColor,optional:true,onChange:(color)=>V({builderColor:color})}),
+                  d.jsx("small",{children:translateUI("A subtle highlight in the meeting builder’s slide list only.")}),
+                  d.jsx(globalThis.MMB.PositionPicker,{value:O.textPosition,onChange:(value)=>V({textPosition:value})}),
                   d.jsxs("details", {
                     children: [
                       d.jsx("summary", {
@@ -22337,21 +22238,7 @@ const Zs = {
   recognition: "Recognition",
   stretch: "Stretch",
 };
-function Df({ item: n }) {
-  const i = Qs(n.thumbnailAssetId ?? (n.type === "image" ? n.assetId : void 0));
-  return d.jsx("div", {
-    className: `content-thumb type-${n.type}`,
-    children: i
-      ? d.jsx("img", { src: i, alt: "" })
-      : n.type === "image"
-        ? d.jsx(Sw, {})
-        : n.type === "video" || n.type === "external-video"
-          ? d.jsx(Pw, {})
-          : n.type === "link"
-            ? d.jsx(zw, {})
-            : d.jsx(fw, {}),
-  });
-}
+function Df({item:n}){return d.jsx(globalThis.MMB.BuilderContent,{item:n});}
 function SE() {
   const { state: n, update: i, run: r, notify: s, busy: c } = qt(),
     [f, h] = ae.useState(""),
@@ -23248,7 +23135,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   date: H.date,
                 }),
               }),
-              isMedia(le) && !ie && d.jsxs("div", {
+              (isMedia(le) || slideKind(le.definition)==="standard") && !ie && d.jsxs("div", {
                 className: "panel media-organizer",
                 children: [
                   d.jsx("h3", { children: translateUI("Meeting media") }),
@@ -23433,6 +23320,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         le.definition.type === "intro"
                           ? d.jsx("h4", { children: translateUI("Title and text") })
                           : d.jsx("summary", { children: translateUI("Edit text for this meeting") }),
+                        d.jsx(globalThis.MMB.PositionPicker,{value:le.definition.textPosition,onChange:(value)=>E(_,{definition:{...le.definition,textPosition:value}})}),
                         d.jsx(Ne, {
                           label: translateUI("Slide title"),
                           children: d.jsx("input", {
@@ -23854,109 +23742,9 @@ function EE({ meeting: n, onExit: i }) {
     })
   );
 }
-function zE({ meeting: n, slide: i, onShown: r }) {
-  const [s, c] = ae.useState(0),
-    [f, h] = ae.useState(i.definition.duration),
-    [m, g] = ae.useState(!0),
-    v = i.definition.type === "stretch",
-    _ = i.definition.duration,
-    b = v ? i.items[s]?.id : void 0;
-  return (
-    ae.useEffect(() => {
-      const S = requestAnimationFrame(() =>
-        r(
-          i,
-          v
-            ? b
-              ? ["image", "image-text", "video"].includes(i.items[s]?.type)
-                ? []
-                : [b]
-              : []
-            : i.items
-                .filter(
-                  (A) => !["image", "image-text", "video"].includes(A.type),
-                )
-                .map((A) => A.id),
-        ),
-      );
-      return () => cancelAnimationFrame(S);
-    }, [i, b, v, r]),
-    ae.useEffect(() => {
-      if (!_ || m) return;
-      let S = Date.now();
-      const A = setInterval(() => {
-        const M = Math.floor((Date.now() - S) / 1e3);
-        M > 0 && ((S += M * 1e3), h((L) => Math.max(0, L - M)));
-      }, 200);
-      return () => clearInterval(A);
-    }, [_, m, s]),
-    ae.useEffect(() => {
-      if (f === 0 && _ && v && s < i.items.length - 1) {
-        const S = setTimeout(() => {
-          (c((A) => A + 1), h(_));
-        }, 500);
-        return () => clearTimeout(S);
-      }
-    }, [f, _, v, s, i.items.length]),
-    d.jsxs(d.Fragment, {
-      children: [
-        d.jsx(Fi, {
-          slide: i,
-          theme: n.theme,
-          groups: n.groups,
-          presenter: n.presenter,
-          date: n.date,
-          interactive: !0,
-          activeItem: v ? s : void 0,
-          onItemDisplayed: (S) => r(i, [S]),
-        }),
-        _ > 0 &&
-          d.jsxs("div", {
-            className: "countdown",
-            children: [
-              d.jsxs("div", {
-                children: [
-                  d.jsx("small", {
-                    children: v
-                      ? i.items.length ? translateUI("Movement {arg0} of {arg1}", {arg0: s + 1, arg1: i.items.length}) : translateUI("Morning movement")
-                      : translateUI("Countdown"),
-                  }),
-                  d.jsxs("strong", {
-                    role: "timer",
-                    children: [
-                      Math.floor(f / 60),
-                      ":",
-                      String(f % 60).padStart(2, "0"),
-                    ],
-                  }),
-                ],
-              }),
-              d.jsx("button", {
-                "aria-label": m ? translateUI("Start countdown") : translateUI("Pause countdown"),
-                onClick: () => g((S) => !S),
-                children: m ? d.jsx(nu, {}) : d.jsx(Lw, {}),
-              }),
-              d.jsx("button", {
-                "aria-label": translateUI("Restart countdown"),
-                onClick: () => {
-                  h(_);
-                  g(!0);
-                },
-                children: d.jsx(qw, {}),
-              }),
-              v &&
-                s < i.items.length - 1 &&
-                d.jsx("button", {
-                  onClick: () => {
-                    (c((S) => S + 1), h(_));
-                  },
-                  children: translateUI("Next movement"),
-                }),
-            ],
-          }),
-      ],
-    })
-  );
+function zE({ meeting:n, slide:i, onShown:r }) {
+ ae.useEffect(()=>{const frame=requestAnimationFrame(()=>r(i,i.items.filter(item=>!["image","image-text","video"].includes(playableContent(item).type)).map(item=>item.id)));return()=>cancelAnimationFrame(frame);},[i,r]);
+ return d.jsx(Fi,{slide:i,theme:n.theme,groups:n.groups,presenter:n.presenter,date:n.date,interactive:true,onItemDisplayed:(id)=>r(i,[id])});
 }
 var ut = Uint8Array,
   Wt = Uint16Array,

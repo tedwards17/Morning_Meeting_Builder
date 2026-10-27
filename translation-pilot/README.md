@@ -1,3 +1,7 @@
+# v0.6.4 — combined Batches 4 and 5
+
+Current [cPanel upgrade and mandatory one-time SQL 006](docs/ROUND6_BATCH4_5_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier notes below are historical.
+
 # v0.6.3 correction — compact library, immediate selection, creator rotation and deletion
 
 Current instructions: [cPanel update](docs/ROUND6_0_6_3_UPGRADE.md). No SQL beyond installed migration 005. Earlier release notes below are historical where behavior differs.

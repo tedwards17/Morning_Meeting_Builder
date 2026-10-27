@@ -40,7 +40,7 @@ function Preview({item,onClose}:{item:Row;onClose:()=>void}){
   {kind==="media"?(url?isVideo?<video ref={media} controls playsInline preload="metadata" src={url} poster={item.thumbnailAssetId?poster:undefined} onLoadedData={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("This video cannot play here. Try H.264 MP4 or VP8/VP9 WebM."))}/>:<img src={url} alt={item.title} onError={()=>setError(t("Image unavailable. Ask the contributor to check the file."))}/>:<p role="alert">{t("Media unavailable")}</p>):youtube?<Player item={{...item,type:"external-video"}} onReady={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("Video did not load. Check your connection, codec, or use the original link."))}/>:null}
   {loading&&(youtube||isVideo)&&!error&&<p role="status">{t("Loading video…")}</p>}
   {error&&<p role="alert" className="form-feedback warning">{error}</p>}
-  {item.description&&<div className="content-body-preview">{item.description}</div>}
+  {item.summary&&<p className="content-summary">{item.summary}</p>}{item.description&&<div className="content-body-preview">{item.description}</div>}
   {kind==="link"&&<a className="button" href={item.url} target="_blank" rel="noopener noreferrer">{youtube?t("Open online video"):t("Open web page")}</a>}
   <p className="muted">{t("Preview does not record use or change rotation.")}</p>
   <button type="button" onClick={onClose}>{t("Back to content")}</button>
@@ -51,7 +51,7 @@ function Card({item,onPreview,children}:{item:Row;onPreview:(item:Row)=>void;chi
  return <article className={`visual-content-card category-${kind}`}>
   {kind==="media"||youtubeId(item.url??"")?<Thumbnail item={item} onPreview={()=>onPreview(item)}/>:null}
   <div className="visual-content-details"><h3>{item.title}</h3><p className="muted">{state.libraries.find(l=>l.id===item.libraryId)?.name} · <Category item={item}/></p>
-  {item.description&&<p className="content-excerpt">{item.description}</p>}
+  {item.summary&&<p className="content-summary">{item.summary}</p>}{kind==="text"&&item.description&&<p className="content-excerpt">{item.description}</p>}
   {kind==="text"&&<button type="button" className="text-button" onClick={()=>onPreview(item)}>{t("See Full Text")}</button>}
   {kind==="link"&&!youtubeId(item.url??"")&&<a href={item.url} target="_blank" rel="noopener noreferrer">{t("Open web page")}</a>}
   {children}</div></article>;
@@ -80,7 +80,7 @@ export function ContentCards({items,onEdit,layout="list"}:{items:Row[];onEdit:(i
    {rows.map(item=><article className="compact-library-row" key={item.id}>
     <div className="compact-content-identity">{contentCategory(item)==="media"||youtubeId(item.url??"")?<Thumbnail item={item} onPreview={()=>setPreview(item)}/>:null}<div>
      {contentCategory(item)==="text"?<button type="button" className="compact-content-title" title={t("See Full Text")} onClick={()=>setPreview(item)}>{item.title}</button>:<strong>{item.title}</strong>}
-     <small><Category item={item}/> · {state.libraries.find(l=>l.id===item.libraryId)?.name}</small>
+     <small><Category item={item}/> · {state.libraries.find(l=>l.id===item.libraryId)?.name}</small>{item.summary&&<small className="content-summary" title={item.summary}>{item.summary}</small>}
     </div></div>
     <div className="tags">{item.tags?.slice(0,3).map((tag:string)=><span className="tag" key={tag}>{tag}</span>)}</div>
     <span className="compact-last-used">{item.lastUsedAt?new Date(item.lastUsedAt).toLocaleDateString(getLanguage()==="es"?"es-MX":"en-US"):t("Never used")}</span>
@@ -136,7 +136,7 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
   if(kind==="media"&&!draft.assetId)throw new Error(t("Choose a media file."));
   if(kind==="link"){try{const u=new URL(draft.url);if(!["http:","https:"].includes(u.protocol))throw Error();}catch{throw new Error(t("Add a complete web link."));}}
   const asset=state.assets.find(a=>a.id===draft.assetId);
-  const saved:Row={...draft,title:draft.title.trim(),description:draft.description??"",tags:tags.split(",").map((s:string)=>s.trim()).filter(Boolean),allLocations:all,locations:all?[]:locations,updatedAt:new Date().toISOString(),type:kind==="text"?"lesson":kind==="media"?(asset?.mime.startsWith("video/")||draft.type==="video"?"video":draft.description?.trim()?"image-text":"image"):youtubeId(draft.url)?"external-video":"link",url:kind==="link"?draft.url.trim():kind==="media"&&contentCategory(item)==="media"?(item.url??""):""};
+  const saved:Row={...draft,title:draft.title.trim(),description:draft.description??"",summary:draft.summary??"",tags:tags.split(",").map((s:string)=>s.trim()).filter(Boolean),allLocations:all,locations:all?[]:locations,updatedAt:new Date().toISOString(),type:kind==="text"?"lesson":kind==="media"?(asset?.mime.startsWith("video/")||draft.type==="video"?"video":draft.description?.trim()?"image-text":"image"):youtubeId(draft.url)?"external-video":"link",url:kind==="link"?draft.url.trim():kind==="media"&&contentCategory(item)==="media"?(item.url??""):""};
   if(kind!=="media"){delete saved.assetId;delete saved.thumbnailAssetId;}
   if(saved.tags.length>40)throw new Error(t("Use no more than 40 subject tags."));
   if(state.items.some(i=>i.id!==saved.id&&i.libraryId===saved.libraryId&&(i.title.toLowerCase()===saved.title.toLowerCase()||(saved.url&&i.url===saved.url)))&&!await confirmUI(t("This title or link already exists in this library. Save another item?")))return;
@@ -150,6 +150,7 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
    <label className="field">{t("Content type")}<select aria-label={t("Content type")} value={kind} onChange={e=>{setKind(e.target.value as ContentCategory);setDirty(true);}}>{(["text","media","link"] as ContentCategory[]).map(k=><option key={k} value={k}>{t(categoryLabel(k))}</option>)}</select></label>
    <label className="field">{t("Library *")}<select aria-label={t("Library *")} required value={draft.libraryId} onChange={e=>change({libraryId:e.target.value})}>{state.libraries.filter(l=>!l.archived).map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
    <label className="field">{kind==="text"?t("Body text *"):t("Accompanying text (optional)")}<textarea aria-label={kind==="text"?t("Body text *"):t("Accompanying text (optional)")} required={kind==="text"} rows={5} maxLength={20000} value={draft.description??""} onChange={e=>change({description:e.target.value})}/></label>
+   <label className="field">{t("Content description (optional)")}<textarea aria-label={t("Content description (optional)")} rows={2} maxLength={4000} value={draft.summary??""} onChange={e=>change({summary:e.target.value})}/><small>{t("Shown when browsing content, not on the presentation slide.")}</small></label>
    {kind==="link"&&<label className="field">{t("Web link *")}<input aria-label={t("Web link *")} type="url" required maxLength={3000} value={draft.url??""} placeholder="https://" onChange={e=>change({url:e.target.value})}/><small>{t("YouTube links use the video player. Other links open their original website.")}</small></label>}
    {kind==="media"&&<label className="field">{t("Media file *")}<FilePicker aria-label={t("Media file *")} disabled={busy||!allowed} accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={e=>{const file=e.target.files?.[0];if(file)void attach(file);e.target.value="";}}/><small>{state.assets.find(a=>a.id===draft.assetId)?.name??t("Choose JPEG, PNG, WebP, MP4 or WebM.")}</small><small>{t("No video conversion is performed. Use H.264 MP4 or VP8/VP9 WebM.")}</small></label>}
    {!!state.libraries.find(l=>l.id===draft.libraryId)?.locations?.length&&<p className="muted">{t("The library’s existing location targeting still applies.")}</p>}
@@ -161,23 +162,28 @@ export function ContentEditor({item,onClose,onSaved}:{item:Row;onClose:()=>void;
   <div className="modal-actions">{exists&&ctx.canDelete&&<button type="button" className="danger-text" disabled={busy} onClick={()=>setDeleting(true)}>{item.archived?t("Delete permanently"):t("Delete content")}</button>}<button type="button" onClick={()=>void close()} disabled={busy}>{t("Cancel")}</button><button className="primary" type="submit" disabled={busy||!allowed}>{busy?t("Saving…"):t("Save content")}</button></div>
  </form>{deleting&&<DeleteChoice item={item} onClose={()=>setDeleting(false)} onDeleted={()=>{setDeleting(false);onClose();}}/>}</Modal>;
 }
-export function ContentSelector({slide,used,onClose,onChoose}:{slide:Row;used:Set<string>;onClose:()=>void;onChoose:(items:Row[])=>void}){
+export function ContentSelector({slide,onClose,onChoose}:{slide:Row;used:Set<string>;onClose:()=>void;onChoose:(items:Row[])=>void}){
  const {state}=app();const ctx=useContext();const [query,setQuery]=React.useState(""),[kind,setKind]=React.useState(""),[tab,setTab]=React.useState("available"),[preview,setPreview]=React.useState<Row|null>(null),[limit,setLimit]=React.useState(30);
  React.useEffect(()=>{void refreshContentContext().catch(runtime.reportError);},[]);
  const container=React.useRef<HTMLDivElement>(null),scroll=React.useRef(0);
  const openPreview=(item:Row)=>{scroll.current=container.current?.closest("dialog")?.scrollTop??0;setPreview(item);};
  const closePreview=()=>{setPreview(null);requestAnimationFrame(()=>requestAnimationFrame(()=>{const dialog=container.current?.closest("dialog");if(dialog)dialog.scrollTop=scroll.current;}));};
  const available=state.items.filter(i=>matchesSlideContent(slide.definition,i)&&isContentAvailable(i));
- const rows=available.filter(i=>(tab!=="rotation"||isInRotation(i))&&(!kind||contentCategory(i)===kind)&&`${i.title} ${i.description} ${(i.tags??[]).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
+ const rows=available.filter(i=>(tab!=="rotation"||isInRotation(i))&&(!kind||contentCategory(i)===kind)&&`${i.title} ${i.description} ${i.summary??""} ${(i.tags??[]).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
  return <Modal title={t("Choose content · {arg0}",{arg0:slide.definition.title})} wide onClose={onClose}><div ref={container} className="content-selector">
   <div className="toolbar"><label className="search"><input aria-label={t("Search replacement content")} placeholder={t("Search content…")} value={query} onChange={e=>{setQuery(e.target.value);setLimit(30);}}/></label><select aria-label={t("Filter content type")} value={kind} onChange={e=>{setKind(e.target.value);setLimit(30);}}><option value="">{t("All content types")}</option>{(["text","media","link"] as ContentCategory[]).map(k=><option key={k} value={k}>{t(categoryLabel(k))}</option>)}</select></div>
   <div className="tabs"><button type="button" aria-pressed={tab==="available"} onClick={()=>{setTab("available");setLimit(30);}}>{t("Available content")}</button><button type="button" aria-pressed={tab==="rotation"} onClick={()=>{setTab("rotation");setLimit(30);}}>{t("Our rotation")}</button></div>
   {!ctx.location&&<p role="note">{t("Choose a meeting location to see its availability and rotation.")}</p>}
   {tab==="rotation"&&!rows.length&&<p role="status">{t("Our rotation is empty. Manage rotation from Edit content in the content library.")}</p>}
   <div className="visual-content-grid">{rows.slice(0,limit).map(item=><Card key={item.id} item={item} onPreview={openPreview}>
-   <div className="actions"><button type="button" className="primary" disabled={used.has(item.id)&&!slide.definition.allowRepeat&&!slide.items.some((i:Row)=>i.id===item.id)} onClick={()=>{setPreview(null);onChoose([structuredClone(item)]);}}>{t("Use content")}</button></div>
+   <div className="actions"><button type="button" className="primary" onClick={()=>{setPreview(null);onChoose([structuredClone(item)]);}}>{t("Use content")}</button></div>
   </Card>)}</div>
   {!rows.length&&<p>{t("No matching content. Try Available content or change the filters.")}</p>}{rows.length>limit&&<button type="button" onClick={()=>setLimit(n=>n+30)}>{t("Show more content")}</button>}
   <div className="modal-actions"><button type="button" onClick={onClose}>{t("Cancel")}</button></div>
  </div>{preview&&<Preview key={preview.id} item={preview} onClose={closePreview}/>}</Modal>;
+}
+
+export function BuilderContent({item}:{item:Row}){
+ const [preview,setPreview]=React.useState(false);const kind=contentCategory(item);
+ return <div className="builder-content">{kind==="media"||youtubeId(item.url??"")?<Thumbnail item={item} onPreview={()=>setPreview(true)}/>:kind==="text"?<button type="button" className="text-button" onClick={()=>setPreview(true)}>{t("See Full Text")}</button>:<a href={item.url} target="_blank" rel="noopener noreferrer">{t("Open web page")}</a>}{item.summary&&<small className="content-summary">{item.summary}</small>}{preview&&<Preview item={item} onClose={()=>setPreview(false)}/>}</div>;
 }

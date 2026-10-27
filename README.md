@@ -1,15 +1,11 @@
-# Morning Meeting Builder — Round 6, combined Batches 2 and 3 follow-up (v0.6.3)
+# Morning Meeting Builder — Round 6, combined Batches 4 and 5 (v0.6.4)
 
-Continue on **Round-6-Development** from working v0.6.1 (`d7971bf`). Round-5-Development remains available for rollback. No default-branch merge or live deployment.
+Source and prebuilt PHP/static cPanel files are on **Round-6-Development**. No default merge or live deployment. Round 5 remains available for rollback.
 
-**Existing PHP/MySQL website:** download this branch ZIP and merge only **hosting-update/public_html contents** into the existing document root. **No new SQL if migration 005 is already installed.** See [v0.6.3 cPanel instructions](hosting-update/docs/ROUND6_0_6_3_UPGRADE.md); older installations need 005 once. Prebuilt PHP/static assets need no production Node service.
+**Existing website:** back up first, apply data-only migration **006 once after 001–005**, then merge only **hosting-update/public_html contents** into the document root. Keep live **server-paths.php**, **config.js**, root **.htaccess**, all private config/provider keys, database, media and corrected media paths. Those three live public files are excluded from the update. Do not replace an existing installation with hosting-upload or the root demo.
 
-The library returns to compact rows with Edit/View on the right. Meeting content selection keeps media thumbnails, uses the video play icon or See Full Text, and immediately chooses one item with Use content. Rotation/deletion controls live in the library editor. New contributions join only the creator location's rotation (an administrator's selected location); other locations choose independently. Admin deletion offers archive, permanent deletion or cancel, including permanent deletion of archived content. Saved-meeting snapshots/media remain intact. Everyone signed in can still contribute.
+[Upgrade and short manual checklist](hosting-update/docs/ROUND6_BATCH4_5_UPGRADE.md). [Development checkpoint](translation-pilot/docs/ROUND6_CHECKPOINT.md).
 
-The update folder excludes **server-paths.php**, **config.js** and the root **.htaccess**. Keep the live copies, all private configs/API keys, the database and the manually corrected media-directory path/permissions. **Do not upload hosting-upload or the repository root demo over the existing site.**
+Three template categories, repeated content, one item per new library selection, no countdown, arbitrary builder color, aligned theme controls, accessible nine-position text picker, browsing descriptions and selected-content thumbnails. Legacy types and saved multi-item presentations retain compatibility. Media uploads retain multiple files. Compact library, all-account contributions, per-location rotation and deletion permissions remain.
 
-[Development checkpoint: cause, decisions, verification and remaining host checks](translation-pilot/docs/ROUND6_CHECKPOINT.md). [Original setup guide for new installations](hosting-upload/docs/ROUND5_SETUP.md).
-
-Editable source is in `translation-pilot/`. Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, both `build:demo`/`build:hosted`, `npm run check:php`, `python3 scripts/check-migrations.py`, and `npm run package`. Focused disposable hosted checks: `tests/api/round6-combined.py`, `tests/e2e/round6-compact.cjs`, then package-smoke with `MMB_PACKAGE_FIXTURE=/tmp/mmb-combined-fixture.json`.
-
-Stop after combined Batches 2 and 3. Template/slide-type redesign, captions, presentation navigation and later batches remain outside this update.
+Editable source is in translation-pilot/. Developer checks: npm ci; npm run typecheck; npm run lint; npm test; both build:demo/build:hosted; npm run check:php; python3 scripts/check-migrations.py; npm run package. Disposable hosted checks: tests/api/round6-slides.py, tests/e2e/round6-compact.cjs, tests/e2e/round6-slides.cjs, then package-smoke. No Node service in production. Stop after combined Batches 4 and 5.

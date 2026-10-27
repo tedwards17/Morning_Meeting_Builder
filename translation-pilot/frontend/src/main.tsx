@@ -1,4 +1,5 @@
-import {ContentEditor, ContentSelector, ContentCards} from "./content-ui";
+import {ColorControl,ThemeColors,PositionPicker,SlideTypeControl} from "./slide-controls";
+import {ContentEditor, ContentSelector, ContentCards, BuilderContent} from "./content-ui";
 import { confirmUI } from "./dialogs";
 import { t as translateUI, getLanguage, getLocale, subscribeLanguage, uiText, uiError, uiLabel } from "./i18n";
 import { LanguageSelector } from "./language-selector";
@@ -24,6 +25,11 @@ import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
 import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
+globalThis.MMB.BuilderContent=BuilderContent;
+globalThis.MMB.ColorControl=ColorControl;
+globalThis.MMB.ThemeColors=ThemeColors;
+globalThis.MMB.PositionPicker=PositionPicker;
+globalThis.MMB.SlideTypeControl=SlideTypeControl;
 globalThis.MMB.ContentEditor = ContentEditor;
 globalThis.MMB.ContentSelector = ContentSelector;
 globalThis.MMB.ContentCards = ContentCards;

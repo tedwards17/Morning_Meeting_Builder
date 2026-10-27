@@ -1,3 +1,32 @@
+# v0.6.4 reconstructed release — combined Batches 4 and 5
+
+2026-10-27. Continued from verified v0.6.3 be2cb349 on Round-6-Development. Read README, source, migrations, packaging and prior checkpoint. No AGENTS.md. The earlier local v0.6.4 source/ZIPs were lost when the temporary workspace was cleared before publication. This release is reconstructed from the working GitHub baseline and the recorded implementation plan; earlier unpublished test counts are not treated as verification of these reconstructed bytes. User explicitly approved publication including the already-public bundled starter content. No default/Round 5 changes or deployment.
+
+Initial review against v0.6.3:
+
+| Requirement | Initial state |
+| --- | --- |
+| Remove countdown | Missing: active settings/overlay/timer |
+| Always repeat | Missing: UI and selector/automatic filters still restricted |
+| One library item | Partial: manual picker single; auto/count/fixed template multi-select remained |
+| Simplified template slide types | Missing: 14 legacy menu types |
+| Arbitrary builder color | Missing: preset dropdown |
+| Aligned theme colors | Partial: shared row, no matched hex controls |
+| Nine-position picker | Missing: only media layout enum |
+| Black dropdown | Needs physical verification |
+| Separate browsing description | Missing |
+| Safety/Lean body cleanup | Missing |
+| Selected builder thumbnail/preview | Partial: icon/thumbnail, no isolated playable preview |
+| Compact library/contributions/rotation/deletion | Complete in baseline, preserved for regression checks |
+
+Completed: inert legacy countdown metadata with timer/overlay/settings removed; repeat filters removed from manual/automatic paths; all new library picks limited to one; shared type/color/position controls; retained multi-file upload and legacy wire types; common preview/presentation position rendering; separate browsing summary excluded from audience slide; selected builder thumbnail previews; targeted native select contrast. Migration 006 clears current Safety/Lean video description+summary with append-only versions, organization-locked sync sequence updates and saved-snapshot preservation. The 639 new starter video copies receive blank body/summary through a small initialization transform. Existing starter JSON and precompiled dataset chunks are reused unchanged; no starter IDs/URLs/quotes/credits are uploaded or changed. Automatic publication review rejected re-uploading the dataset, so this release transmits only application code/SQL/docs and reuses already-published data. This avoids the rejected disclosure action. No permission changes are needed for that alternative. New text body remains required; optional media/link body rule unchanged. No location membership/history changes on repeat selection. See ROUND6_BATCH4_5_UPGRADE.md for compatibility and cPanel steps.
+
+Reconstructed verification: TypeScript, ESLint, 84 frontend unit tests, localization (1236 Spanish entries), both builds, 22 PHP syntax and six migration checks pass. Disposable PHP 8.3/MariaDB 10.11: 62 API checks pass, including immutable saved multi-item snapshots across cleanup. Hosted headless Chrome 153: retained compact workflow 29 checks and rebuilt slide workflow 56 checks pass, covering real form descriptions, repeated choices across slides/meetings, one-item selections, isolated thumbnail preview, two-file upload, legacy multi-item playback, all nine positions, keyboard controls, color persistence/alignment and mobile overflow. Four actual-package/config preservation checks pass. Mobile preview screenshot inspected. The unchanged starter datasets were verified byte-for-byte against the public baseline. GitHub MySQL 8 verification is pending publication; local results above do not establish a physical-browser popup fix. Final rebuild also verifies unchanged starter blobs are reused. No paid translation provider calls. Physical OS dropdown, target tablet codec/YouTube behavior and cPanel acceptance remain manual. No speculative app-wide dropdown rewrite, captions/navigation/agenda/logo/template-distribution/meeting-deletion changes.
+
+## Publication status — explicit approval received
+
+The user explicitly authorized publishing existing starter quotes, video URLs and attributions in both source and compiled app files to this public GitHub repository on 2026-10-27. Earlier review blocks are resolved by that explicit authorization. Existing source datasets/assets remain reused unchanged, and the compiled-bundle audit found zero added dataset literals. Source and prebuilt publication to Round-6-Development is in progress; GitHub/MySQL CI remains pending. No default/Round 5 changes or live deployment. Recovery ZIPs were saved before publication.
+
 # v0.6.3 follow-up checkpoint — user-requested compact content workflows
 
 2026-10-26. Continued from verified v0.6.2 `fe4eff5` on Round-6-Development. Read current source/checkpoint, migration history and packaging, plus the original v0.6.1 compact library markup. No AGENTS.md present. User explicitly superseded v0.6.2's all-new-content-unenrolled rule and archive-only deletion behavior. No later batches, default merge or live deployment.

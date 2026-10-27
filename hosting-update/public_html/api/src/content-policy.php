@@ -30,6 +30,7 @@ function validate_content_sharing(array &$data,?array $prior):void {
 }
 function validate_library_content(array $data):void {
  require_content($data);
+ if(isset($data['summary'])&&(!is_string($data['summary'])||mb_strlen($data['summary'],'UTF-8')>4000))fail(422,'Content description must be 4000 characters or fewer.');
  if(trim($data['title']??'')==='')fail(422,'Content title required');
  if(in_array($data['type'],['lesson','text','vocabulary','recognition','stretch'],true)&&empty($data['assetId'])&&empty($data['url'])&&trim($data['description']??'')==='')fail(422,'Text content requires body text.');
  if(in_array($data['type'],['image','image-text','video'],true)&&empty($data['assetId']))fail(422,'Choose a media file.');

@@ -29,3 +29,15 @@ export const builderColors = [
 export function builderColor(slide:Row):string|undefined {
   return /^#[0-9a-f]{6}$/i.test(slide.builderColor??"")?slide.builderColor:undefined;
 }
+
+export const positions = [
+ {value:"top-left",label:"Top left"},{value:"top-center",label:"Top center"},{value:"top-right",label:"Top right"},
+ {value:"middle-left",label:"Middle left"},{value:"middle-center",label:"Middle center"},{value:"middle-right",label:"Middle right"},
+ {value:"bottom-left",label:"Bottom left"},{value:"bottom-center",label:"Bottom center"},{value:"bottom-right",label:"Bottom right"},
+];
+export function slideKind(slide:Row):"standard"|"library"|"media" {
+ if(["image","image-text","gallery","video","external"].includes(slide.type))return "media";
+ if(["text","intro","divider","closing","discussion"].includes(slide.type))return "standard";
+ if(["library","stretch","vocabulary","recognition"].includes(slide.type)||slide.libraryId)return "library";
+ return "standard";
+}
