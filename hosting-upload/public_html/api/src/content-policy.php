@@ -56,3 +56,7 @@ function validate_slide_layout(mixed $layout,bool $contentOnly=false):void {
   if(!is_string($value)||!in_array($value,$key==='mediaPlacement'?['left','right','top','bottom']:['top-left','top-center','top-right','middle-left','middle-center','middle-right','bottom-left','bottom-center','bottom-right'],true))fail(422,'Choose a valid slide layout.');
  }
 }
+
+function validate_slide_font(mixed $size):void {
+ if($size!==null&&(!is_int($size)||$size<16||$size>96))fail(422,'Choose a slide font size from 16 to 96.');
+}

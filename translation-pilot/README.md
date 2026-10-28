@@ -1,3 +1,7 @@
+# v0.6.6 — consistent slide text and compact controls
+
+Current [cPanel upgrade](docs/ROUND6_0_6_6_UPGRADE.md). No new SQL beyond installed 006. [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier release notes below are historical.
+
 # v0.6.5 — protected slide areas and media removal
 
 Current [cPanel upgrade](docs/ROUND6_0_6_5_UPGRADE.md). No SQL beyond installed 006. [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier release notes below are historical.

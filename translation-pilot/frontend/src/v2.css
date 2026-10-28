@@ -488,3 +488,18 @@ select option:disabled { color:#6b7280; background-color:#edf0f3; }
 .safe-layout .caption-fit { justify-content:center; }
 .safe-layout .caption-fit .fit-text-inner { font-size:1.7cqw; }
 .safe-layout .caption-fit h3 { font-size:1em; line-height:1.25; margin:0; }
+
+/* v0.6.6: natural title height, shared type size and geometric icon centering. */
+.safe-layout .safe-slide-body { grid-template-rows:auto minmax(0,1fr); gap:1cqw; }
+.safe-layout[data-title-row=middle] .safe-slide-body { grid-template-rows:minmax(0,1fr) auto minmax(0,1fr); }
+.safe-layout[data-title-row=bottom] .safe-slide-body { grid-template-rows:minmax(0,1fr) auto; }
+.safe-layout .template-fit,.safe-layout .caption-fit { height:auto; }
+.safe-layout .fit-text-inner { font-size:var(--fitted-slide-font-size,var(--slide-font-size)); }
+.safe-layout .template-fit .fit-text-inner,.safe-layout .content-fit .fit-text-inner,.safe-layout .caption-fit .fit-text-inner { font-size:var(--fitted-slide-font-size,var(--slide-font-size)); }
+.safe-layout .template-body,.safe-layout .presenter-line,.safe-layout .library-text h3,.safe-layout .slide-body,.safe-layout .caption-fit h3 { font-size:1em; }
+.safe-layout .mode-imageOnly.with-media-caption { grid-template-rows:auto minmax(0,1fr); }
+.remove-media { display:grid; place-items:center; flex:0 0 28px; min-width:28px; max-width:28px; max-height:28px; aspect-ratio:1; box-sizing:border-box; }
+.remove-media svg { display:block; width:14px; height:14px; }
+.content-visual .video-indicator { display:grid; place-items:center; left:5px; right:auto; bottom:5px; width:30px; height:30px; min-width:30px; min-height:30px; max-width:30px; max-height:30px; padding:0; border-radius:50%; aspect-ratio:1; box-sizing:border-box; line-height:1; }
+.content-visual .video-indicator svg { display:block; width:14px; height:14px; }
+.template-font-control input { max-width:160px; }

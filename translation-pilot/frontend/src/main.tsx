@@ -1,5 +1,5 @@
 import {SafeSlide} from "./safe-slide";
-import {TemplateLayoutDefaults,SlideLayoutControls,MeetingTextControls} from "./layout-controls";
+import {TemplateLayoutDefaults,SlideLayoutControls,MeetingTextControls,TemplateFontControl} from "./layout-controls";
 import {ColorControl,ThemeColors,PositionPicker,SlideTypeControl} from "./slide-controls";
 import {ContentEditor, ContentSelector, ContentCards, BuilderContent} from "./content-ui";
 import { confirmUI } from "./dialogs";
@@ -29,6 +29,7 @@ import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
 globalThis.MMB.BuilderContent=BuilderContent;
 globalThis.MMB.SafeSlide=SafeSlide;
+globalThis.MMB.TemplateFontControl=TemplateFontControl;
 globalThis.MMB.TemplateLayoutDefaults=TemplateLayoutDefaults;
 globalThis.MMB.SlideLayoutControls=SlideLayoutControls;
 globalThis.MMB.MeetingTextControls=MeetingTextControls;

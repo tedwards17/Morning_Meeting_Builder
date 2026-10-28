@@ -18116,6 +18116,7 @@ const Vi = 1,
     background: Us,
     foreground: Us,
     accent: Us,
+    fontSize: Gs().int().min(16).max(96).optional(),
     backgroundAssetId: Ke.optional(),
     logoAssetId: Ke.optional(),
   }),
@@ -19850,7 +19851,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
  const backdrop=Qs(v.backgroundAssetId??theme.backgroundAssetId),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),
@@ -20470,6 +20471,7 @@ function pE({ template: n, onClose: i }) {
                   }),
                   d.jsx(globalThis.MMB.TemplateLayoutDefaults,{value:m.layoutDefaults,onChange:layoutDefaults=>L({...m,layoutDefaults})}),
                   d.jsx("h3", { children: translateUI("Template theme") }),
+                  d.jsx(globalThis.MMB.TemplateFontControl,{value:m.theme.fontSize,onChange:fontSize=>L({...m,theme:{...m.theme,fontSize}})}),
                   d.jsx(Bg, {
                     theme: m.theme,
                     onChange: (C) => L({ ...m, theme: C }),
@@ -23076,7 +23078,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           children: [
                             d.jsx(Df, { item }),
                             d.jsx("span", { className: "media-item-title", children: item.title }),
-                            item.scope==="meeting-only"&&d.jsx("button",{type:"button",className:"remove-media",disabled:m,"aria-label":translateUI("Remove {arg0} from this slide",{arg0:item.title}),title:translateUI("Remove from slide"),onClick:event=>{event.stopPropagation();removeAttachment(slide.id,item.id);},children:"×"}),
+                            item.scope==="meeting-only"&&d.jsx("button",{type:"button",className:"remove-media",disabled:m,"aria-label":translateUI("Remove {arg0} from this slide",{arg0:item.title}),title:translateUI("Remove from slide"),onClick:event=>{event.stopPropagation();removeAttachment(slide.id,item.id);},children:d.jsx("svg",{width:14,height:14,viewBox:"0 0 16 16","aria-hidden":true,children:d.jsx("path",{d:"M4 4l8 8M12 4l-8 8",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round"})})}),
                             slide.items.length > 1 && mediaSlides.some(({ slide: target, index: targetIndex }) => targetIndex !== index && target.items.length < 12) &&
                               d.jsxs("label", { className: "media-move", children: [
                                 translateUI("Move to slide"),

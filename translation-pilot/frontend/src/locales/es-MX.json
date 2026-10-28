@@ -1259,5 +1259,8 @@
   "Choose a valid slide layout.": "Elige un diseño de diapositiva válido.",
   "Set title position in the template builder.": "Configura la posición del título en el editor de plantillas.",
   "Meeting text must be 20000 characters or fewer.": "El texto de la reunión debe tener 20000 caracteres o menos.",
-  "Share a quick personal update. A photo or video is optional.": "Comparte una breve actualización personal. La foto o el video son opcionales."
+  "Share a quick personal update. A photo or video is optional.": "Comparte una breve actualización personal. La foto o el video son opcionales.",
+  "Slide font size": "Tamaño de fuente de diapositivas",
+  "One size for titles and text on every slide. Text wraps before shrinking. Choose 16–96.": "Un tamaño para títulos y texto en todas las diapositivas. El texto pasa a la siguiente línea antes de reducirse. Elige entre 16 y 96.",
+  "Choose a slide font size from 16 to 96.": "Elige un tamaño de fuente de diapositiva entre 16 y 96."
 }

@@ -25,7 +25,7 @@ function Thumbnail({item,onPreview}:{item:Row;onPreview:()=>void}){
  const {state}=app();const [failed,fail]=React.useState(false);const video=item.type==="video"||!!youtubeId(item.url??"");
  const localImage=useAssetUrl(item,state.assets,true);
  const image=youtubeId(item.url??"")?`https://i.ytimg.com/vi/${youtubeId(item.url)}/mqdefault.jpg`:item.type==="video"&&!item.thumbnailAssetId?undefined:localImage;
- return <div className="content-visual">{image&&!failed?<img src={image} alt={t("Thumbnail for {arg0}",{arg0:item.title})} loading="lazy" referrerPolicy="no-referrer" onError={()=>fail(true)}/>:<span>{video?t("Video"):contentCategory(item)==="media"?t("Image"):contentCategory(item)==="link"?t("Web link"):t("Text")}</span>}{video&&<button type="button" className="video-indicator" aria-label={t("Play preview · {arg0}",{arg0:item.title})} onClick={onPreview}>▶</button>}{failed&&<small>{t("Thumbnail unavailable")}</small>}</div>;
+ return <div className="content-visual">{image&&!failed?<img src={image} alt={t("Thumbnail for {arg0}",{arg0:item.title})} loading="lazy" referrerPolicy="no-referrer" onError={()=>fail(true)}/>:<span>{video?t("Video"):contentCategory(item)==="media"?t("Image"):contentCategory(item)==="link"?t("Web link"):t("Text")}</span>}{video&&<button type="button" className="video-indicator" aria-label={t("Play preview · {arg0}",{arg0:item.title})} onClick={onPreview}><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5 12 8l-7 4.5Z" fill="currentColor"/></svg></button>}{failed&&<small>{t("Thumbnail unavailable")}</small>}</div>;
 }
 function RotationControl({item}:{item:Row}){
  const ctx=useContext();const [busy,setBusy]=React.useState(false),[error,setError]=React.useState("");
