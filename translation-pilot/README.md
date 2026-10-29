@@ -1,3 +1,7 @@
+# Current maintenance patch: v0.6.7.1
+
+See docs/ROUND6_0_6_7_1_PATCH.md. Current meeting slides determine visible numbering and totals; no new SQL, slide-creation controls or presentation-navigation changes. Build version 0.6.7-1.
+
 # Current release: v0.6.7
 
 Separate template title/text sizes, aligned theme image selectors, 688 reviewed quote titles, and admin deletion of unused saved presentations. Existing hosts use hosting-update and docs/ROUND6_0_6_7_UPGRADE.md. One-time data-only migration 007 if absent; never reimport starter data or rerun installed 005/006. Saved presentation snapshots and private hosting state remain.

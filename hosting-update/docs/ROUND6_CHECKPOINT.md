@@ -1,3 +1,13 @@
+# v0.6.7.1 checkpoint — current meeting slide numbering
+
+2026-10-29. Baseline verified against GitHub: Round-6-Development `be2f9cf`, v0.6.7. Reviewed current source, README, checkpoint, announcement insertion, tests and packager; no AGENTS.md. User wants a small patch and plans to test with the next batch. App version 0.6.7.1 / valid npm build version 0.6.7-1; no full release or deployment.
+
+Confirmed cause: `ensureAnnouncementSlot` inserts a hidden, skipped marker after Intro (or Movement). Builder omitted it visually but used raw stored indices and length for badges/count/heading; nine slides became 1,3,…10. Shared ownership and mobile viewport are not the cause.
+
+Added a small current-meeting row model that excludes only internal `definition.announcementSlot` markers and keeps each real slide's stored index/ID. Agenda badges/total and review “Slide X of Y” derive from these rows. Skipped visible slides stay numbered; included/presentation count still excludes skipped slides. Real announcements remain numbered. Builder previous/next skips invisible markers; move controls use visible positions and preserve marker positions, IDs and content. Existing saved meetings display correctly without migrating/rewriting slide arrays. Actual presentation navigation remains unchanged. No new add-slide controls, permission changes or translations; existing EN/ES labels reused. No SQL/API/schema/media/config change.
+
+Local typecheck, lint, **97 unit tests**, localization and both builds pass. Three focused unit scenarios reproduce nine real slides plus marker, real announcements, skipped/removal/additional current slides, selection from legacy hidden indices, and reordering without data mutation. Hosted phone/shared-template regression is added to the existing editor suite using its existing admin/location contexts (no extra logins): nine rows 1–9, matching total/header, next/previous, reorder, save/reopen preserving all IDs/marker, skip count, desktop/mobile consistency/overflow. GitHub hosted verification pending. Prebuilt packaging validates assets and excludes live config/path/root rewrite files. Follow ROUND6_0_6_7_1_PATCH.md; user testing can wait until next batch. Earlier 007 is still required once if v0.6.7 quote update is not yet installed; this patch adds no SQL.
+
 # v0.6.7 checkpoint — split typography, reviewed quote titles, unused saved drafts
 
 2026-10-29. Continues verified Round-6-Development `55b6ef8` (v0.6.6), confirmed against GitHub before editing. Reviewed README/checkpoints/source/migrations/packager/workflow; no AGENTS.md. User added explicit admin deletion of never-used saved presentations to the same request, superseding the earlier exclusion of meeting deletion. No default/Round 5 change or live deployment.

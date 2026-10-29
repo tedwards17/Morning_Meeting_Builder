@@ -1,4 +1,6 @@
-# Morning Meeting Builder — v0.6.7
+# Morning Meeting Builder — v0.6.7.1 numbering patch
+
+[Small numbering patch notes](hosting-update/docs/ROUND6_0_6_7_1_PATCH.md). Nine real meeting slides now number 1–9; hidden announcement markers no longer inflate the count. No new SQL for this patch. You can upload with the next batch.
 
 Source and prebuilt PHP/static cPanel files are on **Round-6-Development**. No default merge or live deployment. Round 5 and earlier Round 6 releases remain available for rollback.
 

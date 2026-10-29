@@ -18,7 +18,7 @@ const starter = { ...starterMeta, items: originalItems.map(item =>
   (["video", "external-video"].includes(item.type) || /https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(item.url))
     ? {...item, description:"", summary:""} : item).map(item=>quoteTitleMap[item.id]?{...item,title:quoteTitleMap[item.id]}:item) };
 
-export const APP_VERSION = "0.6.7";
+export const APP_VERSION = "0.6.7.1";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;

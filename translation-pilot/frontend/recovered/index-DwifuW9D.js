@@ -1,3 +1,4 @@
+import {meetingSlideRows,selectedMeetingRow,moveMeetingSlide} from "../src/meeting-slides";
 import {templateLayout,removeUploadedItem} from "../src/slide-layout";
 import { confirmUI, promptUI, alertUI } from "../src/dialogs";
 import { t as translateUI, getLocale, uiText, uiError } from "../src/i18n";
@@ -22599,7 +22600,7 @@ function MeetingReadiness({ meeting }) {
 function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false }) {
   const { state: s, update: c, run: f, notify: h, busy: m } = qt(),
     [g, v] = ae.useState(n ? globalThis.MMB.normalizeUnstartedMeeting(n) : n),
-    [_, b] = ae.useState(0),
+    [requestedIndex, b] = ae.useState(0),
     [S, A] = ae.useState(null),
     [M, L] = ae.useState(null),
     [O, V] = ae.useState(!1),
@@ -22676,9 +22677,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
       ],
     });
   const H = g,
+    agenda = meetingSlideRows(H.slides),
+    selectedRow = selectedMeetingRow(agenda, requestedIndex),
+    selectedIndex = selectedRow?.index ?? 0,
+    agendaIndex = (selectedRow?.number ?? 1) - 1,
     ie = isMeetingExpired(H),
-    le = H.slides[_],
-    C = H.slides.filter((N) => !N.skipped),
+    le = H.slides[selectedIndex],
+    C = agenda.filter(({slide}) => !slide.skipped).map(({slide}) => slide),
     G = [
       ...lE(H),
       ...H.slides.filter((slide) => !slide.skipped &&
@@ -22913,14 +22918,14 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 className: "section-heading",
                 children: [
                   d.jsx("h3", { children: translateUI("Meeting agenda") }),
-                  d.jsx("span", { children: H.slides.length }),
+                  d.jsx("span", { children: agenda.length }),
                 ],
               }),
-              H.slides.map((N, te) =>
-                N.definition.announcementSlot ? null : d.jsxs(
+              agenda.map(({slide:N,index:te,number}) =>
+                d.jsxs(
                   "div",
                   {
-                    className: `agenda-row ${_ === te ? "selected" : ""} ${N.skipped ? "skipped" : ""} ${globalThis.MMB.builderColor(N.definition) ? "colored-agenda" : ""}`,
+                    className: `agenda-row ${selectedIndex === te ? "selected" : ""} ${N.skipped ? "skipped" : ""} ${globalThis.MMB.builderColor(N.definition) ? "colored-agenda" : ""}`,
                     style: { "--builder-slide-color": globalThis.MMB.builderColor(N.definition) },
                     children: [
                       d.jsxs("button", {
@@ -22929,7 +22934,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         children: [
                           d.jsx("span", {
                             className: "slide-number",
-                            children: te + 1,
+                            children: number,
                           }),
                           d.jsxs("span", {
                             children: [
@@ -22949,10 +22954,11 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                       }),
                       !ie &&
                         d.jsx(ly, {
-                          index: te,
-                          length: H.slides.length,
+                          index: number - 1,
+                          length: agenda.length,
                           onMove: (ue) => {
-                            (x({ ...H, slides: uy(H.slides, te, ue) }), b(ue));
+                            const slides=moveMeetingSlide(H.slides,N.id,ue);
+                            x({...H,slides});b(slides.findIndex(slide=>slide.id===N.id));
                           },
                         }),
                     ],
@@ -22972,7 +22978,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     children: [
                       d.jsxs("span", {
                         className: "eyebrow",
-                        children: [translateUI("SLIDE "), _ + 1, translateUI(" OF "), H.slides.length],
+                        children: [translateUI("SLIDE "), agendaIndex + 1, translateUI(" OF "), agenda.length],
                       }),
                       d.jsx("h2", { children: le.definition.title }),
                       le.required &&
@@ -22991,7 +22997,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         d.jsx("input", {
                           type: "checkbox",
                           checked: le.skipped,
-                          onChange: (N) => E(_, { skipped: N.target.checked }),
+                          onChange: (N) => E(selectedIndex, { skipped: N.target.checked }),
                         }),
                         " ",
                         translateUI("Skip this slide"),
@@ -23050,8 +23056,8 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         const copy = { ...structuredClone(le), id: Bt(), definition: {
                           ...structuredClone(le.definition), type:"gallery", id: Bt(), title: `${le.definition.title} ${mediaSlides.length + 1}`, personalShare: false, mediaOptional: false, optional: true, defaultSkipped: false,
                         }, items: [], skipped: !1, mediaAdded: !0 };
-                        const slides = [...H.slides]; slides.splice(_ + 1, 0, copy);
-                        x({ ...H, slides }); b(_ + 1);
+                        const slides = [...H.slides]; slides.splice(selectedIndex + 1, 0, copy);
+                        x({ ...H, slides }); b(selectedIndex + 1);
                       },
                       children: translateUI("Add media slide"),
                     }),
@@ -23059,7 +23065,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                   uploadFeedback && d.jsx("p", {className: uploadFeedback.error ? "warning media-upload-feedback" : "muted media-upload-feedback", role: uploadFeedback.error ? "alert" : "status", children: uploadFeedback.text}),
                   d.jsx("div", { className: "media-slide-grid", children: mediaSlides.map(({ slide, index }) =>
                     d.jsxs("div", {
-                      className: `media-drop-zone ${index === _ ? "selected" : ""}`,
+                      className: `media-drop-zone ${index === selectedIndex ? "selected" : ""}`,
                       onDragOver: (event) => event.preventDefault(),
                       onDrop: (event) => {
                         event.preventDefault();
@@ -23071,7 +23077,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           d.jsx("button", { onClick: () => b(index), children: slide.definition.title }),
                           slide.mediaAdded && d.jsx("button", { className: "danger-text", onClick: async () => {
                             if (!(await confirmUI(translateUI("Remove “{arg0}” from this meeting?", {arg0: slide.definition.title})))) return;
-                            x({ ...H, slides: H.slides.filter((_, idx) => idx !== index) }); b(Math.max(0, Math.min(_, index - 1)));
+                            x({ ...H, slides: H.slides.filter((_slide, idx) => idx !== index) }); b(Math.max(0, Math.min(selectedIndex, index - 1)));
                           }, children: translateUI("Delete slide") }),
                         ] }),
                         slide.items.length ? slide.items.map((item) => d.jsxs("div", {
@@ -23122,18 +23128,18 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                           className: "actions",
                           children: [
                             d.jsxs("button", {
-                              onClick: () => f(() => J(_)),
+                              onClick: () => f(() => J(selectedIndex)),
                               children: [
                                 d.jsx(ny, { size: 16 }),
                                 translateUI(" Auto-select"),
                               ],
                             }),
                             d.jsx("button", {
-                              onClick: () => A(_),
+                              onClick: () => A(selectedIndex),
                               children: translateUI("Change content"),
                             }),
                             d.jsx("button", {
-                              onClick: () => E(_, { items: [] }),
+                              onClick: () => E(selectedIndex, { items: [] }),
                               children: translateUI("Remove content"),
                             }),
                           ],
@@ -23195,7 +23201,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         le.definition.type === "intro"
                           ? d.jsx("h4", { children: translateUI("Title and text") })
                           : d.jsx("summary", { children: translateUI("Edit text for this meeting") }),
-                        d.jsx(globalThis.MMB.MeetingTextControls,{slide:le,onChange:patch=>E(_,patch)}),
+                        d.jsx(globalThis.MMB.MeetingTextControls,{slide:le,onChange:patch=>E(selectedIndex,patch)}),
                       ],
                     }),
                 ],
@@ -23217,13 +23223,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 className: "review-nav",
                 children: [
                   d.jsxs("button", {
-                    disabled: _ === 0,
-                    onClick: () => b((N) => N - 1),
+                    disabled: agendaIndex === 0,
+                    onClick: () => b(agenda[agendaIndex - 1].index),
                     children: [d.jsx(Af, { size: 18 }), translateUI(" Previous slide")],
                   }),
                   d.jsxs("button", {
-                    disabled: _ === H.slides.length - 1 || (isMedia(le) && !le.items.length && !le.skipped),
-                    onClick: () => b((N) => N + 1),
+                    disabled: agendaIndex === agenda.length - 1 || (isMedia(le) && !le.items.length && !le.skipped),
+                    onClick: () => b(agenda[agendaIndex + 1].index),
                     children: [translateUI("Next slide "), d.jsx(Nn, { size: 18 })],
                   }),
                 ],
