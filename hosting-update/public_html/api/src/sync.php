@@ -5,10 +5,11 @@ function store_meeting(array $m):void{
  $template=record_row('templates',require_id($m['templateId']??''));if(!$template||!template_permission(payload($template),actor(),'use'))fail(403,'Template use denied');
  if(!in_array($m['status']??'',['draft','presenting','completed'],true)||strlen($m['presenter']??'')>300||count($m['slides']??[])>100)fail(422,'Invalid meeting');
  $old=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$id]);
+ if(!$old&&one("SELECT record_id FROM sync_changes WHERE organization_id=? AND kind='meetings' AND record_id=? LIMIT 1",[org(),$id]))fail(409,'This unused presentation was deleted by an administrator. Sync to remove the local copy.',['deleted_meeting_id'=>$id]);
  if($old&&($old['account_id']!==actor()['id']||$old['device_id']!==$GLOBALS['device']['id']))fail(403,'Meeting belongs to another device');
  $m['organization_id']=org();$m['account_id']=actor()['id'];$m['device_id']=$GLOBALS['device']['id'];
  foreach($m['slides']??[] as $slide){validate_slide_layout($slide['layoutOverrides']??null,true);validate_slide_layout($slide['definition']['templateLayout']??null);validate_slide_layout($slide['definition']['layoutOverrides']??null);if(isset($slide['additionalText'])&&(!is_string($slide['additionalText'])||mb_strlen($slide['additionalText'],'UTF-8')>20000))fail(422,'Meeting text must be 20000 characters or fewer.');}
- validate_slide_font($m['theme']['fontSize']??null);
+ validate_slide_font($m['theme']['fontSize']??null);validate_slide_font($m['theme']['titleFontSize']??null);validate_slide_font($m['theme']['textFontSize']??null);
  validate_meeting_history($m);
  if($old&&$old['status']==='completed') {
   $prior=payload($old);
@@ -43,7 +44,7 @@ function store_meeting(array $m):void{
 }
 function store_event(array $e):void{
  role(['administrator','content_manager','location']);
- $id=require_id($e['id']??'');$m=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),require_id($e['meeting_id']??'')]);if(!$m)fail(422,'Meeting must sync before its events');location_scope($m['location_id']);
+ $id=require_id($e['id']??'');$m=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),require_id($e['meeting_id']??'')]);if(!$m){if(one("SELECT record_id FROM sync_changes WHERE organization_id=? AND kind='meetings' AND record_id=? LIMIT 1",[org(),$e['meeting_id']]))fail(409,'This unused presentation was deleted by an administrator. Sync to remove the local copy.',['deleted_meeting_id'=>$e['meeting_id']]);fail(422,'Meeting must sync before its events');}location_scope($m['location_id']);
  if($m['device_id']!==$GLOBALS['device']['id']||$m['account_id']!==actor()['id'])fail(403,'Event device mismatch');
  $types=['meeting_started','meeting_completed','slide_opened','slide_skipped','content_presented','video_started','video_completed','broadcast_presented','broadcast_skipped'];$type=$e['event_type']??'';if(!in_array($type,$types,true))fail(422,'Unknown event type');
  if($type==='broadcast_skipped'&&strlen(trim($e['reason']??''))<1)fail(422,'A reason is required');if(strlen($e['reason']??'')>2000)fail(422,'Reason too long');
@@ -57,6 +58,16 @@ function store_event(array $e):void{
  $lib=$content?record_row('libraries',$content['libraryId']??''):null;$e['safety']=$content&&(in_array('safety',$content['tags']??[],true)||($lib&&stripos(payload($lib)['name']??'','safety')!==false));
  $e['event_key']=implode(':',[$m['id'],$slide['id']??'',$type,$content['id']??'']);$existing=one('SELECT id FROM usage_events WHERE organization_id=? AND event_key=?',[org(),$e['event_key']]);if($existing)return;
  query('INSERT INTO usage_events(id,organization_id,location_id,account_id,device_id,meeting_id,event_key,event_type,content_id,broadcast_id,occurred_at_utc,server_received_at,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6),?)',[$id,org(),$m['location_id'],actor()['id'],$GLOBALS['device']['id'],$m['id'],$e['event_key'],$type,$content['id']??null,$slide['broadcast_id']??null,gmdate('Y-m-d H:i:s',$when),encoded($e)]);change('events',$id);
+}
+if(preg_match('#^meetings/([a-f0-9-]{36})/delete$#',$path,$matches)&&$method==='POST') {
+ role(['administrator']);if(($body['confirm']??false)!==true)fail(422,'Confirm deletion of this unused presentation.');begin_write();
+ $saved=one('SELECT * FROM meetings WHERE organization_id=? AND id=? FOR UPDATE',[org(),$matches[1]]);
+ if(!$saved)fail(404,'Meeting unavailable');$m=payload($saved);
+ if(!unused_meeting($m)||one('SELECT id FROM usage_events WHERE organization_id=? AND meeting_id=? LIMIT 1',[org(),$saved['id']]))fail(409,'Only unused saved presentations can be deleted. Started or presented meetings must be retained.');
+ // Keep shared and server-held media. Meeting-only files remain private and cannot
+ // be downloaded once their parent is absent; deletion does not run completion cleanup.
+ query('DELETE FROM meetings WHERE organization_id=? AND id=?',[org(),$saved['id']]);
+ change('meetings',$saved['id']);audit('unused_meeting_deleted',$saved['id']);$pdo->commit();json_out(['deleted'=>$saved['id']]);
 }
 if(preg_match('#^meetings/([a-f0-9-]{36})$#',$path,$matches)&&$method==='GET') {
  $saved=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$matches[1]]);

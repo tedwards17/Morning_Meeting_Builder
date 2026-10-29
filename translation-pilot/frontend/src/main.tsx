@@ -20,7 +20,7 @@ import * as db from "./db";
 import { defaults } from "./defaults";
 import { csv, normalizeNumber, zonedInput, zonedUtc } from "./domain";
 import type { Row, State } from "./types";
-import { canReadMeeting, groupMeetings } from "./meeting-history";
+import { canReadMeeting, groupMeetings, unusedMeeting } from "./meeting-history";
 import { RollingCaptions } from "./rolling-captions";
 import { TranscriptReader } from "./transcript-reader";
 import "../recovered/index-BdPx4Tei.css";
@@ -92,6 +92,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
   const {state}=useApp() as {state:State};
   const [selected,setSelected]=React.useState<string|null>(null);
   const [openError,setOpenError]=React.useState("");
+  const [deleting,setDeleting]=React.useState(false),[notice,setNotice]=React.useState('');
   const account=runtime.session?.account;
   const rows=state.meetings.filter(meeting=>!account||canReadMeeting(account,meeting));
   const meeting=rows.find(row=>row.id===selected);
@@ -105,6 +106,10 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
       <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</p></div>
         <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
           {editable&&<button className="primary" onClick={async()=>{try{setOpenError("");onOpen(await runtime.claimSavedMeeting(meeting));}catch(error){setOpenError(uiError(error));}}}>{translateUI("Open saved presentation")}</button>}
+          {runtime.hosted&&account?.role==='administrator'&&unusedMeeting(meeting,globalThis.MMB.events??[])&&<button className="danger" disabled={deleting} onClick={async()=>{
+            if(!await confirmUI(translateUI('Permanently delete unused presentation “{arg0}” dated {arg1}? This cannot be undone. Library content and uploaded media are retained.',{arg0:meeting.templateName,arg1:meeting.date})))return;
+            setDeleting(true);setOpenError('');try{await runtime.deleteUnusedMeeting(meeting);setSelected(null);setNotice(translateUI('Unused presentation deleted.'));}catch(error){setOpenError(uiError(error));}finally{setDeleting(false);}
+          }}>{translateUI(deleting?'Deleting…':'Delete unused presentation')}</button>}
           <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
       {openError&&<p role="alert">{openError}</p>}
       <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
@@ -127,6 +132,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
   return <section className="meetings-page">
     <div className="page-title"><div><h1>{translateUI("Meetings")}</h1><p>{runtime.hosted&&account?.role==="administrator"?translateUI("All meeting accounts"):translateUI("Your saved meetings and meeting notes")}</p></div>
       <button className="primary" disabled={account?.role==="report_viewer"} onClick={newMeeting}>{translateUI("Build a new meeting")}</button></div>
+    {notice&&<p role="status">{notice}</p>}
     {!runtime.hosted&&<p className="muted">{translateUI("Meetings are saved in this browser. Company account history requires the hosted account service.")}</p>}
     {([['Saved for presentation',groups.saved],['Previously presented',groups.presented]] as const).map(([title,list])=><section className="panel" key={title}>
       <h2>{uiText(title)}</h2>{list.length?<div className="meeting-list">{list.map(meeting=><button className="meeting-list-row" key={meeting.id} onClick={()=>setSelected(meeting.id)}>

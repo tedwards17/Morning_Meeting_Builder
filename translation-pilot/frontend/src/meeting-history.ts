@@ -117,3 +117,7 @@ export function readableTranscriptText(meeting: Row, language?: "en" | "es"): st
   if (language && paragraphs.some(row => row.parts.some(part => part.translated))) parts.push(translateUI("* Translated from the original speech."));
   return parts.join("\n\n") + "\n";
 }
+
+export function unusedMeeting(meeting:Row,events:Row[]=[]):boolean {
+ return meeting.status==='draft'&&!meeting.startedAt&&!meeting.endedAt&&!(meeting.presentedTopics??[]).length&&!(meeting.transcript??[]).length&&!events.some(event=>event.meeting_id===meeting.id);
+}

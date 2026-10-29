@@ -3,10 +3,13 @@ import { t, uiError } from "./i18n";
 export const contentPermissionMessage = () => t("Everyone signed in can add content. Administrator and Content Manager accounts manage libraries and edit existing shared content.");
 
 export class ApiError extends Error {
+  readonly serverMessage:string;
+  deletedMeetingId?:string;
   constructor(message: string, public status: number, public requestId = "") {
     // Only display the server's opaque identifier, never HTML or private diagnostics.
     requestId = /^[a-zA-Z0-9_-]{8,128}$/.test(requestId) ? requestId : "";
     super(requestId ? t("{arg0} Request ID: {arg1}", {arg0:uiError(message),arg1:requestId}) : uiError(message));
+    this.serverMessage=message;
     this.requestId = requestId;
     this.name = "ApiError";
   }

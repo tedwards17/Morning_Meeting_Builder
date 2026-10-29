@@ -18117,6 +18117,8 @@ const Vi = 1,
     foreground: Us,
     accent: Us,
     fontSize: Gs().int().min(16).max(96).optional(),
+    titleFontSize: Gs().int().min(16).max(96).optional(),
+    textFontSize: Gs().int().min(16).max(96).optional(),
     backgroundAssetId: Ke.optional(),
     logoAssetId: Ke.optional(),
   }),
@@ -19851,7 +19853,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
  const backdrop=Qs(v.backgroundAssetId??theme.backgroundAssetId),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),
@@ -20111,7 +20113,7 @@ function Bg({ theme: n, onChange: i }) {
     children: [
       d.jsx(globalThis.MMB.ThemeColors, {theme:n,onChange:i}),
       d.jsxs("div", {
-        className: "form-row",
+        className: "form-row theme-image-controls",
         children: [
           d.jsx(Ne, {
             label: translateUI("Background image"),
@@ -20471,7 +20473,7 @@ function pE({ template: n, onClose: i }) {
                   }),
                   d.jsx(globalThis.MMB.TemplateLayoutDefaults,{value:m.layoutDefaults,onChange:layoutDefaults=>L({...m,layoutDefaults})}),
                   d.jsx("h3", { children: translateUI("Template theme") }),
-                  d.jsx(globalThis.MMB.TemplateFontControl,{value:m.theme.fontSize,onChange:fontSize=>L({...m,theme:{...m.theme,fontSize}})}),
+                  d.jsx(globalThis.MMB.TemplateFontControl,{theme:m.theme,onChange:theme=>L({...m,theme})}),
                   d.jsx(Bg, {
                     theme: m.theme,
                     onChange: (C) => L({ ...m, theme: C }),

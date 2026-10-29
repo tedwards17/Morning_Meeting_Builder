@@ -1,3 +1,4 @@
+import quoteTitles from "./quote-titles.json";
 import starterMeta from "./round2-seed-meta.json";
 import items1 from "./round2-seed-items-1.json";
 import items2 from "./round2-seed-items-2.json";
@@ -9,12 +10,15 @@ import { templateDefaults } from "./slide-policy";
 
 // Keep the already-published source datasets unchanged. Normalize only new starter
 // copies; existing hosted records use one-time migration 006, not a reimport.
-const starter = { ...starterMeta, items: [...items1, ...items2, ...items3, ...items4].map(item =>
+const originalItems=[...items1,...items2,...items3,...items4];
+const originalQuotes=new Map(originalItems.filter(item=>item.id in quoteTitles).map(item=>[item.id,item]));
+const quoteTitleMap:Record<string,string>=quoteTitles;
+const starter = { ...starterMeta, items: originalItems.map(item =>
   ["00000000-0000-4000-8000-000000000003", "00000000-0000-4000-8000-000000000005"].includes(item.libraryId) &&
   (["video", "external-video"].includes(item.type) || /https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(item.url))
-    ? {...item, description:"", summary:""} : item) };
+    ? {...item, description:"", summary:""} : item).map(item=>quoteTitleMap[item.id]?{...item,title:quoteTitleMap[item.id]}:item) };
 
-export const APP_VERSION = "0.6.6";
+export const APP_VERSION = "0.6.7";
 const DEFAULTS_VERSION = 5;
 const SHIPPED_AT = "2026-09-17T18:47:04.253Z";
 export const DEFAULT_TEMPLATE_ID = starter.template.id;
@@ -47,7 +51,13 @@ export function defaults(): State {
 // Upgrade saved Round 2 data without changing personal content, history, or other templates.
 export function upgradeDefaults(state:State):State {
   const upgraded=upgradeLegacyDefaults(state);
-  return {...upgraded,templates:upgraded.templates.map(templateDefaults)};
+  return {...upgraded,templates:upgraded.templates.map(templateDefaults),items:upgraded.items.map(item=>{
+    // Hosted records are versioned by migration 007, never silently rewritten here.
+    if(item.organization_id)return item;
+    const original=originalQuotes.get(item.id);
+    return original&&item.libraryId===original.libraryId&&item.title===original.title&&item.description===original.description
+      ?{...item,title:quoteTitleMap[item.id]}:item;
+  })};
 }
 function upgradeLegacyDefaults(state: State): State {
   if (state.settings.round3DefaultsVersion === DEFAULTS_VERSION)

@@ -45,3 +45,9 @@ function append_completed_history(array $prior,array $incoming):array {
  }
  return $incoming;
 }
+
+function unused_meeting(array $meeting):bool {
+ if(($meeting['status']??'')!=='draft')return false;
+ foreach(['startedAt','endedAt','presentedTopics','transcript'] as $key)if(!empty($meeting[$key]))return false;
+ return true;
+}

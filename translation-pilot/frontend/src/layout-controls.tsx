@@ -1,4 +1,4 @@
-import {slideFontSize} from './slide-typography';
+import {slideFonts,slideFontSize} from './slide-typography';
 import type * as RT from 'react';
 import {React as RecoveredReact} from '../recovered/index-DwifuW9D.js';
 import {PositionPicker} from './slide-controls';
@@ -24,9 +24,14 @@ export function MeetingTextControls({slide,onChange}:{slide:Row;onChange:(patch:
  return <div className="meeting-text-controls"><p className="muted">{t('Template title and text stay fixed. Add meeting text below; it appears after the selected content text.')}</p><div className="template-text-reference"><strong>{slide.definition.title}</strong>{slide.definition.text&&<p>{slide.definition.text}</p>}</div><label className="field">{t('Additional meeting text')}<textarea aria-label={t('Additional meeting text')} rows={4} maxLength={20000} value={slide.additionalText??''} onChange={e=>onChange({additionalText:e.target.value})}/></label><PositionPicker label={t('Content position')} value={value[key]} onChange={position=>onChange({layoutOverrides:{...slide.layoutOverrides,[key]:position}})}/>{mode==='imageText'&&<Placement value={value.mediaPlacement} onChange={mediaPlacement=>onChange({layoutOverrides:{...slide.layoutOverrides,mediaPlacement}})}/>}<button type="button" onClick={()=>onChange({layoutOverrides:undefined})}>{t('Use slide content layout')}</button><p className="muted">{t('Positioning applies inside the reserved content area. Media proportions are preserved.')}</p></div>;
 }
 
-export function TemplateFontControl({value,onChange}:{value?:number;onChange:(size:number)=>void}){
+function FontSizeField({label,value,onChange}:{label:string;value?:number;onChange:(size:number)=>void}){
  const current=slideFontSize(value),[text,setText]=React.useState(String(current));
  React.useEffect(()=>setText(String(current)),[current]);
  const valid=(n:number)=>Number.isInteger(n)&&n>=16&&n<=96;
- return <label className="field template-font-control">{t('Slide font size')}<input aria-label={t('Slide font size')} type="number" min={16} max={96} step={1} value={text} onChange={e=>{setText(e.target.value);const n=Number(e.target.value);if(valid(n))onChange(n);}} onBlur={()=>{const n=Number(text);setText(String(valid(n)?n:current));}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur();}}}/><small>{t('One size for titles and text on every slide. Text wraps before shrinking. Choose 16–96.')}</small></label>;
+ return <label className="field template-font-control">{label}<input aria-label={label} type="number" min={16} max={96} step={1} value={text} onChange={e=>{setText(e.target.value);const n=Number(e.target.value);if(valid(n))onChange(n);}} onBlur={()=>{const n=Number(text);setText(String(valid(n)?n:current));}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur();}}}/></label>;
+}
+
+export function TemplateFontControl({theme,onChange}:{theme:Row;onChange:(theme:Row)=>void}){
+ const sizes=slideFonts(theme);
+ return <div className="template-font-settings"><div className="template-font-row"><FontSizeField label={t('Title font size')} value={sizes.title} onChange={titleFontSize=>onChange({...theme,titleFontSize})}/><FontSizeField label={t('Text font size')} value={sizes.text} onChange={textFontSize=>onChange({...theme,textFontSize})}/></div><small>{t('Title size applies to slide and content titles. Text size applies to template, library and meeting text on every slide. Text wraps before shrinking. Choose 16–96.')}</small></div>;
 }

@@ -10,7 +10,7 @@ import {mergeCompletedMeeting} from "./completed-meeting";
 import { expireSavedMedia, isMeetingExpired } from "./retention";
 import { openMediaDatabase } from "./media-db";
 import { startTranslation } from "./translation";
-import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, canReadMeeting } from "./meeting-history";
+import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, canReadMeeting, unusedMeeting } from "./meeting-history";
 import { translationEnabled, captionGap, toggleFullscreen } from "./presentation-config";
 import * as db from "./db";
 import {
@@ -95,7 +95,10 @@ export async function api(
       else { session = null; announce(); }
     }
     const message = res.status >= 500 ? translateUI("The server could not complete the request. Try again or contact your administrator.") : data.error?.message || translateUI("Request failed");
-    throw new ApiError(message, res.status, data.error?.request_id || requestId);
+    const failure=new ApiError(message,res.status,data.error?.request_id||requestId);
+    const deletedId=data.error?.deleted_meeting_id;
+    if(typeof deletedId==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(deletedId))failure.deletedMeetingId=deletedId;
+    throw failure;
   }
   return data;
 }
@@ -361,9 +364,11 @@ export const repository = {
         }
       }
     }
+    const deletedMeetingIds=new Set<string>();
     for (const [meetingIndex, incoming] of next.meetings.entries()) {
       let meeting=incoming;
       const prior = before?.meetings.find((r) => r.id === meeting.id);
+      if(hosted&&await db.get('meta',`deletedMeeting:${meeting.id}`)){deletedMeetingIds.add(meeting.id);continue;}
       // Read-only history from another account/device must never enter this device's outbox.
       if(hosted&&prior&&(prior.account_id!==session?.account.id||prior.device_id!==session?.device.id)) {
         next.meetings[meetingIndex]=prior;continue;
@@ -412,6 +417,7 @@ export const repository = {
       const rotation=await db.get("meta","demoRotation");
       if(rotation){const added=next.items.filter(item=>!before.items.some(old=>old.id===item.id)&&!item.archived&&(!item.locations?.length||item.locations.includes(next.device.id))).map(item=>item.id);if(added.length)await db.put("meta","demoRotation",[...new Set([...rotation,...added])]);}
     }
+    next.meetings=next.meetings.filter(meeting=>!deletedMeetingIds.has(meeting.id));
     await db.saveState(next);
     if (
       next.meetings.some(
@@ -456,16 +462,27 @@ async function doSync() {
       (a, b) => (a.kind === "meeting" ? 0 : 1) - (b.kind === "meeting" ? 0 : 1),
     );
     for (let i = 0; i < outbox.length; i += 50) {
-      let batch = outbox
-        .slice(i, i + 50)
+      let batch = (await Promise.all(outbox.slice(i,i+50).map(write=>db.get("outbox",write.id)))).filter(Boolean)
         .sort((a, b) =>
           a.kind === "meeting" ? -1 : b.kind === "meeting" ? 1 : 0,
         );
+      if(!batch.length)continue;
       let res;
-      try {res=await api("sync/push",{writes:batch});}
+      while(true) {
+      try {res=await api("sync/push",{writes:batch});break;}
       catch(failure) {
+        if(failure instanceof ApiError&&failure.status===409&&failure.deletedMeetingId) {
+          const id=failure.deletedMeetingId;
+          // A 404 may also mean a brand-new unsent draft. Only discard the exact
+          // authoritative tombstone named by this transaction's conflict response.
+          if(!batch.some(write=>(write.kind==='meeting'?write.id:write.data.meeting_id)===id))throw failure;
+          await discardDeletedMeeting(id);
+          batch=(await Promise.all(batch.map(write=>db.get('outbox',write.id)))).filter(Boolean);
+          if(!batch.length){res={accepted:[]};break;}
+          continue;
+        } else {
         if(!(failure instanceof ApiError)||failure.status!==409||
-          !["Completed meeting details cannot be changed","Saved transcript cannot be replaced","Saved transcript translation cannot be replaced"].includes(failure.message))throw failure;
+          !["Completed meeting details cannot be changed","Saved transcript cannot be replaced","Saved transcript translation cannot be replaced"].includes(failure.serverMessage))throw failure;
         let repaired=false;
         for(const write of batch.filter(write=>write.kind==="meeting")) {
           let saved:Row;
@@ -485,7 +502,9 @@ async function doSync() {
         }
         if(!repaired)throw failure;
         batch=(await Promise.all(batch.map(write=>db.get("outbox",write.id)))).filter(Boolean);
-        res=await api("sync/push",{writes:batch});
+        res=await api("sync/push",{writes:batch});break;
+        }
+      }
       }
       for (const id of res.accepted) {
         const current = await db.get("outbox", id);
@@ -522,6 +541,7 @@ async function doSync() {
           "events",
           "usage",
           "meetings",
+          "outbox",
           "meta",
         ],
         "readwrite",
@@ -549,6 +569,12 @@ async function doSync() {
         const name = r.kind;
         if (!tx.objectStoreNames.contains(name)) continue;
         if (r.deleted) {
+          if(name==='meetings') {
+            const recovery=pending.filter(write=>(write.kind==='meeting'?write.id:write.data.meeting_id)===r.id);
+            if(recovery.length)await tx.objectStore('meta').put({meeting:await tx.objectStore('meetings').get(r.id),pending:recovery},`deletedMeetingRecovery:${r.id}`);
+            await tx.objectStore('meta').put(true,`deletedMeeting:${r.id}`);
+            for(let k=pending.length-1;k>=0;k--)if((pending[k].kind==='meeting'?pending[k].id:pending[k].data.meeting_id)===r.id){await tx.objectStore('outbox').delete(pending[k].id);pending.splice(k,1);}
+          }
           if(name==="assets"){const asset=previousAssets.find(row=>row.id===r.id);if(asset?.scope==="meeting-only")deletedHashes.push(asset.hash);}
           await tx.objectStore(name).delete(r.id);
         }
@@ -968,6 +994,22 @@ function publicMeeting(meeting: Row): Row {
     const clean:Row={...item,url:""};delete clean.assetId;delete clean.thumbnailAssetId;return clean;
   });
   return copy;
+}
+// A server tombstone also removes pending stale writes on this device.
+async function discardDeletedMeeting(id:string) {
+ const database=await db.db,tx=database.transaction(['meetings','outbox','meta'],'readwrite');
+ const pending=(await tx.objectStore('outbox').getAll()).filter(write=>(write.kind==='meeting'?write.id:write.data.meeting_id)===id);
+ if(pending.length)await tx.objectStore('meta').put({meeting:await tx.objectStore('meetings').get(id),pending},`deletedMeetingRecovery:${id}`);
+ await tx.objectStore('meetings').delete(id);await tx.objectStore('meta').put(true,`deletedMeeting:${id}`);
+ for(const write of await tx.objectStore('outbox').getAll())if((write.kind==='meeting'?write.id:write.data.meeting_id)===id)await tx.objectStore('outbox').delete(write.id);
+ await tx.done;
+}
+export async function deleteUnusedMeeting(meeting:Row):Promise<void> {
+ if(!hosted||session?.account.role!=='administrator')throw new Error(translateUI('Only administrators can delete unused saved presentations.'));
+ if(!unusedMeeting(meeting,globalThis.MMB.events??[]))throw new Error(translateUI('Only unused saved presentations can be deleted. Started or presented meetings must be retained.'));
+ if(!navigator.onLine)throw new Error(translateUI('Connect to the internet to delete an unused presentation.'));
+ await api(`meetings/${meeting.id}/delete`,{confirm:true});await discardDeletedMeeting(meeting.id);
+ globalThis.MMB.refresh?.();await sync();
 }
 export async function claimSavedMeeting(meeting:Row):Promise<Row> {
   if(!hosted||meeting.device_id===session?.device.id)return meeting;

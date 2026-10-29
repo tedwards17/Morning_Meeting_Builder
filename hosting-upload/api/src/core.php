@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function fail(int $status,string $message): never {http_response_code($status);echo json_encode(['error'=>['message'=>$message,'request_id'=>$GLOBALS['request_id']??'']]);exit;}
+function fail(int $status,string $message,array $context=[]): never {http_response_code($status);echo json_encode(['error'=>['message'=>$message,'request_id'=>$GLOBALS['request_id']??'']+$context]);exit;}
 function json_out(mixed $data,int $status=200): never {http_response_code($status);echo json_encode($data,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);exit;}
 function query(string $sql,array $args=[]): PDOStatement {$q=$GLOBALS['pdo']->prepare($sql);$q->execute($args);return $q;}
 function one(string $sql,array $args=[]): array|false {return query($sql,$args)->fetch(PDO::FETCH_ASSOC);}

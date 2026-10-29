@@ -503,3 +503,16 @@ select option:disabled { color:#6b7280; background-color:#edf0f3; }
 .content-visual .video-indicator { display:grid; place-items:center; left:5px; right:auto; bottom:5px; width:30px; height:30px; min-width:30px; min-height:30px; max-width:30px; max-height:30px; padding:0; border-radius:50%; aspect-ratio:1; box-sizing:border-box; line-height:1; }
 .content-visual .video-indicator svg { display:block; width:14px; height:14px; }
 .template-font-control input { max-width:160px; }
+
+/* v0.6.7: two template-wide typography sizes; identical image-field baselines. */
+.safe-layout .slide-heading h2,.safe-layout .library-text h3,.safe-layout .caption-fit h3 { font-size:var(--fitted-title-font-size,var(--title-font-size)); }
+.template-font-row,.theme-image-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+.theme-image-controls .field { display:flex; flex-direction:column; gap:8px; margin:0; align-self:start; }
+.theme-image-controls .field>span { display:block; margin:0; line-height:1.4; min-height:1.4em; }
+.theme-image-controls select { height:44px; min-height:44px; width:100%; margin:0; box-sizing:border-box; }
+.template-font-settings { margin-bottom:16px; }
+@media(max-width:600px){.template-font-row,.theme-image-controls{grid-template-columns:1fr}}
+/* The legacy details rule adds 16px only to each first field. Reset it for
+   paired controls so labels and dropdowns share the same vertical baseline. */
+.theme-image-controls>.field:first-of-type,.template-font-row>.field:first-of-type { margin-top:0; }
+.template-font-row>.field { margin:0; display:flex; flex-direction:column; gap:8px; line-height:1.4; }

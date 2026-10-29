@@ -1,7 +1,7 @@
 import type * as RT from 'react';
 import {React as RecoveredReact} from '../recovered/index-DwifuW9D.js';
 import {isPersonalShare} from './slide-policy';
-import {slideFontSize} from './slide-typography';
+import {slideFonts} from './slide-typography';
 import {slideLayout,contentMode} from './slide-layout';
 import {t} from './i18n';
 import type {Row} from './types';
@@ -9,13 +9,13 @@ const React=RecoveredReact as typeof RT;
 function FitText({children,className}:{children:RT.ReactNode;className:string}){
  return <div className={'fit-text '+className}><div className="fit-text-inner">{children}</div></div>;
 }
-function useSlideTextFit(ref:RT.RefObject<HTMLDivElement|null>,fontSize:number,revision:unknown){
+function useSlideTextFit(ref:RT.RefObject<HTMLDivElement|null>,titleSize:number,textSize:number,revision:unknown){
  React.useLayoutEffect(()=>{
   const el=ref.current;if(!el)return;let frame=0,closed=false;
   const fit=()=>{
    if(closed||!el.clientWidth||!el.clientHeight)return;
-   const base=el.clientWidth*fontSize/1920;
-   const set=(size:number)=>el.style.setProperty('--fitted-slide-font-size',size+'px');
+   const base=el.clientWidth*textSize/1920,titleBase=el.clientWidth*titleSize/1920;
+   const set=(size:number)=>{el.style.setProperty('--fitted-slide-font-size',size+'px');el.style.setProperty('--fitted-title-font-size',titleBase*size/base+'px');};
    const fits=()=>{
     const body=el.querySelector<HTMLElement>('.safe-slide-body'),title=el.querySelector<HTMLElement>('.template-region'),content=el.querySelector<HTMLElement>('.content-region');if(!body||!title||!content)return true;
     const bounds=body.getBoundingClientRect(),t=title.getBoundingClientRect(),c=content.getBoundingClientRect();
@@ -27,21 +27,21 @@ function useSlideTextFit(ref:RT.RefObject<HTMLDivElement|null>,fontSize:number,r
    // never changes the available width/height or forces an arbitrary smaller box.
    set(base);let chosen=base;
    if(!fits()){let low=base/100,high=base;for(let i=0;i<14;i++){const size=(low+high)/2;set(size);if(fits())low=size;else high=size;}chosen=low;set(chosen);}
-   el.dataset.baseFont=String(base);el.dataset.fittedFont=String(chosen);el.dataset.textReduced=String(chosen<base-.05);
+   el.dataset.baseTitleFont=String(titleBase);el.dataset.fittedTitleFont=String(titleBase*chosen/base);el.dataset.baseFont=String(base);el.dataset.fittedFont=String(chosen);el.dataset.textReduced=String(chosen<base-.05);
   };
   const resized=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(fit);};
   const observer=new ResizeObserver(resized);observer.observe(el);fit();void document.fonts?.ready.then(resized);
   return()=>{closed=true;observer.disconnect();cancelAnimationFrame(frame);};
- },[ref,fontSize,revision]);
+ },[ref,titleSize,textSize,revision]);
 }
-export function SafeSlide({slide,items,company,groupTitle,logo,style,presenter,date,renderItem,fontSize}:{slide:Row;items:Row[];company:string;groupTitle:string;logo?:string;style:RT.CSSProperties;presenter:string;date:string;renderItem:(item:Row)=>RT.ReactNode;fontSize?:number}){
- const canvas=React.useRef<HTMLDivElement>(null);const size=slideFontSize(fontSize);useSlideTextFit(canvas,size,slide);
+export function SafeSlide({slide,items,company,groupTitle,logo,style,presenter,date,renderItem,fontSize,titleFontSize,textFontSize}:{slide:Row;items:Row[];company:string;groupTitle:string;logo?:string;style:RT.CSSProperties;presenter:string;date:string;renderItem:(item:Row)=>RT.ReactNode;fontSize?:number;titleFontSize?:number;textFontSize?:number}){
+ const canvas=React.useRef<HTMLDivElement>(null);const sizes=slideFonts({fontSize,titleFontSize,textFontSize});useSlideTextFit(canvas,sizes.title,sizes.text,slide);
  const def=slide.definition,layout=slideLayout(def,slide.layoutOverrides),mode=contentMode(items,slide.additionalText??''),position=layout[mode==='textOnly'?'textOnlyPosition':mode==='imageOnly'?'imageOnlyPosition':'imageTextPosition'];
  const media=items.filter(item=>['image','image-text','video','external-video'].includes(item.type)),text=items.filter(item=>item.description||!media.includes(item)||(mode==='imageText'&&def.type!=='gallery'&&def.title!=='Quote of the day'&&item.title!==def.title));
  const mediaLabel=mode==='imageOnly'&&media.length===1&&def.type!=='gallery'&&def.title!=='Quote of the day'&&media[0].title!==def.title?media[0].title:'';
  const templateText=def.text||(isPersonalShare(def)&&!items.length?t('Share a quick personal update. A photo or video is optional.'):'');
  const row=layout.titlePosition.split('-')[0],horizontal=layout.titlePosition.split('-')[1];
- return <div ref={canvas} className={`slide-canvas safe-layout ${media.length?'has-media':''}`} data-text-position={layout.titlePosition} data-title-row={row} data-content-mode={mode} data-content-position={position} data-media-placement={layout.mediaPlacement} style={{...style,"--slide-font-size":`${size/19.2}cqw`} as RT.CSSProperties}>
+ return <div ref={canvas} className={`slide-canvas safe-layout ${media.length?'has-media':''}`} data-text-position={layout.titlePosition} data-title-row={row} data-content-mode={mode} data-content-position={position} data-media-placement={layout.mediaPlacement} style={{...style,"--slide-font-size":`${sizes.text/19.2}cqw`,"--title-font-size":`${sizes.title/19.2}cqw`} as RT.CSSProperties}>
   <div className="slide-inner"><div className="slide-brand">{logo?<img src={logo} alt={t('Company logo')}/>:<span>{company}</span>}<span>{groupTitle}</span></div>
    <div className="safe-slide-body"><div className="template-region" data-horizontal={horizontal} data-vertical={row}><FitText className="template-fit"><div className="slide-heading"><span className="slide-line"/><h2>{def.title}</h2>{templateText&&<p className="template-body">{templateText}</p>}{def.type==='intro'&&<div className="presenter-line"><strong>{presenter}</strong><span>{date}</span></div>}</div></FitText></div>
     <div className="content-region"><div className={`content-frame mode-${mode} ${mediaLabel?'with-media-caption':''}`} data-position={position}>

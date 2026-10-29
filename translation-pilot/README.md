@@ -1,3 +1,7 @@
+# Current release: v0.6.7
+
+Separate template title/text sizes, aligned theme image selectors, 688 reviewed quote titles, and admin deletion of unused saved presentations. Existing hosts use hosting-update and docs/ROUND6_0_6_7_UPGRADE.md. One-time data-only migration 007 if absent; never reimport starter data or rerun installed 005/006. Saved presentation snapshots and private hosting state remain.
+
 # v0.6.6 — consistent slide text and compact controls
 
 Current [cPanel upgrade](docs/ROUND6_0_6_6_UPGRADE.md). No new SQL beyond installed 006. [Checkpoint](docs/ROUND6_CHECKPOINT.md). Earlier release notes below are historical.

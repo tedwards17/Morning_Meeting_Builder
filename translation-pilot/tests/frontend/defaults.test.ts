@@ -84,3 +84,13 @@ describe("Round 3 starter data and browser upgrade", () => {
     expect(next.usage).toEqual(state.usage);
   });
 });
+
+it('gives every starter quote a reviewed summary while preserving quote text and saved snapshots',async()=>{
+ const {default:titles}=await import('../../frontend/src/quote-titles.json');
+ const raw=(await Promise.all([import('../../frontend/src/round2-seed-items-1.json'),import('../../frontend/src/round2-seed-items-2.json'),import('../../frontend/src/round2-seed-items-3.json'),import('../../frontend/src/round2-seed-items-4.json')])).flatMap(part=>part.default);
+ const quotes=raw.filter(item=>item.libraryId.endsWith('008')),state=defaults();expect(quotes).toHaveLength(688);expect(Object.keys(titles)).toHaveLength(688);
+ for(const item of quotes){const fresh=state.items.find(row=>row.id===item.id)!;expect(fresh.title.length).toBeLessThanOrEqual(65);expect(fresh.title).not.toBe(item.title);expect({...fresh,title:item.title}).toEqual(item);}
+ const example=quotes.find(item=>item.description.includes('willing to be the most uncomfortable'))!;expect(state.items.find(item=>item.id===example.id)!.title).toBe('Uncomfortable people improve');
+ const snapshot={id:'old',slides:[{items:[quotes[0]]}]};state.meetings=[snapshot];state.items=[{...quotes[0],useCount:9},{...quotes[1],title:'My own summary'},{...quotes[2],description:'Edited body'},{...quotes[3],organization_id:'server'}];
+ const upgraded=upgradeDefaults(state);expect(upgraded.items[0].title).toBe(state.items[0].id in titles?(titles as Record<string,string>)[state.items[0].id]:'');expect(upgraded.items[0].useCount).toBe(9);expect(upgraded.items.slice(1)).toEqual(state.items.slice(1));expect(upgraded.meetings).toEqual([snapshot]);
+});

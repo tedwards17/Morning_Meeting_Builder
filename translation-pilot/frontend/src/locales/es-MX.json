@@ -1262,5 +1262,17 @@
   "Share a quick personal update. A photo or video is optional.": "Comparte una breve actualización personal. La foto o el video son opcionales.",
   "Slide font size": "Tamaño de fuente de diapositivas",
   "One size for titles and text on every slide. Text wraps before shrinking. Choose 16–96.": "Un tamaño para títulos y texto en todas las diapositivas. El texto pasa a la siguiente línea antes de reducirse. Elige entre 16 y 96.",
-  "Choose a slide font size from 16 to 96.": "Elige un tamaño de fuente de diapositiva entre 16 y 96."
+  "Choose a slide font size from 16 to 96.": "Elige un tamaño de fuente de diapositiva entre 16 y 96.",
+  "Title font size": "Tamaño de letra del título",
+  "Text font size": "Tamaño de letra del texto",
+  "Title size applies to slide and content titles. Text size applies to template, library and meeting text on every slide. Text wraps before shrinking. Choose 16–96.": "El tamaño del título se aplica a los títulos de diapositivas y contenido. El tamaño del texto se aplica al texto de la plantilla, biblioteca y reunión en todas las diapositivas. El texto se ajusta en líneas antes de reducirse. Elija entre 16 y 96.",
+  "Only administrators can delete unused saved presentations.": "Solo los administradores pueden eliminar presentaciones guardadas que no se han usado.",
+  "Only unused saved presentations can be deleted. Started or presented meetings must be retained.": "Solo se pueden eliminar presentaciones guardadas que no se han usado. Las reuniones iniciadas o presentadas deben conservarse.",
+  "Connect to the internet to delete an unused presentation.": "Conéctese a internet para eliminar una presentación sin usar.",
+  "Permanently delete unused presentation “{arg0}” dated {arg1}? This cannot be undone. Library content and uploaded media are retained.": "¿Eliminar permanentemente la presentación sin usar «{arg0}» del {arg1}? Esta acción no se puede deshacer. Se conservan el contenido de la biblioteca y los archivos subidos.",
+  "Delete unused presentation": "Eliminar presentación sin usar",
+  "Deleting…": "Eliminando…",
+  "Unused presentation deleted.": "Presentación sin usar eliminada.",
+  "Confirm deletion of this unused presentation.": "Confirme la eliminación de esta presentación sin usar.",
+  "This unused presentation was deleted by an administrator. Sync to remove the local copy.": "Un administrador eliminó esta presentación sin usar. Sincronice para quitar la copia local."
 }

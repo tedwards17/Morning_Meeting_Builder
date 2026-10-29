@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, transcriptDisplayEntries, transcriptTopicTitle, canReadMeeting, groupMeetings } from "../../frontend/src/meeting-history";
+import { withTranscript, withTranscriptTranslations, withPresentedTopic, transcriptText, readableTranscriptText, transcriptParagraphs, transcriptDisplayEntries, transcriptTopicTitle, canReadMeeting, groupMeetings, unusedMeeting } from "../../frontend/src/meeting-history";
 import { defaults } from "../../frontend/src/defaults";
 import { expireSavedMedia } from "../../frontend/src/retention";
 const slide = {id:crypto.randomUUID(),definition:{title:"Safety Moment"},items:[{id:crypto.randomUUID(),title:"Safe lifting",type:"lesson"}]};
@@ -93,3 +93,5 @@ test("hides the introduction label while keeping Good morning when it was actual
   expect(JSON.stringify(saved)).toBe(original);
   expect(transcriptTopicTitle(meeting,{slideId:slide.id,slideTitle:"Safety Moment"})).toBe("Safety Moment");
 });
+
+test('unused deletion eligibility excludes every evidence of use',()=>{const draft={...meeting,status:'draft'};expect(unusedMeeting(draft)).toBe(true);for(const patch of [{status:'presenting'},{status:'completed'},{startedAt:'today'},{endedAt:'today'},{transcript:[{}]},{presentedTopics:[{}]}])expect(unusedMeeting({...draft,...patch})).toBe(false);expect(unusedMeeting(draft,[{id:'event',meeting_id:draft.id,event_type:'slide_opened'}])).toBe(false);expect(unusedMeeting(draft,[{id:'event',meeting_id:'different'}])).toBe(true);});

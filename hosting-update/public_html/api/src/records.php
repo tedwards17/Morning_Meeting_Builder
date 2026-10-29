@@ -4,7 +4,7 @@ function save_record(array $write):array{
  $id=require_id($write['id']??'');$data=$write['data']??[];if(!is_array($data)||strlen(encoded($data))>524288)fail(422,'Record too large');
  $old=record_row($kind,$id);$prior=$old?payload($old):null;
  if($kind==='templates'){
-  validate_slide_font($data['theme']['fontSize']??null);
+  foreach(['fontSize','titleFontSize','textFontSize'] as $key)validate_slide_font($data['theme'][$key]??null);
   if($prior){if(!template_permission($prior,actor(),'edit'))fail(403,'Template edit denied');if(($data['access']??[])!==($prior['access']??[])||($data['company_visible']??false)!==($prior['company_visible']??false))if(!template_permission($prior,actor(),'share'))fail(403,'Only owner or administrator can share');}
   elseif(!actor()['can_create_templates']&&actor()['role']!=='administrator'&&actor()['role']!=='content_manager')fail(403,'Template creation denied');
   if(!is_array($data['slides']??null)||count($data['slides'])<1||count($data['slides'])>100)fail(422,'Templates require 1–100 slides');
