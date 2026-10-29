@@ -2,6 +2,10 @@
 import os,json,pathlib,shutil,socket,subprocess,tempfile,time,urllib.request,urllib.error,http.cookiejar
 assert os.environ.get('MMB_TEST_ALLOW_RESET')=='1'
 root=pathlib.Path(__file__).resolve().parents[2];php=os.environ.get('PHP_BIN','php');fixture=json.load(open(os.environ.get('MMB_PACKAGE_FIXTURE','/tmp/mmb-e2e-fixture.json')))
+# Expanded browser suites share a fixture IP and legitimately consume the login
+# attempt allowance. This separately isolated package check uses only the explicit
+# disposable test config and resets that fixture's counters, never app throttling.
+subprocess.run([php,'-r',"$c=require getenv('MMB_CONFIG');if(empty($c['test_http']))throw new RuntimeException('Disposable HTTP fixture required');$p=new PDO($c['dsn'],$c['user'],$c['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$p->exec('DELETE FROM login_attempts');"],check=True)
 with tempfile.TemporaryDirectory() as directory:
  stage=pathlib.Path(directory);public=stage/'public_html';shutil.copytree(root.parent/'hosting-upload/public_html',public);private=stage/'morning-meeting-private';private.mkdir()
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
