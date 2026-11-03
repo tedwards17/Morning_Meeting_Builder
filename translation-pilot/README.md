@@ -1,3 +1,7 @@
+# Current release: v0.6.8 — combined Batches 6 and 7
+
+Original agenda-inspired illustrations, optional highlight matching, reusable company images, contextual background uploads, admin logo collection, location availability controls and readable dates. Existing shared templates/saved snapshots/deletion restrictions preserved. [Upgrade and manual checklist](docs/ROUND6_0_6_8_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). No new SQL; prior 007 once if absent. Earlier release notes below are historical.
+
 # Current maintenance patch: v0.6.7.1
 
 See docs/ROUND6_0_6_7_1_PATCH.md. Current meeting slides determine visible numbering and totals; no new SQL, slide-creation controls or presentation-navigation changes. Build version 0.6.7-1.

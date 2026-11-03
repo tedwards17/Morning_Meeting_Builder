@@ -1,13 +1,11 @@
-# Morning Meeting Builder — v0.6.7.1 numbering patch
+# Morning Meeting Builder — v0.6.8
 
-[Small numbering patch notes](hosting-update/docs/ROUND6_0_6_7_1_PATCH.md). Nine real meeting slides now number 1–9; hidden announcement markers no longer inflate the count. No new SQL for this patch. You can upload with the next batch.
+Combined Batches 6 and 7: agenda-inspired slide illustrations, optional slide-highlight matching, reusable administrator-managed illustrations/logos, template background uploads, targeted location availability and readable English/Spanish meeting dates. Existing saved presentations, numbering, text layouts, contribution/rotation and admin unused-draft deletion remain compatible.
 
-Source and prebuilt PHP/static cPanel files are on **Round-6-Development**. No default merge or live deployment. Round 5 and earlier Round 6 releases remain available for rollback.
+Source and prebuilt cPanel files are on **Round-6-Development**. No default-branch merge or live deployment. Earlier Round 5/Round 6 commits remain available for rollback.
 
-**Existing website:** back up first, import **hosting-update/database/007_quote_titles.sql once if version 7 is absent**, then merge **hosting-update/public_html contents** into the document root. Preserve live server-paths.php, config.js, root .htaccess, private configs/provider keys, database, media and corrected paths. Never reset/reimport starter data or rerun installed 005/006.
+**Existing website:** back up, then merge only **hosting-update/public_html contents** into the document root. Keep live server-paths.php, config.js, root .htaccess, private configs/keys, database, media and corrected paths. **No new SQL for v0.6.8.** If earlier 007 quote-title migration is absent, apply it once per the guide; never reset/reimport starter content or rerun installed 005/006.
 
-[Upgrade and manual checklist](hosting-update/docs/ROUND6_0_6_7_UPGRADE.md). [Development checkpoint](translation-pilot/docs/ROUND6_CHECKPOINT.md). [688 reviewed quote titles](hosting-update/docs/QUOTE_TITLES.csv).
+[Upgrade and manual checklist](hosting-update/docs/ROUND6_0_6_8_UPGRADE.md). [Development checkpoint](translation-pilot/docs/ROUND6_CHECKPOINT.md). [688 reviewed quote titles](hosting-update/docs/QUOTE_TITLES.csv).
 
-Independent template-wide title/text sizes, aligned theme image selectors, short starter quote summaries, and administrator deletion of unused saved presentations with confirmation, history protection and synchronized removal. Saved presentations retain captured text/theme. Existing compact library, contribution permissions, rotation, media, translation and completion cleanup remain.
-
-Editable source is translation-pilot/. Developer checks: npm ci; typecheck; lint; test; both builds; check:php; scripts/check-migrations.py; npm run package. Disposable hosted checks: tests/api/round6-editor.py, all five Round 6 browser suites and package-smoke. No production Node service.
+Editable source: translation-pilot/. Node is a development/build tool only; production is PHP/MySQL and static assets. Developer checks: npm ci; typecheck; lint; test; both builds; check:php; scripts/check-migrations.py; npm run package. Hosted checks: tests/api/round6-visuals.py, six Round 6 browser suites and package-smoke (disposable database only).

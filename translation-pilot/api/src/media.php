@@ -9,6 +9,7 @@ function media_allowed(string $id):bool {
   $meeting=one('SELECT * FROM meetings WHERE organization_id=? AND id=?',[org(),$asset['meeting_id']]);
   return $meeting&&$meeting['status']!=='completed'&&can_read_meeting($meeting);
  }
+ if(one("SELECT id FROM records WHERE organization_id=? AND kind='visuals' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.assetId'))=? LIMIT 1",[org(),$id]))return true;
  if(in_array(actor()['role'],['administrator','content_manager','report_viewer'],true))return true;
  if($asset['creator_id']===actor()['id'])return true;
  foreach(rows('SELECT kind,payload FROM records WHERE organization_id=?',[org()]) as $r)if(str_contains($r['payload'],$id)&&visible($r['kind'],payload($r)))return true;
@@ -49,6 +50,7 @@ function validate_meeting_uploads(array $meeting):void {
 }
 if($path==='media'&&$method==='POST') {
  $temporary=($_POST['scope']??'')==='meeting-only';
+ if(!empty($_POST['template_id'])){$template=record_row('templates',require_id($_POST['template_id']));if($template){if(!template_permission(payload($template),actor(),'edit'))fail(403,'Template edit denied');}elseif(!actor()['can_create_templates']&&!in_array(actor()['role'],['administrator','content_manager'],true))fail(403,'Template creation denied');}
  role($temporary?['administrator','content_manager','location']:['administrator','content_manager','location','report_viewer']);
  $meetingId=$temporary?require_id($_POST['meeting_id']??''):null;
  $f=$_FILES['image']??null;if(!$f||$f['error']!==UPLOAD_ERR_OK)fail(422,'Media upload failed; check PHP upload limits');
@@ -71,7 +73,7 @@ if($path==='media'&&$method==='POST') {
  if(!$video&&function_exists('imagecreatefromstring')&&function_exists('imagewebp')) {
   $image=@imagecreatefromstring(file_get_contents($f['tmp_name']));if(!$image)fail(422,'Image decoding failed');
   if($mime==='image/jpeg'&&function_exists('exif_read_data')){$exif=@exif_read_data($f['tmp_name']);$orientation=$exif['Orientation']??1;if(in_array($orientation,[2,4,5,7],true))imageflip($image,IMG_FLIP_HORIZONTAL);$angle=[3=>180,4=>180,5=>90,6=>-90,7=>-90,8=>90][$orientation]??0;if($angle)$image=imagerotate($image,$angle,0);}
-  $w=imagesx($image);$h=imagesy($image);$scale=min(1,2400/max($w,$h));if($scale<1)$image=imagescale($image,(int)($w*$scale),(int)($h*$scale));$target=preg_replace('/\.[^.]+$/','.webp',$target);if(!imagewebp($image,$target,85))throw new RuntimeException('WebP encoding failed');$thumb=substr($target,0,-5).'-thumb.webp';$small=imagescale($image,min(400,imagesx($image)));imagewebp($small,$thumb,75);imagedestroy($small);$info=[imagesx($image),imagesy($image)];imagedestroy($image);$mime='image/webp';
+  imagealphablending($image,false);imagesavealpha($image,true);$w=imagesx($image);$h=imagesy($image);$scale=min(1,2400/max($w,$h));if($scale<1)$image=imagescale($image,(int)($w*$scale),(int)($h*$scale));$designLossless=!empty($_POST['design_image'])&&in_array($mime,['image/png','image/webp'],true);$quality=$designLossless?(defined('IMG_WEBP_LOSSLESS')?IMG_WEBP_LOSSLESS:100):85;imagesavealpha($image,true);$target=preg_replace('/\.[^.]+$/','.webp',$target);if(!imagewebp($image,$target,$quality))throw new RuntimeException('WebP encoding failed');$thumb=substr($target,0,-5).'-thumb.webp';$small=imagescale($image,min(400,imagesx($image)));imagesavealpha($small,true);imagewebp($small,$thumb,$designLossless?$quality:75);imagedestroy($small);$info=[imagesx($image),imagesy($image)];imagedestroy($image);$mime='image/webp';
  }elseif(!move_uploaded_file($f['tmp_name'],$target))throw new RuntimeException('Media storage failed');
  chmod($target,0600);if($thumb)chmod($thumb,0600);$hash=hash_file('sha256',$target);$scope=$temporary?'meeting-only':'shared';
  $duplicate=one('SELECT * FROM media_assets WHERE organization_id=? AND sha256=? AND archived=0 AND scope=? AND meeting_id <=> ?',[org(),$hash,$scope,$meetingId]);

@@ -19853,8 +19853,8 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 }
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
- const backdrop=Qs(v.backgroundAssetId??theme.backgroundAssetId),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),illustrationUrl=Qs(v.illustration?.assetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,illustrationUrl,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),
@@ -20107,55 +20107,8 @@ const Zg = {
   discussion: "Discussion / problems",
   closing: "Closing",
 };
-function Bg({ theme: n, onChange: i }) {
-  const { state: r } = qt(),
-    s = r.items.filter((c) => c.type === "image" && c.assetId && !c.archived);
-  return d.jsxs(d.Fragment, {
-    children: [
-      d.jsx(globalThis.MMB.ThemeColors, {theme:n,onChange:i}),
-      d.jsxs("div", {
-        className: "form-row theme-image-controls",
-        children: [
-          d.jsx(Ne, {
-            label: translateUI("Background image"),
-            children: d.jsxs("select", {
-              value: n.backgroundAssetId ?? "",
-              onChange: (c) =>
-                i({ ...n, backgroundAssetId: c.target.value || void 0 }),
-              children: [
-                d.jsx("option", { value: "", children: translateUI("Solid color") }),
-                s.map((c) =>
-                  d.jsx(
-                    "option",
-                    { value: c.assetId, children: c.title },
-                    c.id,
-                  ),
-                ),
-              ],
-            }),
-          }),
-          d.jsx(Ne, {
-            label: translateUI("Logo image"),
-            children: d.jsxs("select", {
-              value: n.logoAssetId ?? "",
-              onChange: (c) =>
-                i({ ...n, logoAssetId: c.target.value || void 0 }),
-              children: [
-                d.jsx("option", { value: "", children: translateUI("Company name") }),
-                s.map((c) =>
-                  d.jsx(
-                    "option",
-                    { value: c.assetId, children: c.title },
-                    c.id,
-                  ),
-                ),
-              ],
-            }),
-          }),
-        ],
-      }),
-    ],
-  });
+function Bg({theme:n,onChange:i,templateId}) {
+ return d.jsxs(d.Fragment,{children:[d.jsx(globalThis.MMB.ThemeColors,{theme:n,onChange:i}),d.jsx(globalThis.MMB.ThemeImages,{theme:n,onChange:i,templateId})]});
 }
 function mE({ onUse: n }) {
   const { state: i, update: r, run: s, notify: c, busy: f } = qt(),
@@ -20177,6 +20130,7 @@ function mE({ onUse: n }) {
         description: translateUI("Set the rhythm once. Make each morning your own."),
         actions: d.jsxs("button", {
           className: "primary",
+          disabled:!globalThis.MMB.canCreateTemplate(),
           onClick: () =>
             m({
               id: Bt(),
@@ -20219,6 +20173,7 @@ function mE({ onUse: n }) {
                 d.jsx("button", {
                   className: "template-preview",
                   "aria-label": translateUI("Edit {arg0}", {arg0: S.name}),
+                  disabled:!globalThis.MMB.canEditTemplate(S),
                   onClick: () => m(structuredClone(S)),
                   children: d.jsx(Fi, {
                     slide: A.slides[0],
@@ -20257,12 +20212,13 @@ function mE({ onUse: n }) {
                       children: [
                         d.jsx("button", {
                           className: "primary",
-                          disabled: S.archived,
+                          disabled: S.archived||!globalThis.MMB.canUse(S),
                           onClick: () => n(S),
                           children: translateUI("Use template"),
                         }),
                         d.jsx("button", {
                           onClick: () => m(structuredClone(S)),
+                          disabled:!globalThis.MMB.canEditTemplate(S),
                           children: translateUI("Edit"),
                         }),
                       ],
@@ -20272,6 +20228,7 @@ function mE({ onUse: n }) {
                       children: [
                         d.jsxs("button", {
                           title: translateUI("Duplicate template"),
+                          disabled:!globalThis.MMB.canCreateTemplate(),
                           onClick: () => {
                             s(async () => {
                               const M = new Map(
@@ -20307,7 +20264,7 @@ function mE({ onUse: n }) {
                         }),
                         d.jsxs("button", {
                           disabled:
-                            S.archived || i.settings.defaultTemplateId === S.id,
+                            S.archived || !globalThis.MMB.canUse(S) || i.settings.defaultTemplateId === S.id,
                           onClick: () => {
                             s(async () => {
                               await r((M) => ({
@@ -20322,6 +20279,7 @@ function mE({ onUse: n }) {
                           children: [d.jsx(Ug, { size: 16 }), translateUI(" Default")],
                         }),
                         d.jsxs("button", {
+                          disabled:!globalThis.MMB.canEditTemplate(S),
                           onClick: () => {
                             s(async () => {
                               await _({
@@ -20476,6 +20434,7 @@ function pE({ template: n, onClose: i }) {
                   d.jsx("h3", { children: translateUI("Template theme") }),
                   d.jsx(globalThis.MMB.TemplateFontControl,{theme:m.theme,onChange:theme=>L({...m,theme})}),
                   d.jsx(Bg, {
+                    templateId:m.id,
                     theme: m.theme,
                     onChange: (C) => L({ ...m, theme: C }),
                   }),
@@ -20527,6 +20486,7 @@ function pE({ template: n, onClose: i }) {
                             }),
                           }),
                           d.jsx(Bg, {
+                            templateId:m.id,
                             theme: C.theme,
                             onChange: (G) =>
                               L({
@@ -20598,6 +20558,7 @@ function pE({ template: n, onClose: i }) {
                             className: "slide-number",
                             children: G + 1,
                           }),
+                          d.jsx(globalThis.MMB.SlideIllustrationBadge,{definition:C}),
                           d.jsxs("span", {
                             children: [
                               C.title,
@@ -20812,7 +20773,8 @@ function pE({ template: n, onClose: i }) {
                     ],
                   }),
                   d.jsx(globalThis.MMB.ColorControl,{label:translateUI("Builder slide color"),value:O.builderColor,optional:true,onChange:(color)=>V({builderColor:color})}),
-                  d.jsx("small",{children:translateUI("A subtle highlight in the meeting builder’s slide list only.")}),
+                  d.jsx("small",{children:translateUI("A subtle slide-list highlight. Illustrations can optionally match it.")}),
+                  d.jsx(globalThis.MMB.SlideIllustrationPicker,{slide:O,onChange:V}),
                   d.jsx(globalThis.MMB.SlideLayoutControls,{slide:O,defaults:m.layoutDefaults,onChange:V}),
                   d.jsxs("details", {
                     children: [
@@ -20836,6 +20798,7 @@ function pE({ template: n, onClose: i }) {
                               V({
                                 background: void 0,
                                 backgroundAssetId: void 0,
+                                backgroundImageHidden: false,
                               }),
                             children: translateUI("Use theme background"),
                           }),
@@ -20844,14 +20807,15 @@ function pE({ template: n, onClose: i }) {
                       d.jsx(Ne, {
                         label: translateUI("Background image"),
                         children: d.jsxs("select", {
-                          value: O.backgroundAssetId ?? "",
+                          value: O.backgroundImageHidden ? "none" : (O.backgroundAssetId ?? ""),
                           onChange: (C) =>
-                            V({ backgroundAssetId: C.target.value || void 0 }),
+                            V({ backgroundImageHidden:C.target.value==="none",backgroundAssetId:C.target.value==="none"?undefined:(C.target.value||undefined) }),
                           children: [
                             d.jsx("option", {
                               value: "",
                               children: translateUI("Use theme image / color"),
                             }),
+                            d.jsx("option",{value:"none",children:translateUI("No background image")}),
                             r.items
                               .filter((C) => C.type === "image" && C.assetId)
                               .map((C) =>
@@ -22936,6 +22900,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                             className: "slide-number",
                             children: number,
                           }),
+                          d.jsx(globalThis.MMB.SlideIllustrationBadge,{definition:N.definition}),
                           d.jsxs("span", {
                             children: [
                               d.jsx("strong", { children: N.definition.title }),
@@ -24499,7 +24464,7 @@ function Zf(n) {
       if (new Set(m.slides.map((v) => v.id)).size !== m.slides.length)
         throw new Error(translateUI("Duplicate slides found."));
       m.slides.forEach((v) => {
-        if ((c(v.backgroundAssetId), v.libraryId && !r.has(v.libraryId)))
+        if ((c(v.backgroundAssetId),c(v.illustration?.assetId), v.libraryId && !r.has(v.libraryId)))
           throw new Error(translateUI("A template library is missing."));
         if (v.contentIds.some((_) => !s.has(_)))
           throw new Error(translateUI("A fixed selection is missing."));
@@ -24511,7 +24476,7 @@ function Zf(n) {
       (f(m.theme),
         m.groups.forEach((g) => f(g.theme)),
         m.slides.forEach((g) => {
-          (c(g.definition.backgroundAssetId),
+          (c(g.definition.backgroundAssetId),c(g.definition.illustration?.assetId),
             g.items.forEach((v) => {
               (c(v.assetId), c(v.thumbnailAssetId));
             }));

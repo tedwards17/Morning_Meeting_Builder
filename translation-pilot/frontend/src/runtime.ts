@@ -279,6 +279,7 @@ export const repository = {
         await db.all<Usage>("events"),
         location,
       );
+      editableTemplatesAvailable=s!.templates.some(template=>!template.archived&&canTemplate(session!.account,template,'edit'));
       return s!;
     }
     return recalculate(s!) as State;
@@ -705,6 +706,7 @@ export async function download(meeting: Row) {
       ]),
       ...meeting.slides.flatMap((s: Row) => [
         s.definition.backgroundAssetId,
+        s.definition.illustration?.assetId,
         ...s.items.map((i: Row) => i.assetId),
       ]),
     ].filter(Boolean),
@@ -741,14 +743,17 @@ export async function download(meeting: Row) {
   }
 }
 let assets: Row[] = [];
+let editableTemplatesAvailable=false;
 export function mediaUrl(hash: string, assetId?:string) {
   const asset = assets.find((a) => assetId ? a.id === assetId : a.hash === hash);
   return hosted && asset ? `./api/v1/media/${asset.id}` : null;
 }
-export async function upload(file: File) {
+export async function upload(file: File,templateId?:string,designImage=false) {
   if (!navigator.onLine) throw new Error(translateUI("Image upload needs a connection"));
   const body = new FormData();
   body.append("image", file);
+  if(templateId)body.append("template_id",templateId);
+  if(designImage)body.append("design_image","1");
   const asset = await api("media", body);
   assets.push(asset);
   return { asset, duplicate: false };
@@ -820,7 +825,7 @@ export function canNavigate(page: string) {
     return (
       session.account.can_create_templates ||
       session.account.role === "administrator" ||
-      session.account.role === "content_manager"
+      session.account.role === "content_manager" || editableTemplatesAvailable
     );
   return (
     page !== "backup" ||
@@ -860,6 +865,8 @@ globalThis.MMB = {
   },
   isMeetingExpired,
   discardExpiredMedia,
+  canCreateTemplate:()=>!hosted||!!session&&(session.account.can_create_templates||['administrator','content_manager'].includes(session.account.role)),
+  canEditTemplate:(template:Row)=>!hosted||!!session&&canTemplate(session.account,template,'edit'),
   canUse: (t: Row) =>
     !hosted || !session || canTemplate(session.account, t, "use"),
   repository,
@@ -919,6 +926,7 @@ function meetingAssetIds(meeting: Row): Set<string> {
       ]),
       ...meeting.slides.flatMap((s: Row) => [
         s.definition.backgroundAssetId,
+        s.definition.illustration?.assetId,
         ...s.items.map((i: Row) => i.assetId),
       ]),
     ].filter(Boolean),

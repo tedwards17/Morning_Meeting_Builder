@@ -1,3 +1,6 @@
+import {TemplateDistribution} from "./template-distribution";
+import {formatMeetingDate} from "./meeting-date";
+import {SlideIllustrationPicker,SlideIllustrationBadge,ThemeImages} from "./design-ui";
 import {SafeSlide} from "./safe-slide";
 import {TemplateLayoutDefaults,SlideLayoutControls,MeetingTextControls,TemplateFontControl} from "./layout-controls";
 import {ColorControl,ThemeColors,PositionPicker,SlideTypeControl} from "./slide-controls";
@@ -29,6 +32,9 @@ import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
 globalThis.MMB.BuilderContent=BuilderContent;
 globalThis.MMB.SafeSlide=SafeSlide;
+globalThis.MMB.SlideIllustrationPicker=SlideIllustrationPicker;
+globalThis.MMB.SlideIllustrationBadge=SlideIllustrationBadge;
+globalThis.MMB.ThemeImages=ThemeImages;
 globalThis.MMB.TemplateFontControl=TemplateFontControl;
 globalThis.MMB.TemplateLayoutDefaults=TemplateLayoutDefaults;
 globalThis.MMB.SlideLayoutControls=SlideLayoutControls;
@@ -103,17 +109,17 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
       !globalThis.MMB.isMeetingExpired(meeting);
     const topics=meeting.presentedTopics??[];
     return <section className="meeting-record">
-      <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</p></div>
+      <div className="page-title"><div><h1>{meeting.templateName}</h1><p>{meeting.presenter||translateUI("Presenter not entered")} · {formatMeetingDate(meeting.date)}</p></div>
         <div className="actions"><button onClick={()=>setSelected(null)}>{translateUI("Back to Meetings")}</button>
           {editable&&<button className="primary" onClick={async()=>{try{setOpenError("");onOpen(await runtime.claimSavedMeeting(meeting));}catch(error){setOpenError(uiError(error));}}}>{translateUI("Open saved presentation")}</button>}
           {runtime.hosted&&account?.role==='administrator'&&unusedMeeting(meeting,globalThis.MMB.events??[])&&<button className="danger" disabled={deleting} onClick={async()=>{
-            if(!await confirmUI(translateUI('Permanently delete unused presentation “{arg0}” dated {arg1}? This cannot be undone. Library content and uploaded media are retained.',{arg0:meeting.templateName,arg1:meeting.date})))return;
+            if(!await confirmUI(translateUI('Permanently delete unused presentation “{arg0}” dated {arg1}? This cannot be undone. Library content and uploaded media are retained.',{arg0:meeting.templateName,arg1:formatMeetingDate(meeting.date)})))return;
             setDeleting(true);setOpenError('');try{await runtime.deleteUnusedMeeting(meeting);setSelected(null);setNotice(translateUI('Unused presentation deleted.'));}catch(error){setOpenError(uiError(error));}finally{setDeleting(false);}
           }}>{translateUI(deleting?'Deleting…':'Delete unused presentation')}</button>}
           <button onClick={()=>globalThis.MMB.exportTranscript(meeting)}>{translateUI("Download meeting notes")}</button></div></div>
       {openError&&<p role="alert">{openError}</p>}
       <div className="panel"><h2>{translateUI("Meeting details")}</h2><dl className="meeting-metadata">
-        <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{meeting.date}</dd>
+        <dt>{translateUI("Presenter")}</dt><dd>{meeting.presenter||translateUI("Not entered")}</dd><dt>{translateUI("Scheduled date")}</dt><dd>{formatMeetingDate(meeting.date)}</dd>
         <dt>{translateUI("Status")}</dt><dd>{meeting.status==="presenting"?translateUI("Paused / in progress"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved for presentation")}</dd>
         <dt>{translateUI("Meeting area")}</dt><dd>{(globalThis.MMB.locations??[]).find((row:Row)=>row.id===meeting.location_id)?.name??state.device.name}</dd>
         {meeting.startedAt&&<><dt>{translateUI("Started")}</dt><dd>{new Date(meeting.startedAt).toLocaleString(getLocale())}</dd></>}
@@ -136,7 +142,7 @@ function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeti
     {!runtime.hosted&&<p className="muted">{translateUI("Meetings are saved in this browser. Company account history requires the hosted account service.")}</p>}
     {([['Saved for presentation',groups.saved],['Previously presented',groups.presented]] as const).map(([title,list])=><section className="panel" key={title}>
       <h2>{uiText(title)}</h2>{list.length?<div className="meeting-list">{list.map(meeting=><button className="meeting-list-row" key={meeting.id} onClick={()=>setSelected(meeting.id)}>
-        <span><strong>{meeting.templateName}</strong><small>{meeting.presenter||translateUI("Presenter not entered")} · {meeting.date}</small></span>
+        <span><strong>{meeting.templateName}</strong><small>{meeting.presenter||translateUI("Presenter not entered")} · {formatMeetingDate(meeting.date)}</small></span>
         <span>{meeting.status==="presenting"?translateUI("Paused"):meeting.status==="completed"?translateUI("Presented"):translateUI("Saved")} · {(meeting.transcript??[]).length} {translateUI("transcript phrases")}</span>
       </button>)}</div>:<p className="muted">{title==='Saved for presentation'?translateUI("No saved presentations yet."):translateUI("No presentations logged yet.")}</p>}</section>)}
   </section>;
@@ -803,54 +809,7 @@ function Manager({ close }: { close: () => void }) {
             )}
             {tab === "templates" && (
               <>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={!!editing.company_visible}
-                    onChange={(e) => field("company_visible", e.target.checked)}
-                  />
-                  {translateUI("Company-wide use")}</label>
-                <h3>{translateUI("Share use and edit separately")}</h3>
-                {[
-                  ...directory.accounts.map((a) => ({
-                    ...a,
-                    accessKind: "account_id",
-                  })),
-                  ...directory.locations.map((l) => ({
-                    ...l,
-                    accessKind: "location_id",
-                  })),
-                ].map((r) => {
-                  const a = (editing.access ?? []).find(
-                    (a: Row) => a[r.accessKind] === r.id,
-                  ) ?? {
-                    [r.accessKind]: r.id,
-                    can_use: false,
-                    can_edit: false,
-                  };
-                  return (
-                    <div className="sharing-row" key={r.accessKind + r.id}>
-                      <span>{(r as Row).name ?? (r as Row).username}</span>
-                      {["can_use", "can_edit"].map((k) => (
-                        <label className="check" key={k}>
-                          <input
-                            type="checkbox"
-                            checked={!!a[k]}
-                            onChange={(e) =>
-                              field("access", [
-                                ...(editing.access ?? []).filter(
-                                  (v: Row) => v[r.accessKind] !== r.id,
-                                ),
-                                { ...a, [k]: e.target.checked },
-                              ])
-                            }
-                          />
-                          {k === "can_use" ? translateUI("Use") : translateUI("Edit")}
-                        </label>
-                      ))}
-                    </div>
-                  );
-                })}
+                <TemplateDistribution template={editing} locations={directory.locations} accounts={directory.accounts} disabled={!admin&&editing.owner_id!==runtime.session?.account.id} onChange={setEditing}/>
                 <h3>{translateUI("Named insertion slots")}</h3>
                 {editing.slides.map((s: Row, i: number) => (
                   <label key={s.id}>

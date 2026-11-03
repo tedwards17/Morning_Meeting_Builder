@@ -8,7 +8,7 @@ function store_meeting(array $m):void{
  if(!$old&&one("SELECT record_id FROM sync_changes WHERE organization_id=? AND kind='meetings' AND record_id=? LIMIT 1",[org(),$id]))fail(409,'This unused presentation was deleted by an administrator. Sync to remove the local copy.',['deleted_meeting_id'=>$id]);
  if($old&&($old['account_id']!==actor()['id']||$old['device_id']!==$GLOBALS['device']['id']))fail(403,'Meeting belongs to another device');
  $m['organization_id']=org();$m['account_id']=actor()['id'];$m['device_id']=$GLOBALS['device']['id'];
- foreach($m['slides']??[] as $slide){validate_slide_layout($slide['layoutOverrides']??null,true);validate_slide_layout($slide['definition']['templateLayout']??null);validate_slide_layout($slide['definition']['layoutOverrides']??null);if(isset($slide['additionalText'])&&(!is_string($slide['additionalText'])||mb_strlen($slide['additionalText'],'UTF-8')>20000))fail(422,'Meeting text must be 20000 characters or fewer.');}
+ foreach($m['slides']??[] as $slide){validate_slide_illustration($slide['definition']??[]);validate_slide_layout($slide['layoutOverrides']??null,true);validate_slide_layout($slide['definition']['templateLayout']??null);validate_slide_layout($slide['definition']['layoutOverrides']??null);if(isset($slide['additionalText'])&&(!is_string($slide['additionalText'])||mb_strlen($slide['additionalText'],'UTF-8')>20000))fail(422,'Meeting text must be 20000 characters or fewer.');}
  validate_slide_font($m['theme']['fontSize']??null);validate_slide_font($m['theme']['titleFontSize']??null);validate_slide_font($m['theme']['textFontSize']??null);
  validate_meeting_history($m);
  if($old&&$old['status']==='completed') {
