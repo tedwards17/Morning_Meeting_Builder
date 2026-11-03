@@ -44,7 +44,7 @@ Themes, per-group background overrides, legacy references and saved snapshots re
 
 ## Verification and remaining device checks
 
-Local verification: 100 unit tests; 119 hosted API checks (97 retained + 22 visual/permission cases); 228 browser checks (190 retained + 38 new); 23 PHP syntax checks; seven unchanged migrations; typecheck, lint, localization and both builds. Package smoke and GitHub CI results are recorded in ROUND6_CHECKPOINT.md when complete. Disposable PHP 8.3/MariaDB 10.11 and headless Chromium 153 were used locally, with mocked provider tests and no paid provider calls. Desktop/mobile screenshots inspected. These are not physical-phone/TV or native open-dropdown acceptance tests.
+Local verification: 100 unit tests; 119 hosted API checks (97 retained + 22 visual/permission cases); 228 browser checks (190 retained + 38 new); 23 PHP syntax checks; seven unchanged migrations; typecheck, lint, localization and both builds. All four package smoke checks and GitHub CI passed; run 41738358591 is linked in ROUND6_CHECKPOINT.md. Disposable PHP 8.3/MariaDB 10.11 and headless Chromium 153 were used locally, with mocked provider tests and no paid provider calls. Desktop/mobile screenshots inspected. These are not physical-phone/TV or native open-dropdown acceptance tests.
 
 ## Short manual checklist
 
