@@ -1,6 +1,6 @@
 import {TemplateDistribution} from "./template-distribution";
 import {formatMeetingDate} from "./meeting-date";
-import {SlideIllustrationPicker,SlideIllustrationBadge,ThemeImages} from "./design-ui";
+import {ThemeImages,SlideBackground} from "./design-ui";
 import {SafeSlide} from "./safe-slide";
 import {TemplateLayoutDefaults,SlideLayoutControls,MeetingTextControls,TemplateFontControl} from "./layout-controls";
 import {ColorControl,ThemeColors,PositionPicker,SlideTypeControl} from "./slide-controls";
@@ -32,8 +32,7 @@ import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
 globalThis.MMB.BuilderContent=BuilderContent;
 globalThis.MMB.SafeSlide=SafeSlide;
-globalThis.MMB.SlideIllustrationPicker=SlideIllustrationPicker;
-globalThis.MMB.SlideIllustrationBadge=SlideIllustrationBadge;
+globalThis.MMB.SlideBackground=SlideBackground;
 globalThis.MMB.ThemeImages=ThemeImages;
 globalThis.MMB.TemplateFontControl=TemplateFontControl;
 globalThis.MMB.TemplateLayoutDefaults=TemplateLayoutDefaults;

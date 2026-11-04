@@ -18122,6 +18122,9 @@ const Vi = 1,
     textFontSize: Gs().int().min(16).max(96).optional(),
     backgroundAssetId: Ke.optional(),
     logoAssetId: Ke.optional(),
+    logoSize: Gs().min(25).max(100).optional(),
+    logoTrim: Na().optional(),
+    backgroundFit: Ta(["cover","contain"]).optional(),
   }),
   Yv = Ht({ id: Ke, title: vn, theme: Ef }),
   Gv = Ht({
@@ -19853,8 +19856,8 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 }
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
- const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),illustrationUrl=Qs(v.illustration?.assetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,illustrationUrl,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),
@@ -20558,7 +20561,6 @@ function pE({ template: n, onClose: i }) {
                             className: "slide-number",
                             children: G + 1,
                           }),
-                          d.jsx(globalThis.MMB.SlideIllustrationBadge,{definition:C}),
                           d.jsxs("span", {
                             children: [
                               C.title,
@@ -20773,8 +20775,7 @@ function pE({ template: n, onClose: i }) {
                     ],
                   }),
                   d.jsx(globalThis.MMB.ColorControl,{label:translateUI("Builder slide color"),value:O.builderColor,optional:true,onChange:(color)=>V({builderColor:color})}),
-                  d.jsx("small",{children:translateUI("A subtle slide-list highlight. Illustrations can optionally match it.")}),
-                  d.jsx(globalThis.MMB.SlideIllustrationPicker,{slide:O,onChange:V}),
+                  d.jsx("small",{children:translateUI("A subtle color for this slide in the builder.")}),
                   d.jsx(globalThis.MMB.SlideLayoutControls,{slide:O,defaults:m.layoutDefaults,onChange:V}),
                   d.jsxs("details", {
                     children: [
@@ -20799,35 +20800,13 @@ function pE({ template: n, onClose: i }) {
                                 background: void 0,
                                 backgroundAssetId: void 0,
                                 backgroundImageHidden: false,
+                                backgroundFit: void 0,
                               }),
                             children: translateUI("Use theme background"),
                           }),
                         ],
                       }),
-                      d.jsx(Ne, {
-                        label: translateUI("Background image"),
-                        children: d.jsxs("select", {
-                          value: O.backgroundImageHidden ? "none" : (O.backgroundAssetId ?? ""),
-                          onChange: (C) =>
-                            V({ backgroundImageHidden:C.target.value==="none",backgroundAssetId:C.target.value==="none"?undefined:(C.target.value||undefined) }),
-                          children: [
-                            d.jsx("option", {
-                              value: "",
-                              children: translateUI("Use theme image / color"),
-                            }),
-                            d.jsx("option",{value:"none",children:translateUI("No background image")}),
-                            r.items
-                              .filter((C) => C.type === "image" && C.assetId)
-                              .map((C) =>
-                                d.jsx(
-                                  "option",
-                                  { value: C.assetId, children: C.title },
-                                  C.id,
-                                ),
-                              ),
-                          ],
-                        }),
-                      }),
+                      d.jsx(globalThis.MMB.SlideBackground,{slide:O,onChange:V,templateId:m.id}),
                       d.jsx(Ne, {
                         label: translateUI("Presenter notes"),
                         hint: translateUI("Visible in the builder. Hidden from the audience."),
@@ -22900,7 +22879,6 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                             className: "slide-number",
                             children: number,
                           }),
-                          d.jsx(globalThis.MMB.SlideIllustrationBadge,{definition:N.definition}),
                           d.jsxs("span", {
                             children: [
                               d.jsx("strong", { children: N.definition.title }),
@@ -24464,7 +24442,7 @@ function Zf(n) {
       if (new Set(m.slides.map((v) => v.id)).size !== m.slides.length)
         throw new Error(translateUI("Duplicate slides found."));
       m.slides.forEach((v) => {
-        if ((c(v.backgroundAssetId),c(v.illustration?.assetId), v.libraryId && !r.has(v.libraryId)))
+        if ((c(v.backgroundAssetId), v.libraryId && !r.has(v.libraryId)))
           throw new Error(translateUI("A template library is missing."));
         if (v.contentIds.some((_) => !s.has(_)))
           throw new Error(translateUI("A fixed selection is missing."));
@@ -24476,7 +24454,7 @@ function Zf(n) {
       (f(m.theme),
         m.groups.forEach((g) => f(g.theme)),
         m.slides.forEach((g) => {
-          (c(g.definition.backgroundAssetId),c(g.definition.illustration?.assetId),
+          (c(g.definition.backgroundAssetId),
             g.items.forEach((v) => {
               (c(v.assetId), c(v.thumbnailAssetId));
             }));

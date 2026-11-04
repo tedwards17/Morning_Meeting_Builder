@@ -1,3 +1,7 @@
+# Current release: v0.6.9 — simpler branding and dedicated backgrounds
+
+Illustrations removed. Transparent logos fill a fixed header area with padding trim and adjustable size; background collections are separate from library content and support Fill slide / Shrink to fit. [Upgrade and manual checklist](docs/ROUND6_0_6_9_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). No new SQL; earlier 007 once if absent. Earlier release notes below are historical.
+
 # Current release: v0.6.8 — combined Batches 6 and 7
 
 Original agenda-inspired illustrations, optional highlight matching, reusable company images, contextual background uploads, admin logo collection, location availability controls and readable dates. Existing shared templates/saved snapshots/deletion restrictions preserved. [Upgrade and manual checklist](docs/ROUND6_0_6_8_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). No new SQL; prior 007 once if absent. Earlier release notes below are historical.

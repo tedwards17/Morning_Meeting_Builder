@@ -12,7 +12,6 @@ function collectReferences(meeting: Row, ids: Set<string>) {
     if (id) ids.add(id);
   for (const slide of meeting.slides ?? []) {
     if (slide.definition?.backgroundAssetId) ids.add(slide.definition.backgroundAssetId);
-    if (slide.definition?.illustration?.assetId) ids.add(slide.definition.illustration.assetId);
     for (const item of slide.items ?? [])
       for (const id of [item.assetId, item.thumbnailAssetId]) if (id) ids.add(id);
   }
@@ -47,7 +46,7 @@ export function expireSavedMedia(state: State, now = Date.now(), meetingId?:stri
   for (const template of state.templates) {
     for (const id of [template.theme?.backgroundAssetId, template.theme?.logoAssetId,
       ...(template.groups ?? []).flatMap((group: Row) => [group.theme?.backgroundAssetId, group.theme?.logoAssetId]),
-      ...(template.slides ?? []).flatMap((slide: Row) => [slide.backgroundAssetId,slide.illustration?.assetId])])
+      ...(template.slides ?? []).flatMap((slide: Row) => [slide.backgroundAssetId])])
       if (id) references.add(id);
   }
   for (const broadcast of state.broadcasts ?? [])

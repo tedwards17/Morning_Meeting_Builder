@@ -77,7 +77,7 @@ if($path==='media'&&$method==='POST') {
  }elseif(!move_uploaded_file($f['tmp_name'],$target))throw new RuntimeException('Media storage failed');
  chmod($target,0600);if($thumb)chmod($thumb,0600);$hash=hash_file('sha256',$target);$scope=$temporary?'meeting-only':'shared';
  $duplicate=one('SELECT * FROM media_assets WHERE organization_id=? AND sha256=? AND archived=0 AND scope=? AND meeting_id <=> ?',[org(),$hash,$scope,$meetingId]);
- if($duplicate&&!media_allowed($duplicate['id']))$duplicate=false;
+ if($duplicate&&(!media_allowed($duplicate['id'])||(!empty($_POST['design_image'])&&!empty($_POST['template_id'])&&$duplicate['creator_id']!==actor()['id'])))$duplicate=false;
  if($duplicate){unlink($target);if($thumb)unlink($thumb);$pdo->commit();json_out(media_meta($duplicate));}
  $id=uuid();query('INSERT INTO media_assets(id,organization_id,creator_id,stored_path,thumbnail_path,sha256,mime,byte_size,width,height,name,created_at,scope,meeting_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6),?,?)',[ $id,org(),actor()['id'],$target,$thumb,$hash,$mime,filesize($target),$info[0],$info[1],substr(basename($f['name']),0,255),$scope,$meetingId]);change('assets',$id);audit('media_upload',$id);$pdo->commit();json_out(media_meta(one('SELECT * FROM media_assets WHERE organization_id=? AND id=?',[org(),$id])),201);
 }

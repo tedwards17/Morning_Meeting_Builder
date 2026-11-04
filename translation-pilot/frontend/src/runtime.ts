@@ -706,7 +706,7 @@ export async function download(meeting: Row) {
       ]),
       ...meeting.slides.flatMap((s: Row) => [
         s.definition.backgroundAssetId,
-        s.definition.illustration?.assetId,
+
         ...s.items.map((i: Row) => i.assetId),
       ]),
     ].filter(Boolean),
@@ -926,7 +926,7 @@ function meetingAssetIds(meeting: Row): Set<string> {
       ]),
       ...meeting.slides.flatMap((s: Row) => [
         s.definition.backgroundAssetId,
-        s.definition.illustration?.assetId,
+
         ...s.items.map((i: Row) => i.assetId),
       ]),
     ].filter(Boolean),
