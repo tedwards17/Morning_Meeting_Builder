@@ -1,3 +1,7 @@
+# v0.7.0 — video expansion and final branding
+
+User approved promotion from verified v0.6.9.5. See [upgrade guide](docs/ROUND7_0_7_0_UPGRADE.md) and [checkpoint](docs/ROUND6_CHECKPOINT.md). Version/releaseVersion/APP_VERSION are 0.7.0. No default merge or live deployment. Production stays PHP/MySQL plus static assets; no new migration.
+
 # v0.6.9.5 — caption refinement and presentation navigation
 
 Continue from verified v0.6.9. Internal npm SemVer: 0.6.9-5; releaseVersion and APP_VERSION: 0.6.9.5. No v0.7 promotion, live deployment or default merge.

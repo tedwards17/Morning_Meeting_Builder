@@ -26,6 +26,7 @@ import type { Row, State } from "./types";
 import { canReadMeeting, groupMeetings, unusedMeeting } from "./meeting-history";
 import { RollingCaptions } from "./rolling-captions";
 import { guardPresentationBack } from "./presentation-history";
+import { VideoFrame } from "./video-frame";
 import { TranscriptReader } from "./transcript-reader";
 import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
@@ -95,6 +96,7 @@ function RemoteSettings() {
 globalThis.MMB.RemoteSettings=RemoteSettings;
 globalThis.MMB.RollingCaptions=RollingCaptions;
 globalThis.MMB.guardPresentationBack=guardPresentationBack;
+globalThis.MMB.VideoFrame=VideoFrame;
 function Meetings({onBuild,onOpen}: {onBuild:(template?:Row)=>void;onOpen:(meeting:Row)=>void}) {
   const {state}=useApp() as {state:State};
   const [selected,setSelected]=React.useState<string|null>(null);

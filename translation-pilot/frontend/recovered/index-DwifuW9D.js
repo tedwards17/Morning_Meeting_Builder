@@ -18122,7 +18122,7 @@ const Vi = 1,
     textFontSize: Gs().int().min(16).max(96).optional(),
     backgroundAssetId: Ke.optional(),
     logoAssetId: Ke.optional(),
-    logoSize: Gs().min(25).max(100).optional(),
+    logoSize: Gs().min(25).max(200).optional(),
     logoTrim: Na().optional(),
     backgroundFit: Ta(["cover","contain"]).optional(),
   }),
@@ -19766,10 +19766,10 @@ function YouTubePlayer({ item, onEvent, onReady, onError }) {
       player?.destroy();
     };
   }, [item.id]);
-  return d.jsx("div", {
+  return d.jsx(globalThis.MMB.VideoFrame, {children:d.jsx("div", {
     className: "youtube-player",
     children: d.jsx("div", { ref }),
-  });
+  })});
 }
 function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
   n = playableContent(n);
@@ -19857,7 +19857,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
  const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,company:g.settings.company,groupTitle:group?.title??"Morning meeting",logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,company:g.settings.company,groupTitle:group?.title??translateUI("Morning Meeting"),logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),

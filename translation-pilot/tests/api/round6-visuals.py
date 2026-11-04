@@ -39,7 +39,9 @@ check('location editors cannot register another uploader asset as their own back
 code,r=asm.write('templates',{**t,'name':'Location edited branding','theme':{**t['theme'],'backgroundAssetId':bg['id'],'logoSize':75},'slides':[{**t['slides'][0],'backgroundFit':'cover'}]});assert code==200,(code,r);t=r['records'][0]['data']
 check('location editor saves image settings without a false sharing denial',t['theme']['logoSize']==75 and t['slides'][0]['backgroundFit']=='cover')
 check('location editor cannot redistribute shared master',asm.write('templates',{**t,'company_visible':True})[0]==403)
-check('invalid fit and logo settings are actionable validation failures',all(admin.write('templates',{**t,'theme':{**t['theme'],**patch}})[0]==422 for patch in [{'backgroundFit':'stretch'},{'logoSize':0},{'logoSize':101},{'logoTrim':'yes'}]))
+code,r=admin.write('templates',{**t,'theme':{**t['theme'],'logoSize':200}});assert code==200,(code,r);t=r['records'][0]['data']
+check('200 percent logos save through server validation',t['theme']['logoSize']==200)
+check('invalid fit and logo settings are actionable validation failures',all(admin.write('templates',{**t,'theme':{**t['theme'],**patch}})[0]==422 for patch in [{'backgroundFit':'stretch'},{'logoSize':0},{'logoSize':201},{'logoTrim':'yes'}]))
 snapshot=draft(templateId=t['id'],templateName=t['name'],theme=copy.deepcopy(t['theme']),slides=[{'id':uid(),'definition':copy.deepcopy(t['slides'][0]),'items':[],'additionalText':'Meeting additions','skipped':False}])
 assert asm.req('sync/push',{'writes':[{'id':snapshot['id'],'kind':'meeting','data':snapshot}]})[0]==200
 code,r=admin.write('templates',{**t,'theme':{**t['theme'],'logoSize':25,'backgroundFit':'cover'}});assert code==200;t=r['records'][0]['data']

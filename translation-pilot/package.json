@@ -1,6 +1,6 @@
 {
   "name": "morning-meeting-builder",
-  "version": "0.6.9-5",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -37,5 +37,5 @@
     "vite": "8.3.4",
     "vitest": "5.0.5"
   },
-  "releaseVersion": "0.6.9.5"
+  "releaseVersion": "0.7.0"
 }

@@ -11,6 +11,8 @@ export function guardPresentationBack({meetingId,kind,onBack}:{meetingId:string;
     // Re-arm before asynchronous confirmation. A cancelled exit retains exactly
     // one guard; pushing discards its forward copy rather than accumulating entries.
     history.pushState(marker,'',location.href);
+    const video=kind==='presentation'?document.querySelector('.presentation .video-expand-frame.is-expanded'):null;
+    if(video){video.dispatchEvent(new Event('mmb-video-collapse'));return;}
     if(pending)return;
     pending=true;
     Promise.resolve().then(onBack).catch(()=>{}).finally(()=>{pending=false;});

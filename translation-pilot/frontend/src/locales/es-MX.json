@@ -1324,5 +1324,9 @@
   "Only the uploader or an administrator can manage this background image.": "Solo quien subió la imagen o un administrador puede administrar este fondo.",
   "Choose Fill slide or Shrink to fit.": "Elige Llenar diapositiva o Reducir para ajustar.",
   "Logo size must be between 25 and 100 percent.": "El tamaño del logotipo debe estar entre 25 y 100 por ciento.",
-  "Choose a valid logo padding setting.": "Elige una configuración válida de márgenes del logotipo."
+  "Choose a valid logo padding setting.": "Elige una configuración válida de márgenes del logotipo.",
+  "Expand video": "Ampliar video",
+  "Back to slide": "Volver a la diapositiva",
+  "Logo size can be 25–200%. Above 100%, the header grows to keep the logo clear of the title. Transparent padding is trimmed for display; the original file is unchanged.": "El tamaño del logotipo puede ser del 25 al 200%. Por encima del 100%, el encabezado crece para que el logotipo no cubra el título. El margen transparente se recorta solo al mostrarlo; el archivo original no cambia.",
+  "Logo size must be between 25 and 200 percent.": "El tamaño del logotipo debe estar entre el 25 y el 200 por ciento."
 }

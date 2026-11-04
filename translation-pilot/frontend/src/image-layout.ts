@@ -7,6 +7,7 @@ export function visibleBounds(pixels:ArrayLike<number>,width:number,height:numbe
 }
 export function logoFrame(bounds:ImageBounds,size=100,trim=true){
  const b=trim?bounds:{...bounds,x:0,y:0,width:bounds.fullWidth,height:bounds.fullHeight};
- const ratio=b.width/b.height,height=4*Math.min(100,Math.max(25,Number(size)||100))/100,width=Math.min(35,height*ratio);
+ const scale=Math.min(200,Math.max(25,Number(size)||100))/100;
+ const ratio=b.width/b.height,height=4*scale,width=Math.min(35*scale,height*ratio);
  return {width:width+'cqw',height:width/ratio+'cqw',image:{width:100*b.fullWidth/b.width+'%',height:100*b.fullHeight/b.height+'%',left:-100*b.x/b.width+'%',top:-100*b.y/b.height+'%'}};
 }

@@ -31,7 +31,7 @@ function useSlideTextFit(ref:RT.RefObject<HTMLDivElement|null>,titleSize:number,
    el.dataset.baseTitleFont=String(titleBase);el.dataset.fittedTitleFont=String(titleBase*chosen/base);el.dataset.baseFont=String(base);el.dataset.fittedFont=String(chosen);el.dataset.textReduced=String(chosen<base-.05);
   };
   const resized=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(fit);};
-  const observer=new ResizeObserver(resized);observer.observe(el);fit();void document.fonts?.ready.then(resized);
+  const observer=new ResizeObserver(resized);observer.observe(el);const workspace=el.querySelector('.slide-workspace');if(workspace)observer.observe(workspace);fit();void document.fonts?.ready.then(resized);
   return()=>{closed=true;observer.disconnect();cancelAnimationFrame(frame);};
  },[ref,titleSize,textSize,revision,hasLogo]);
 }
@@ -43,14 +43,14 @@ export function SafeSlide({slide,items,company,groupTitle,logo,style,presenter,d
  const templateText=def.text||(isPersonalShare(def)&&!items.length?t('Share a quick personal update. A photo or video is optional.'):'');
  const row=layout.titlePosition.split('-')[0],horizontal=layout.titlePosition.split('-')[1];
  return <div ref={canvas} className={`slide-canvas safe-layout ${media.length?'has-media':''}`} data-text-position={layout.titlePosition} data-title-row={row} data-content-mode={mode} data-content-position={position} data-media-placement={layout.mediaPlacement} style={{...style,"--slide-font-size":`${sizes.text/19.2}cqw`,"--title-font-size":`${sizes.title/19.2}cqw`} as RT.CSSProperties}>
-  <div className="slide-inner"><div className={`slide-brand ${logo?'has-logo':''}`}>{logo?<LogoImage url={logo} size={logoSize} trim={logoTrim!==false}/>:<span>{company}</span>}<span>{groupTitle}</span></div>
+  <div className="slide-inner"><div className={`slide-brand ${logo?'has-logo':''}`}>{logo?<LogoImage url={logo} size={logoSize} trim={logoTrim!==false}/>:<span>{company}</span>}</div>
    <div className="slide-workspace"><div className="safe-slide-body"><div className="template-region" data-horizontal={horizontal} data-vertical={row}><FitText className="template-fit"><div className="slide-heading"><span className="slide-line"/><h2>{def.title}</h2>{templateText&&<p className="template-body">{templateText}</p>}{def.type==='intro'&&<div className="presenter-line"><strong>{presenter}</strong><span>{date}</span></div>}</div></FitText></div>
     <div className="content-region"><div className={`content-frame mode-${mode} ${mediaLabel?'with-media-caption':''}`} data-position={position}>
      {mediaLabel&&<div className="media-caption"><FitText className="caption-fit"><h3>{mediaLabel}</h3></FitText></div>}
      {media.length>0&&<div className={`safe-media-region ${media.length>1?'multiple':''}`} style={{"--media-columns":Math.ceil(Math.sqrt(media.length)),"--media-rows":Math.ceil(media.length/Math.ceil(Math.sqrt(media.length)))} as RT.CSSProperties}>{media.map(item=><div className="slide-item" data-content-id={item.id} key={item.id}>{renderItem({...item,description:''})}</div>)}</div>}
      {(text.length>0||slide.additionalText)&&<FitText className="content-fit"><div className="content-text-stack">{text.map(item=><div className="library-text" data-content-id={item.id} key={item.id}>{item.title!==def.title&&def.type!=='gallery'&&def.title!=='Quote of the day'&&<h3>{item.title}</h3>}{item.description&&<p className="slide-body">{item.description}</p>}{item.type==='link'&&renderItem({...item,description:''})}</div>)}{slide.additionalText&&<div className="meeting-text"><p className="slide-body">{slide.additionalText}</p></div>}</div></FitText>}
     </div></div>
-   </div></div><footer className="slide-footer"><span>{def.title}</span><span>{company}</span></footer>
+   </div></div><footer className="slide-footer"><span>{groupTitle}</span><span>{company}</span></footer>
   </div>
  </div>;
 }
