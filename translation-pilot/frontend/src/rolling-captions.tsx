@@ -14,10 +14,12 @@ export function RollingCaptions({events}:{events:Caption[]}) {
     const el=element.current;if(!el)return;
     const canvas=document.createElement("canvas");const context=canvas.getContext("2d");
     const size=()=>{const style=getComputedStyle(el);if(context)context.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      layout.current={width:Math.max(80,el.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)),measure:context?(text:string)=>context.measureText(text).width:(text:string)=>text.length*14};};
+      layout.current={width:Math.max(80,el.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-12),measure:context?(text:string)=>context.measureText(text).width:(text:string)=>text.length*14};};
     size();const observer=new ResizeObserver(size);observer.observe(el);return ()=>observer.disconnect();
   },[]);
   React.useEffect(()=>{
+    // Stop/error resets must also discard the buffer, not only the event array.
+    if(events.length<seen.current){buffer.current=new CaptionBuffer();seen.current=0;render(n=>n+1);}
     for(const event of events.slice(seen.current))buffer.current.add(event.text,event.source==="en"?"es":"en");
     seen.current=events.length;
     if(buffer.current.tick(Date.now(),layout.current.width,layout.current.measure))render(n=>n+1);

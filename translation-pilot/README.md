@@ -1,3 +1,9 @@
+# v0.6.9.5 — caption refinement and presentation navigation
+
+Continue from verified v0.6.9. Internal npm SemVer: 0.6.9-5; releaseVersion and APP_VERSION: 0.6.9.5. No v0.7 promotion, live deployment or default merge.
+
+See [upgrade guide](docs/ROUND6_0_6_9_5_UPGRADE.md) and [checkpoint](docs/ROUND6_CHECKPOINT.md). Production remains PHP/MySQL plus static assets. Use hosting-update for existing installations and preserve live private config, paths, media and root configuration files. No new migration.
+
 # Current release: v0.6.9 — simpler branding and dedicated backgrounds
 
 Illustrations removed. Transparent logos fill a fixed header area with padding trim and adjustable size; background collections are separate from library content and support Fill slide / Shrink to fit. [Upgrade and manual checklist](docs/ROUND6_0_6_9_UPGRADE.md). [Checkpoint](docs/ROUND6_CHECKPOINT.md). No new SQL; earlier 007 once if absent. Earlier release notes below are historical.

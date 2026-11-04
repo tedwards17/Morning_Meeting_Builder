@@ -22553,6 +22553,14 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
     starting = ae.useRef(false),
     latestMeeting = ae.useRef(g);
   latestMeeting.current = g;
+  ae.useEffect(() => {
+    globalThis.MMB.previewMeetingId=g?.id;
+    return ()=>{if(globalThis.MMB.previewMeetingId===g?.id)globalThis.MMB.previewMeetingId=undefined;};
+  }, [g?.id]);
+  ae.useEffect(() => {
+    if (M === null || !g) return;
+    return globalThis.MMB.guardPresentationBack({meetingId:g.id,kind:"preview",onBack:()=>L(null)});
+  }, [M !== null, g?.id]);
   au(O);
   ae.useEffect(() => {
     if (!g || isMeetingExpired(g) || !O || starting.current) return;
@@ -23252,8 +23260,12 @@ function EE({ meeting: n, onExit: i }) {
     [captureMode, setCaptureMode] = ae.useState("translation"),
     [caption, setCaption] = ae.useState([]),
     [controlsHeight, setControlsHeight] = ae.useState(0),
-    [fullscreen, setFullscreen] = ae.useState(Boolean(document.fullscreenElement)),
+    [fullscreen, setFullscreen] = ae.useState(
+      Boolean(document.fullscreenElement),
+    ),
     [fullscreenMessage, setFullscreenMessage] = ae.useState(""),
+    backExit = ae.useRef(null),
+    exitPending = ae.useRef(false),
     translationPending = ae.useRef(null),
     translationSession = ae.useRef(null),
     translationGeneration = ae.useRef(0),
@@ -23263,9 +23275,23 @@ function EE({ meeting: n, onExit: i }) {
     A = S[f],
     currentSlide = ae.useRef(A),
     M = ae.useCallback(async () => {
-      (await confirmUI(translateUI("Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded."))) && i("paused");
+      if(exitPending.current)return;
+      exitPending.current=true;
+      try {
+        if(await confirmUI(translateUI("Pause this presentation? You can resume it from Saved presentations. Content already shown stays recorded."))) {
+          await stopTranslation();i("paused");
+        }
+      } finally {exitPending.current=false;}
     }, [i]),
-    finish = ae.useCallback(async () => { if(await confirmUI(translateUI("Finish this presentation? Personal Share Images will not be saved. Uploaded meeting photos and videos will be deleted; the transcript and meeting notes will stay."))) i("finished"); },[i]),
+    finish = ae.useCallback(async () => {
+      if(exitPending.current)return;
+      exitPending.current=true;
+      try {
+        if(await confirmUI(translateUI("Finish this presentation? Personal Share Images will not be saved. Uploaded meeting photos and videos will be deleted; the transcript and meeting notes will stay."))) {
+          await stopTranslation();i("finished");
+        }
+      } finally {exitPending.current=false;}
+    }, [i]),
     L = ae.useCallback(
       (V, reveal = true) => {
         h((ne) => Math.max(0, Math.min(S.length - 1, ne + V)));
@@ -23296,57 +23322,75 @@ function EE({ meeting: n, onExit: i }) {
       },
       [n, c, s],
     ),
-    stopTranslation = ae.useCallback(() => {
+    stopTranslation = ae.useCallback(async () => {
       translationGeneration.current++;
       translationPending.current?.abort();
-      translationSession.current?.stop();
+      const stopping = translationSession.current?.stop();
       translationSession.current = null;
       clearTimeout(captionTimer.current);
       setCaption([]);
       setTranslationError("");
       setTranslationStatus("off");
+      await stopping;
     }, []),
-    startTranslation = ae.useCallback(async (mode = "translation") => {
-      const generation = ++translationGeneration.current;
-      setCaptureMode(mode);
-      setTranslationError("");
-      setTranslationStatus("connecting");
-      translationPending.current = new AbortController();
-      try {
-        const session = await globalThis.MMB.startTranslation({
-          signal: translationPending.current.signal,
-          translate: mode === "translation",
-          onTranscript: (phrase) => globalThis.MMB.captureTranscript(n.id, currentSlide.current, phrase),
-          onTranslation: (translation) => globalThis.MMB.captureTranscriptTranslations(n.id, [translation]),
-          onStatus: (status) => {
-            if (translationGeneration.current === generation) setTranslationStatus(status);
-          },
-          onCaption: (next) => {
-            if (translationGeneration.current !== generation) return;
-            setCaption(events => [...events, next]);
-          },
-          onError: (message) => {
-            if (translationGeneration.current !== generation) return;
-            translationSession.current = null;
+    startTranslation = ae.useCallback(
+      async (mode = "translation") => {
+        const generation = ++translationGeneration.current;
+        setCaptureMode(mode);
+        setTranslationError("");
+        setTranslationStatus("connecting");
+        translationPending.current = new AbortController();
+        try {
+          const session = await globalThis.MMB.startTranslation({
+            signal: translationPending.current.signal,
+            translate: mode === "translation",
+            onTranscript: (phrase) =>
+              globalThis.MMB.captureTranscript(
+                n.id,
+                currentSlide.current,
+                phrase,
+              ),
+            onTranslation: (translation) =>
+              globalThis.MMB.captureTranscriptTranslations(n.id, [translation]),
+            onStatus: (status) => {
+              if (translationGeneration.current === generation)
+                setTranslationStatus(status);
+            },
+            onCaption: (next) => {
+              if (translationGeneration.current !== generation) return;
+              setCaption((events) => [...events, next]);
+            },
+            onError: (message) => {
+              if (translationGeneration.current !== generation) return;
+              translationSession.current = null;
+              setTranslationStatus("unavailable");
+              setTranslationError(message);
+            },
+          });
+          if (translationGeneration.current !== generation) session.stop();
+          else translationSession.current = session;
+        } catch (error) {
+          if (translationGeneration.current === generation) {
             setTranslationStatus("unavailable");
-            setTranslationError(message);
-          },
-        });
-        if (translationGeneration.current !== generation) session.stop();
-        else translationSession.current = session;
-      } catch (error) {
-        if (translationGeneration.current === generation) {
-          setTranslationStatus("unavailable");
-          setTranslationError(error instanceof Error ? error.message : translateUI("Translation unavailable. Try again."));
+            setTranslationError(
+              error instanceof Error
+                ? error.message
+                : translateUI("Translation unavailable. Try again."),
+            );
+          }
         }
-      }
-    }, [n.id]);
+      },
+      [n.id],
+    );
   currentSlide.current = A;
+  backExit.current = M;
   return (
+    ae.useEffect(() => globalThis.MMB.guardPresentationBack({meetingId:n.id,kind:"presentation",onBack:()=>backExit.current()}), [n.id]),
     ae.useEffect(() => {
       const element = document.querySelector(".presentation-controls");
       if (!element) return;
-      const measure = () => setControlsHeight(element.getBoundingClientRect().height);
+      const measure = () =>
+        setControlsHeight(element.getBoundingClientRect().height);
       measure();
       const observer = new ResizeObserver(measure);
       observer.observe(element);
@@ -23361,19 +23405,32 @@ function EE({ meeting: n, onExit: i }) {
       const timer = setInterval(() => setClock(new Date()), 15000);
       return () => clearInterval(timer);
     }, []),
-    ae.useEffect(() => () => {
-      translationGeneration.current++;
-      translationPending.current?.abort();
-      translationSession.current?.stop();
-      globalThis.MMB.videoEvent = undefined;
-      clearTimeout(captionTimer.current);
-    }, []),
+    ae.useEffect(
+      () => () => {
+        translationGeneration.current++;
+        translationPending.current?.abort();
+        translationSession.current?.stop();
+        globalThis.MMB.videoEvent = undefined;
+        clearTimeout(captionTimer.current);
+      },
+      [],
+    ),
     ae.useEffect(() => {
       const V = (ne) => {
-        if (ne.target?.closest("video,a,input,textarea,select,[contenteditable=true]") || ne.target?.closest("iframe")) return;
-        const direction = globalThis.MMB.remoteDirection(ne, r.settings.remoteKeys);
+        if (
+          ne.target?.closest(
+            "video,a,input,textarea,select,[contenteditable=true]",
+          ) ||
+          ne.target?.closest("iframe")
+        )
+          return;
+        const direction = globalThis.MMB.remoteDirection(
+          ne,
+          r.settings.remoteKeys,
+        );
         if (direction) {
-          ne.preventDefault(); ne.stopPropagation();
+          ne.preventDefault();
+          ne.stopPropagation();
           if (ne.target instanceof HTMLButtonElement) ne.target.blur();
           L(direction, false);
         } else if (ne.key === "Escape" && !document.fullscreenElement) M();
@@ -23385,8 +23442,8 @@ function EE({ meeting: n, onExit: i }) {
     }, [L, M, r.settings.remoteKeys]),
     ae.useEffect(() => {
       const V = setTimeout(() => {
-        const focused=document.activeElement;
-        if(focused?.closest(".presentation-controls"))focused.blur();
+        const focused = document.activeElement;
+        if (focused?.closest(".presentation-controls")) focused.blur();
         g(!1);
       }, 5000);
       return () => clearTimeout(V);
@@ -23414,7 +23471,10 @@ function EE({ meeting: n, onExit: i }) {
     }, [r.settings.wakeLock]),
     d.jsxs("div", {
       className: `presentation ${caption.length ? "has-caption" : ""}`,
-      style: { "--caption-gap": `${globalThis.MMB.captionGap}px`, "--controls-height": `${controlsHeight}px` },
+      style: {
+        "--caption-gap": `${globalThis.MMB.captionGap}px`,
+        "--controls-height": `${controlsHeight}px`,
+      },
       onPointerMove: () => {
         (_(Date.now()), g(!0));
       },
@@ -23442,19 +23502,28 @@ function EE({ meeting: n, onExit: i }) {
           className: "presentation-clock",
           dateTime: clock.toISOString(),
           "aria-label": translateUI("Current time"),
-          children: clock.toLocaleTimeString(getLocale(), { hour: "numeric", minute: "2-digit" }),
+          children: clock.toLocaleTimeString(getLocale(), {
+            hour: "numeric",
+            minute: "2-digit",
+          }),
         }),
-        fullscreenMessage && d.jsx("div", { className: "fullscreen-message", role: "status", children: uiText(fullscreenMessage) }),
-        (translationStatus !== "off" || translationError) && d.jsx("div", {
-          className: `translation-state ${translationStatus === "unavailable" ? "error" : ""}`,
-          role: "status",
-          children: uiError(translationError) || ({ connecting: translateUI("Connecting microphone…"), listening: captureMode === "transcript" ? translateUI("Transcript ON · Saving speech text…") : translateUI("Translation ON · Saving transcript…"), translating: translateUI("Translating · Saving transcript…"), unavailable: translateUI("Speech capture unavailable") })[translationStatus],
-        }),
-        d.jsx(globalThis.MMB.RollingCaptions, {events: caption}),
+        fullscreenMessage &&
+          d.jsx("div", {
+            className: "fullscreen-message",
+            role: "status",
+            children: uiText(fullscreenMessage),
+          }),
+        translationError && d.jsx("div", {className:"translation-state error",role:"alert",children:uiError(translationError)}),
+        d.jsx(globalThis.MMB.RollingCaptions, { events: caption }),
         d.jsxs("div", {
           className: `presentation-controls ${m ? "visible" : ""}`,
-          onFocusCapture: () => {_(Date.now());g(!0);},
-          onClickCapture: event => {if(event.detail>0)event.target.closest("button")?.blur();},
+          onFocusCapture: () => {
+            _(Date.now());
+            g(!0);
+          },
+          onClickCapture: (event) => {
+            if (event.detail > 0) event.target.closest("button")?.blur();
+          },
           children: [
             d.jsx("button", {
               className: "control-icon",
@@ -23468,37 +23537,82 @@ function EE({ meeting: n, onExit: i }) {
               className: "fullscreen-toggle",
               onClick: async () => {
                 setFullscreenMessage("");
-                try { await globalThis.MMB.toggleFullscreen(); }
-                catch (error) { setFullscreenMessage(error.message); }
+                try {
+                  await globalThis.MMB.toggleFullscreen();
+                } catch (error) {
+                  setFullscreenMessage(error.message);
+                }
               },
-              children: fullscreen ? translateUI("Exit fullscreen") : translateUI("Fullscreen"),
+              children: fullscreen
+                ? translateUI("Exit fullscreen")
+                : translateUI("Fullscreen"),
             }),
-            globalThis.MMB.translationEnabled && d.jsx("button", {
-              className: "translation-toggle",
-              disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "translation",
-              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("translation"),
-              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "translation" ? translateUI("Stop Translation") : translateUI("Start Translation"),
-            }),
+            globalThis.MMB.translationEnabled &&
+              d.jsx("button", {
+                className: "translation-toggle",
+                "aria-pressed": ["connecting","listening","translating"].includes(translationStatus) && captureMode === "translation",
+                disabled:
+                  ["connecting", "listening", "translating"].includes(
+                    translationStatus,
+                  ) && captureMode !== "translation",
+                onClick: ["connecting", "listening", "translating"].includes(
+                  translationStatus,
+                )
+                  ? stopTranslation
+                  : () => startTranslation("translation"),
+                children:
+                  ["connecting", "listening", "translating"].includes(
+                    translationStatus,
+                  ) && captureMode === "translation"
+                    ? translateUI("Stop Translation")
+                    : translateUI("Start Translation"),
+              }),
             d.jsx("button", {
-              disabled: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode !== "transcript",
-              onClick: ["connecting", "listening", "translating"].includes(translationStatus) ? stopTranslation : () => startTranslation("transcript"),
-              children: ["connecting", "listening", "translating"].includes(translationStatus) && captureMode === "transcript" ? translateUI("Stop transcript") : translateUI("Start transcript"),
-              title: translateUI("Save speech text with this meeting without using Azure translation"),
+              "aria-pressed": ["connecting","listening","translating"].includes(translationStatus) && captureMode === "transcript",
+              disabled:
+                ["connecting", "listening", "translating"].includes(
+                  translationStatus,
+                ) && captureMode !== "transcript",
+              onClick: ["connecting", "listening", "translating"].includes(
+                translationStatus,
+              )
+                ? stopTranslation
+                : () => startTranslation("transcript"),
+              children:
+                ["connecting", "listening", "translating"].includes(
+                  translationStatus,
+                ) && captureMode === "transcript"
+                  ? translateUI("Stop transcript")
+                  : translateUI("Start transcript"),
+              title: translateUI(
+                "Save speech text with this meeting without using Azure translation",
+              ),
             }),
-            !globalThis.MMB.hosted && globalThis.MMB.translationEnabled && d.jsx("button", {
-              className: "translation-preview",
-              onClick: () => {
-                setCaption(events => [...events, {source:"en",text:"Asegurémonos de que este camión pase por control de calidad antes del almuerzo."}]);
-                clearTimeout(captionTimer.current);
-
-              },
-              children: translateUI("Preview captions"),
-            }),
+            !globalThis.MMB.hosted &&
+              globalThis.MMB.translationEnabled &&
+              d.jsx("button", {
+                className: "translation-preview",
+                onClick: () => {
+                  setCaption((events) => [
+                    ...events,
+                    {
+                      source: "en",
+                      text: "Asegurémonos de que este camión pase por control de calidad antes del almuerzo.",
+                    },
+                  ]);
+                  clearTimeout(captionTimer.current);
+                },
+                children: translateUI("Preview captions"),
+              }),
             A.required &&
               d.jsx("button", {
                 onClick: () =>
                   c(async () => {
-                    const reason = (await promptUI(translateUI("Reason for skipping this required broadcast:")));
+                    const reason = await promptUI(
+                      translateUI(
+                        "Reason for skipping this required broadcast:",
+                      ),
+                    );
                     if (!reason?.trim()) return;
                     await globalThis.MMB.skip(n, A, reason.trim());
                     f === S.length - 1 ? await finish() : L(1);
@@ -23516,24 +23630,19 @@ function EE({ meeting: n, onExit: i }) {
                   onClick: () => L(-1),
                   children: d.jsx(Af, { size: 24 }),
                 }),
-                f === S.length - 1
-                  ? d.jsx("button", {
-                      className: "primary control-icon",
-                      "aria-label": translateUI("Finish meeting"),
-                      title: translateUI("Finish meeting"),
-                      onClick: finish,
-                      children: d.jsx(ew, { size: 24 }),
-                    })
-                  : d.jsx("button", {
-                      className: "primary control-icon",
-                      "aria-label": translateUI("Next slide"),
-                      title: translateUI("Next slide"),
-                      onClick: () => L(1),
-                      children: d.jsx(Nn, { size: 24 }),
-                    }),
+
               ],
             }),
           ],
+        }),
+        d.jsx("button", {
+          className: `primary control-icon presentation-next ${m ? "controls-visible" : ""}`,
+          "aria-label": translateUI(f === S.length-1 ? "Finish meeting" : "Next slide"),
+          title: translateUI(f === S.length-1 ? "Finish meeting" : "Next slide"),
+          onPointerDown: event=>event.stopPropagation(),
+          onPointerMove: event=>event.stopPropagation(),
+          onClick: event=>{event.stopPropagation();if(event.detail>0)event.currentTarget.blur();f===S.length-1?finish():L(1,false);},
+          children: d.jsx(f===S.length-1?ew:Nn,{size:24}),
         }),
       ],
     })

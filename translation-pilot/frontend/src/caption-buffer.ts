@@ -1,7 +1,7 @@
 export type CaptionWord = {text:string;language:"en"|"es";continuation?:boolean};
 export type CaptionLine = {id:number;words:CaptionWord[];updated:number;width:number};
-export const CAPTION_MIN_MS=8000;
-export const CAPTION_IDLE_MS=10000;
+export const CAPTION_MIN_MS=5000;
+export const CAPTION_IDLE_MS=5000;
 // An append-only roll-up window. Full rows wait their reading time before moving out.
 export class CaptionBuffer {
   lines:CaptionLine[]=[];
@@ -38,6 +38,7 @@ export class CaptionBuffer {
       this.pending.shift();row.width+=measure((row.words.length&&!word.continuation?" ":"")+word.text);row.words.push(word);row.updated=now;this.lastPublished=now;changed=true;
     }
     if(!this.pending.length&&this.lines.length&&now-this.lastPublished>=CAPTION_IDLE_MS){this.lines=[];changed=true;}
+    else if(this.lines.length>1&&now-this.lines[0].updated>=CAPTION_MIN_MS&&now-this.lastRoll>=2200){this.lines.shift();this.lastRoll=now;changed=true;}
     return changed;
   }
 }

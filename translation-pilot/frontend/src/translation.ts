@@ -35,7 +35,7 @@ export async function translationApi(action: string, body: unknown, csrf = "", s
   return data;
 }
 
-export async function startTranslation(callbacks: TranslationCallbacks): Promise<{ stop: () => void }> {
+export async function startTranslation(callbacks: TranslationCallbacks): Promise<{ stop: () => Promise<void> }> {
   if (callbacks.translate !== false && !translationEnabled) throw new Error(translateUI("Live translation is disabled."));
   if (!navigator.onLine) throw new Error(translateUI("Connect to the internet to start live translation."));
   if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext || !window.AudioWorkletNode)
@@ -54,9 +54,12 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
   let maxTimer: ReturnType<typeof setTimeout> | undefined;
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   let busy = false;
+  const saves=new Set<Promise<unknown>>();
+  function retain<T>(promise:Promise<T>){saves.add(promise);void promise.then(()=>saves.delete(promise),()=>saves.delete(promise));return promise;}
+  let finalized:Promise<void>|undefined;
   const queued: {phrase: Caption; saved: Promise<void>}[] = [];
   const stop = () => {
-    if (stopped) return;
+    if (stopped) return finalized??Promise.resolve();
     stopped = true; abort.abort(); queued.length = 0;
     clearTimeout(maxTimer); clearInterval(keepAlive);
     window.removeEventListener("pagehide", stop);
@@ -72,6 +75,10 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
       headers: captionHeaders(csrf),
       body: JSON.stringify({ sessionId }),
     }).catch(() => {});
+    // Capture is released synchronously. Let already captured original phrases
+    // and returned translations finish storage before the builder is restored.
+    finalized=(async()=>{while(saves.size)await Promise.allSettled([...saves]);})();
+    return finalized;
   };
   const fail = (message: string) => { if (!stopped) { stop(); callbacks.onError(message); } };
   const checkDeadline = () => {
@@ -173,9 +180,9 @@ export async function startTranslation(callbacks: TranslationCallbacks): Promise
           run.id = crypto.randomUUID();
           // Save every final recognition phrase before the caption queue can replace it.
           // Pending saves finish even when capture is stopped or the presentation exits.
-          const saved = callbacks.onTranscript?.(run) ?? Promise.resolve();
+          const saved = retain(callbacks.onTranscript?.(run) ?? Promise.resolve());
           void saved.catch(() => fail(translateUI("Transcript could not be saved. Capture stopped; previously saved text is still available.")));
-          if (callbacks.translate !== false) void translate(run, saved);
+          if (callbacks.translate !== false) void retain(translate(run, saved));
         }
       } catch { fail(translateUI("Speech response could not be read. Restart translation.")); }
     };

@@ -4,6 +4,7 @@ import * as runtime from "./runtime";
 import {contentContext, setRotation, refreshContentContext, isContentAvailable, isInRotation, deleteCompanyContent} from "./content-runtime";
 import {contentCategory, categoryLabel, youtubeId, matchesSlideContent, type ContentCategory} from "./content-selection";
 import {FilePicker} from "./file-picker";
+import {guardPresentationBack} from "./presentation-history";
 import {confirmUI} from "./dialogs";
 import {formError, contentPermissionMessage} from "./content-feedback";
 import {t, subscribeLanguage, getLanguage} from "./i18n";
@@ -32,9 +33,11 @@ function RotationControl({item}:{item:Row}){
  const enrolled=isInRotation(item),available=isContentAvailable(item);const reason=!ctx.location?t("Choose a meeting location before managing rotation."):!ctx.canManage?t("Only this location account or an administrator can change its rotation."):!available?t("Content is not available at this location."):"";
  return <div className="rotation-control"><span className={`status-chip ${enrolled?"green":""}`}>{item.archived?t("Archived"):enrolled?t("In our rotation"):t("Available only")}</span><button type="button" hidden={!!item.archived} disabled={busy||!!reason} title={reason} onClick={async()=>{setError("");setBusy(true);try{await setRotation(item,!enrolled);}catch(e){setError(formError(e));}finally{setBusy(false);}}}>{busy?t("Saving…"):enrolled?t("Remove from our rotation"):t("Add to our rotation")}</button>{error&&<p role="alert" className="form-feedback warning">{error}</p>}</div>;
 }
-function Preview({item,onClose}:{item:Row;onClose:()=>void}){
+function Preview({item,onClose,onBack}:{item:Row;onClose:()=>void;onBack?:()=>void}){
  const {state}=app();const media=React.useRef<HTMLVideoElement>(null),ready=React.useRef(false),[error,setError]=React.useState(""),[loading,setLoading]=React.useState(true);
  const kind=contentCategory(item),youtube=youtubeId(item.url??""),url=useAssetUrl(item,state.assets),poster=useAssetUrl(item,state.assets,true),isVideo=item.type==="video";
+ const meetingId=globalThis.MMB.previewMeetingId,exit=React.useRef(onBack??onClose);exit.current=onBack??onClose;
+ React.useEffect(()=>{if(meetingId)return guardPresentationBack({meetingId,kind:"preview",onBack:()=>exit.current()});},[item.id,meetingId]);
  React.useEffect(()=>{const el=media.current;const timer=setTimeout(()=>{if((youtube||isVideo)&&!ready.current)setError(t("Video did not load. Check your connection, codec, or use the original link."));},10000);return()=>{clearTimeout(timer);if(el){el.pause();el.removeAttribute("src");el.load();}};},[item.id]);
  return <Modal title={t(kind==="text"?"Full text · {arg0}":"Preview · {arg0}",{arg0:item.title})} wide onClose={onClose}><div className="content-preview" data-preview-id={item.id}>
   {kind==="media"?(url?isVideo?<video ref={media} controls playsInline preload="metadata" src={url} poster={item.thumbnailAssetId?poster:undefined} onLoadedData={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("This video cannot play here. Try H.264 MP4 or VP8/VP9 WebM."))}/>:<img src={url} alt={item.title} onError={()=>setError(t("Image unavailable. Ask the contributor to check the file."))}/>:<p role="alert">{t("Media unavailable")}</p>):youtube?<Player item={{...item,type:"external-video"}} onReady={()=>{ready.current=true;setLoading(false);}} onError={()=>setError(t("Video did not load. Check your connection, codec, or use the original link."))}/>:null}
@@ -180,7 +183,7 @@ export function ContentSelector({slide,onClose,onChoose}:{slide:Row;used:Set<str
   </Card>)}</div>
   {!rows.length&&<p>{t("No matching content. Try Available content or change the filters.")}</p>}{rows.length>limit&&<button type="button" onClick={()=>setLimit(n=>n+30)}>{t("Show more content")}</button>}
   <div className="modal-actions"><button type="button" onClick={onClose}>{t("Cancel")}</button></div>
- </div>{preview&&<Preview key={preview.id} item={preview} onClose={closePreview}/>}</Modal>;
+ </div>{preview&&<Preview key={preview.id} item={preview} onClose={closePreview} onBack={()=>{closePreview();onClose();}}/>}</Modal>;
 }
 
 export function BuilderContent({item}:{item:Row}){

@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
  const ok=(name,value)=>{assert.ok(value,name);count++;console.log('PASS',name);};
  try{
   await new Promise(resolve=>setTimeout(resolve,400));
-  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
   for(const viewport of [{width:1366,height:900},{width:844,height:390},{width:667,height:375},{width:390,height:844}]){
    const context=await browser.newContext({viewport,serviceWorkers:'block'});const page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
    await page.goto('http://127.0.0.1:5194/demo/');await page.locator('.start-panel').waitFor();
@@ -32,7 +32,7 @@ const assert=require('node:assert/strict');
    ok(`${viewport.width}: subtitles sit above visible controls while controls stay at bottom`,Math.abs(viewport.height-bar.y-bar.height)<2&&cap.y+cap.height<=bar.y-6&&cap.x>=0&&cap.x+cap.width<=viewport.width);
    await page.screenshot({path:`test-results/sidebar-captions-visible-${viewport.width}.png`});
    await page.keyboard.press('ArrowRight');await page.waitForTimeout(250);cap=await caption.boundingBox();
-   ok(`${viewport.width}: remote-hidden controls let subtitles return to bottom`,await controls.evaluate(el=>getComputedStyle(el).opacity==='0')&&Math.abs(viewport.height-cap.y-cap.height-6)<2);
+   ok(`${viewport.width}: remote-hidden controls keep subtitles clear of persistent Next`,await controls.evaluate(el=>getComputedStyle(el).opacity==='0')&&cap.y+cap.height<=await page.locator('.presentation-next').evaluate(el=>el.getBoundingClientRect().top));
    await controls.locator('button').first().focus();await page.waitForTimeout(250);cap=await caption.boundingBox();bar=await controls.boundingBox();
    ok(`${viewport.width}: keyboard-focused controls also keep subtitles above them`,cap.y+cap.height<=bar.y-6);
    await page.evaluate(()=>document.activeElement.blur());await page.locator('.presentation-stage').click({position:{x:20,y:20}});await page.waitForTimeout(250);cap=await caption.boundingBox();bar=await controls.boundingBox();

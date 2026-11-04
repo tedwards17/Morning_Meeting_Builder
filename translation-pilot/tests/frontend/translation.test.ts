@@ -72,6 +72,14 @@ test('page exit releases the microphone and socket',async()=>{
   expect(stopRequest?.[1].keepalive).toBe(true);
   expect(new Headers(stopRequest?.[1].headers).get('X-MMB-Page-Origin')).toBe(window.location.origin);
 });
+test('stopping releases capture immediately and waits for captured transcript storage',async()=>{
+  const {startTranslation}=await import('../../frontend/src/translation');
+  let save!:()=>void;
+  const session=await startTranslation({translate:false,onTranscript:()=>new Promise<void>(resolve=>{save=resolve;}),onStatus:vi.fn(),onCaption:vi.fn(),onError:vi.fn()});
+  result('en');let finished=false;const pending=session.stop().then(()=>{finished=true;});
+  expect(track.stop).toHaveBeenCalledOnce();await Promise.resolve();expect(finished).toBe(false);
+  save();await pending;expect(finished).toBe(true);await session.stop();expect(track.stop).toHaveBeenCalledOnce();
+});
 test('transcript-only capture saves final speech without Azure text requests',async()=>{
   const {startTranslation}=await import('../../frontend/src/translation');
   const onTranscript=vi.fn().mockResolvedValue(undefined);
