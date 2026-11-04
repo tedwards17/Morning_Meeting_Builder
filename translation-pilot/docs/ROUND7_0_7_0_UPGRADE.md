@@ -28,4 +28,4 @@ Static assets plus PHP/MySQL remain the production stack. No Node production ser
 - Try a transparent logo at 100%, 150% and 200%, including a long slide title and phone landscape. Confirm it stays clear of the title, then save/reopen the template.
 - Check that Morning Meeting/custom group appears at the bottom-left, company name remains at the bottom-right and the slide title appears only in its main position.
 
-See ROUND6_CHECKPOINT.md for exact automated results, verified commit and browser/device limitations. No paid translation-provider calls are made by the automated tests. Real YouTube playback and live shop audio/provider behavior remain manual acceptance.
+GitHub verification passed: 103 unit, 119 API, 316 browser and four package checks. See ROUND6_CHECKPOINT.md for the verified commit/run and browser/device limitations. No paid translation-provider calls are made by the automated tests. Real YouTube playback and live shop audio/provider behavior remain manual acceptance.
