@@ -27,7 +27,7 @@ The user-facing version and artifact name are **0.6.9.5**. Npm requires SemVer, 
 
 ## Browser/device limits and verification
 
-See ROUND6_CHECKPOINT.md for exact tested versions/results. Automated portrait/landscape viewports are browser emulation, not physical Android/iOS or meeting-room TV testing. Speech/translation and YouTube API behavior are mocked for focused tests; no paid provider calls are made. Real provider latency, audio quality, YouTube playback/ads and TV readability need shop acceptance.
+GitHub verification passed: 102 unit, 118 API, 279 browser and four package checks. See ROUND6_CHECKPOINT.md for the verified commit/run and exact tested versions/results. Automated portrait/landscape viewports are browser emulation, not physical Android/iOS or meeting-room TV testing. Speech/translation and YouTube API behavior are mocked for focused tests; no paid provider calls are made. Real provider latency, audio quality, YouTube playback/ads and TV readability need shop acceptance.
 
 Native browser fullscreen can consume a device Back/Escape to leave fullscreen before dispatching a history popstate. In that case the first Back exits native fullscreen and the next Back reaches the app's pause/exit confirmation. The app does not force a pause solely because fullscreen ended or automatically reenter fullscreen. Browser-history Back and native fullscreen API behavior are tested where supported, but a programmatic history traversal is not proof of a physical Android Back gesture. If native fullscreen is unavailable, the existing actionable fallback explains browser fullscreen/Add to Home Screen. No universal device support is claimed.
 
