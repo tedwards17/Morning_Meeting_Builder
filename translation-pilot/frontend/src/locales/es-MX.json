@@ -1328,5 +1328,14 @@
   "Expand video": "Ampliar video",
   "Back to slide": "Volver a la diapositiva",
   "Logo size can be 25–200%. Above 100%, the header grows to keep the logo clear of the title. Transparent padding is trimmed for display; the original file is unchanged.": "El tamaño del logotipo puede ser del 25 al 200%. Por encima del 100%, el encabezado crece para que el logotipo no cubra el título. El margen transparente se recorta solo al mostrarlo; el archivo original no cambia.",
-  "Logo size must be between 25 and 200 percent.": "El tamaño del logotipo debe estar entre el 25 y el 200 por ciento."
+  "Logo size must be between 25 and 200 percent.": "El tamaño del logotipo debe estar entre el 25 y el 200 por ciento.",
+  "Slide Options": "Opciones de la diapositiva",
+  "Web link information": "Información sobre el enlace web",
+  "Media is optional. Present this slide with or without images or video.": "Los archivos multimedia son opcionales. Presenta esta diapositiva con o sin imágenes o video.",
+  "Upload images or videos to the selected slide, or present without media. Add another slide, then move an item with the slide menu or by dragging it.": "Sube imágenes o videos a la diapositiva seleccionada, o preséntala sin archivos multimedia. Agrega otra diapositiva y mueve un elemento con el menú de diapositivas o arrastrándolo.",
+  "Logo position": "Posición del logotipo",
+  "Left": "Izquierda",
+  "Center": "Centro",
+  "Right": "Derecha",
+  "Choose a valid logo position.": "Elige una posición válida para el logotipo."
 }

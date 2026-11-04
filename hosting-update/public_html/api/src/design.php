@@ -13,6 +13,7 @@ function validate_slide_images(array $node):void {
   if($value===null)continue;
   if($key==='backgroundFit'&&!in_array($value,['cover','contain'],true))fail(422,'Choose Fill slide or Shrink to fit.');
   if($key==='logoSize'&&(!is_numeric($value)||$value<25||$value>200))fail(422,'Logo size must be between 25 and 200 percent.');
+  if($key==='logoPosition'&&!in_array($value,['left','center','right'],true))fail(422,'Choose a valid logo position.');
   if($key==='logoTrim'&&!is_bool($value))fail(422,'Choose a valid logo padding setting.');
  }
 }

@@ -561,3 +561,33 @@ select option:disabled { color:#6b7280; background-color:#edf0f3; }
 .video-return{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));padding:0 12px;min-height:44px;font-size:14px;background:#08131bed}
 .presentation.video-expanded .slide-brand,.presentation.video-expanded .template-region,.presentation.video-expanded .slide-footer,.presentation.video-expanded .meeting-text,.presentation.video-expanded .library-text{visibility:hidden}
 .presentation.video-expanded .slide-item:not(:has(.video-expand-frame.is-expanded)){visibility:hidden}
+
+/* v0.7.1: compact and consistent template/meeting controls. */
+.color-control>span,.editor-main .field-label-row>label{font-size:.86rem;font-weight:650;color:#3e5263}
+.field-label-row{display:flex;align-items:center;gap:5px;min-height:1.4em;position:relative}
+.inline-info{display:inline-flex;position:relative;margin:0;padding:0;border:0}
+.inline-info>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:28px;height:28px;cursor:pointer;color:var(--navy);font-size:20px;border-radius:50%}
+.inline-info>summary::-webkit-details-marker{display:none}
+.inline-info>summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.inline-info[open]>p{position:absolute;z-index:12;top:28px;right:0;width:min(280px,70vw);margin:4px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:white;color:#3e5263;box-shadow:0 6px 20px #0002;font-size:.86rem;line-height:1.5;font-weight:400}
+.editor-main textarea[rows="2"],.meeting-text-controls textarea[rows="2"]{min-height:0;height:calc(2.8em + 22px);line-height:1.4;resize:vertical}
+.editor-main textarea::placeholder{color:var(--muted);opacity:1;font-weight:400}
+.slide-background-notes{margin:12px 0;padding:10px;border:1px solid #d9e1e7;border-radius:7px}
+.slide-background-notes>summary,.slide-layout-controls>summary,.meeting-slide-options>summary{cursor:pointer;font-weight:600}
+.meeting-slide-options>summary{font-size:1.1rem;min-height:44px;align-content:center}
+.meeting-slide-options[open]>summary{margin-bottom:14px}
+.meeting-options-fields{border:0;padding:0;margin:0;min-width:0}
+.meeting-text-controls .position-control>span{font-size:1.17em;font-weight:700;color:inherit}
+.meeting-position-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.meeting-position-row>.position-control{margin-bottom:0}
+.meeting-position-row>.reset-content-layout{min-height:44px}
+.logo-size-position{display:flex;align-items:center;gap:8px;min-width:0}
+.logo-options .logo-size-position input{min-width:60px;flex:1}
+.logo-alignment{position:relative;flex-shrink:0}
+.logo-alignment>button{padding-inline:10px}
+.logo-position-popup{position:absolute;right:0;top:100%;z-index:15;padding:6px;background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px #0002}
+.logo-position-popup [role=radiogroup]{display:flex;gap:4px}
+.logo-position-popup [aria-checked=true]{background:var(--soft);border-color:var(--blue)}
+.safe-layout .slide-brand.has-logo[data-logo-position=center]{justify-content:center}
+.safe-layout .slide-brand.has-logo[data-logo-position=right]{justify-content:flex-end}
+@media(max-width:680px){.meeting-position-row{flex-direction:column;align-items:flex-start}.logo-options{grid-template-columns:1fr}.logo-size-position{width:100%;max-width:280px}.logo-size-position input{max-width:100px}}

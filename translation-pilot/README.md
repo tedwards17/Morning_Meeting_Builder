@@ -1,3 +1,7 @@
+# v0.7.1 — optional media and compact slide options
+
+Continues verified v0.7.0. Media is optional on every slide; compact template controls, separate Slide Options with meeting title editing, and Left/Center/Right logo alignment. [Upgrade guide](docs/ROUND7_0_7_1_UPGRADE.md) · [Checkpoint](docs/ROUND6_CHECKPOINT.md). Source and prebuilt files stay on Round-6-Development; no default merge, live deployment, new SQL or production Node service.
+
 # v0.7.0 — video expansion and final branding
 
 User approved promotion from verified v0.6.9.5. See [upgrade guide](docs/ROUND7_0_7_0_UPGRADE.md) and [checkpoint](docs/ROUND6_CHECKPOINT.md). Version/releaseVersion/APP_VERSION are 0.7.0. No default merge or live deployment. Production stays PHP/MySQL plus static assets; no new migration.

@@ -18123,6 +18123,7 @@ const Vi = 1,
     backgroundAssetId: Ke.optional(),
     logoAssetId: Ke.optional(),
     logoSize: Gs().min(25).max(200).optional(),
+    logoPosition: Ta(["left","center","right"]).optional(),
     logoTrim: Na().optional(),
     backgroundFit: Ta(["cover","contain"]).optional(),
   }),
@@ -19857,7 +19858,7 @@ function dE({ item: n, interactive: i = !1, onDisplayed: r }) {
 function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),date:c,interactive:f=false,activeItem:h,onItemDisplayed:m}){
  const {state:g}=qt(),v=n.definition,group=r.find(item=>item.id===v.groupId),theme=group?.theme??i,background=v.background??theme.background;
  const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
- return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,company:g.settings.company,groupTitle:group?.title??translateUI("Morning Meeting"),logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
+ return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,logoPosition:theme.logoPosition,company:g.settings.company,groupTitle:group?.title??translateUI("Morning Meeting"),logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
 function hE({ onBuild: n, onNavigate: i, onResume: r }) {
   const { state: s } = qt(),
@@ -20684,9 +20685,9 @@ function pE({ template: n, onClose: i }) {
                   }),
                   d.jsx(Ne, {
                     label: translateUI("Slide text"),
-                    hint: translateUI("Keep text brief so it reads well on the TV."),
                     children: d.jsx("textarea", {
-                      rows: 4,
+                      rows: 2,
+                      placeholder: translateUI("Keep text brief so it reads well on the TV."),
                       value: O.text,
                       onChange: (C) => V({ text: C.target.value }),
                     }),
@@ -20778,6 +20779,7 @@ function pE({ template: n, onClose: i }) {
                   d.jsx("small",{children:translateUI("A subtle color for this slide in the builder.")}),
                   d.jsx(globalThis.MMB.SlideLayoutControls,{slide:O,defaults:m.layoutDefaults,onChange:V}),
                   d.jsxs("details", {
+                    className: "slide-background-notes",
                     children: [
                       d.jsx("summary", {
                         children: translateUI("Background override & presenter notes"),
@@ -22635,12 +22637,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
     ie = isMeetingExpired(H),
     le = H.slides[selectedIndex],
     C = agenda.filter(({slide}) => !slide.skipped).map(({slide}) => slide),
-    G = [
-      ...lE(H),
-      ...H.slides.filter((slide) => !slide.skipped &&
-        ["gallery", "image", "image-text", "video"].includes(slide.definition.type) &&
-        !slide.definition.mediaOptional && !globalThis.MMB.isPersonalShare(slide.definition) && !slide.items.length).map((slide) => translateUI("Add media to “{arg0}” or skip/delete the slide.", {arg0: slide.definition.title})),
-    ],
+    G = lE(H),
     x = (N) => {
       (v(N.date !== H.date ? globalThis.MMB.refreshMeetingAnnouncements(N,s) : N), V(!0));
     },
@@ -22970,7 +22967,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                 className: "panel media-organizer",
                 children: [
                   d.jsx("h3", { children: translateUI("Meeting media") }),
-                  d.jsx("p", { className: "muted", children: translateUI("Upload images or videos to the selected slide. Add another slide, then move an item with the slide menu or by dragging it. Media is optional for Personal share; other included media slides need an item.") }),
+                  d.jsx("p", { className: "muted", children: translateUI("Upload images or videos to the selected slide, or present without media. Add another slide, then move an item with the slide menu or by dragging it.") }),
                   d.jsxs("div", { className: "actions", children: [
                     d.jsx("button", {
                       disabled: m || le.items.length >= 12,
@@ -23055,13 +23052,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                                 }),
                               ] }),
                           ],
-                        }, item.id)) : d.jsx("p", { className: globalThis.MMB.isPersonalShare(slide.definition) ? "muted" : "warning", children: globalThis.MMB.isPersonalShare(slide.definition) ? translateUI("Media is optional. Share a personal update with the team.") : translateUI("Drop an image or video here, or delete this slide.") }),
+                        }, item.id)) : d.jsx("p", { className: "muted", children: globalThis.MMB.isPersonalShare(slide.definition) ? translateUI("Media is optional. Share a personal update with the team.") : translateUI("Media is optional. Present this slide with or without images or video.") }),
                       ],
                     }, slide.id),
                   ) }),
                 ],
               }),
-              d.jsxs("div", {
+              (le.items.length > 0 || !!le.definition.libraryId) && d.jsxs("div", {
                 className: "review-selection panel",
                 children: [
                   d.jsxs("div", {
@@ -23144,17 +23141,13 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                         le.definition.text ||
                         translateUI("This slide uses the template’s title and layout."),
                     }),
-                  !ie &&
-                    !le.required &&
-                    d.jsxs("details", {
-                      open: le.definition.type === "intro" ? true : undefined,
-                      children: [
-                        le.definition.type === "intro"
-                          ? d.jsx("h4", { children: translateUI("Title and text") })
-                          : d.jsx("summary", { children: translateUI("Edit text for this meeting") }),
-                        d.jsx(globalThis.MMB.MeetingTextControls,{slide:le,onChange:patch=>E(selectedIndex,patch)}),
-                      ],
-                    }),
+                ],
+              }),
+              !ie && d.jsxs("details", {
+                className: "panel meeting-slide-options",
+                children: [
+                  d.jsx("summary", {children:translateUI("Slide Options")}),
+                  d.jsx("fieldset",{disabled:!!le.required,className:"meeting-options-fields",children:d.jsx(globalThis.MMB.MeetingTextControls,{slide:le,onChange:patch=>E(selectedIndex,patch)})}),
                 ],
               }),
               le.definition.notes &&
@@ -23179,7 +23172,7 @@ function jE({ initial: n, onPresent: i, onBuild: r, onSaved, canPresent = false 
                     children: [d.jsx(Af, { size: 18 }), translateUI(" Previous slide")],
                   }),
                   d.jsxs("button", {
-                    disabled: agendaIndex === agenda.length - 1 || (isMedia(le) && !le.items.length && !le.skipped),
+                    disabled: agendaIndex === agenda.length - 1,
                     onClick: () => b(agenda[agendaIndex + 1].index),
                     children: [translateUI("Next slide "), d.jsx(Nn, { size: 18 })],
                   }),
