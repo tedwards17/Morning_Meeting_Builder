@@ -12,7 +12,7 @@ const {spawn}=require('node:child_process');const assert=require('node:assert/st
     await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name,exact:true}).click();
    }
    await page.goto('http://127.0.0.1:5195/demo/');await page.locator('.start-panel').waitFor();
-   await page.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Navigation test');await page.getByRole('button',{name:'Save presentation',exact:true}).click();
+   await page.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Navigation test');await page.getByRole('button',{name:'Save presentation',exact:true}).click();
    await page.getByText('Presentation saved for future use.',{exact:true}).waitFor();
    const original=await page.evaluate(async()=>{
     const state=await MMB.repository.load();const meeting=state.meetings[0];const slide=meeting.slides[0];

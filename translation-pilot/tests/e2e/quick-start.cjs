@@ -2,7 +2,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {spawn}=require('node:child_process');const assert=require('node:assert/strict');
 (async()=>{const server=spawn('python3',['-m','http.server','5186','--bind','127.0.0.1','--directory','build'],{stdio:'ignore'});let browser;
 try{await new Promise(resolve=>setTimeout(resolve,350));browser=await chromium.launch({headless:true,args:['--no-sandbox']});const page=await browser.newPage({serviceWorkers:'block'});
-await page.goto('http://127.0.0.1:5186/demo/');await page.locator('.start-panel').waitFor();await page.getByRole('button',{name:/Build a meeting/}).last().click();
+await page.goto('http://127.0.0.1:5186/demo/');await page.locator('.start-panel').waitFor();await page.getByRole('button',{name:/Build a new meeting/}).last().click();
 await page.getByPlaceholder('Who is leading today?').fill('Quick presenter');await page.getByRole('button',{name:'Present meeting',exact:true}).click();await page.locator('.presentation').waitFor();
 await page.waitForTimeout(900);const state=await page.evaluate(()=>MMB.repository.load());assert.equal(state.meetings[0].status,'presenting');assert.equal(state.meetings[0].presenter,'Quick presenter');
 assert.equal(state.meetings[0].slides.find(slide=>slide.definition.title==='Personal share').skipped,false);assert.equal(state.meetings[0].slides.find(slide=>slide.definition.title==='Small changes. Better work.').skipped,true);

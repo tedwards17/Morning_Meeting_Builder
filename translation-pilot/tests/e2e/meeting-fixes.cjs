@@ -11,7 +11,7 @@ try{
  await p.getByRole('button',{name:'Open navigation',exact:true}).click();check('mobile menu has its own close control',await p.getByRole('button',{name:'Close navigation',exact:true}).isVisible());await p.getByRole('button',{name:'Close navigation',exact:true}).click();await p.evaluate(()=>scrollTo(0,0));await p.screenshot({path:'/tmp/mmb-meeting-fixes-mobile.png'});
  await p.setViewportSize({width:1366,height:900});
  await p.evaluate(async()=>{await MMB.sync();const s=await MMB.repository.load();s.settings.defaultTemplateId=s.templates.find(t=>t.name==='Meeting media regression').id;await MMB.repository.save(s);});await p.reload();await p.locator('.start-panel').waitFor();
- await p.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill(presenter);await p.getByRole('button',{name:/Personal share.*Template content/}).click();
+ await p.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill(presenter);await p.getByRole('button',{name:/Personal share.*Template content/}).click();
  const [chooser]=await Promise.all([p.waitForEvent('filechooser'),p.getByRole('button',{name:'Upload images / videos',exact:true}).click()]);await chooser.setFiles({name:'personal.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAIAAAAC64paAAAAHUlEQVR4nGOU9M5jIBcwka1zVPOo5lHNo5qpohkASx8A+rXaktMAAAAASUVORK5CYII=','base64')});
  await p.waitForFunction(async()=>(await MMB.repository.load()).assets.some(a=>a.scope==='meeting-only'));
  await p.getByRole('button',{name:'Save presentation',exact:true}).click();await p.getByText('Presentation saved for future use.',{exact:true}).waitFor();

@@ -19860,241 +19860,10 @@ function Fi({slide:n,theme:i,groups:r,presenter:s=translateUI("Presenter name"),
  const backdrop=Qs(v.backgroundImageHidden?undefined:(v.backgroundAssetId??theme.backgroundAssetId)),logo=Qs(theme.logoAssetId),items=(h===undefined?n.items:n.items.slice(h,h+1)).map(playableContent);
  return d.jsx(globalThis.MMB.SafeSlide,{slide:n,items,logoSize:theme.logoSize,logoTrim:theme.logoTrim,logoPosition:theme.logoPosition,company:g.settings.company,groupTitle:group?.title??translateUI("Morning Meeting"),logo,fontSize:i.fontSize,titleFontSize:i.titleFontSize,textFontSize:i.textFontSize,presenter:s||translateUI("Presenter name"),date:c?Pt(c,g.settings.dateFormat):translateUI("Meeting date"),style:{background,color:theme.foreground,"--slide-accent":theme.accent,...(backdrop?{backgroundSize:`100% 100%,${(v.backgroundFit??theme.backgroundFit)==="contain"?"contain":"cover"}`,backgroundRepeat:"no-repeat",backgroundImage:`linear-gradient(#0007,#0007),url("${backdrop}")`}:{})},renderItem:item=>d.jsx(dE,{item,interactive:f,onDisplayed:m})});
 }
-function hE({ onBuild: n, onNavigate: i, onResume: r }) {
-  const { state: s } = qt(),
-    c = s.templates.filter((v) => !v.archived && globalThis.MMB.canUse(v)),
-    f = c.find((v) => v.id === s.settings.defaultTemplateId) ?? c[0],
-    h = c.find((v) => v.id === s.settings.lastTemplateId),
-    m = f ? iu(f, s.items) : null,
-    g = [...s.meetings]
-      .sort((v, _) => Number(v.status === "completed") - Number(_.status === "completed") ||
-        _.createdAt.localeCompare(v.createdAt))
-      .filter((meeting, index, list) => meeting.status !== "completed" ||
-        list.slice(0, index).filter((entry) => entry.status === "completed").length < 10);
-  return d.jsxs(d.Fragment, {
-    children: [
-      d.jsx(ka, {
-        eyebrow: Pt(new Date().toISOString(), "long"),
-        title: translateUI("Good morning."),
-        description: translateUI("Your meeting starts here."),
-        actions: d.jsxs("span", {
-          className: "status-chip",
-          children: [d.jsx(Rw, { size: 16 }), s.device.name],
-        }),
-      }),
-      d.jsxs("section", {
-        className: "start-panel",
-        children: [
-          d.jsxs("div", {
-            className: "start-copy",
-            children: [
-              d.jsx("span", {
-                className: "eyebrow",
-                children: translateUI("TODAY’S MEETING"),
-              }),
-              d.jsxs("h2", {
-                children: [
-                  translateUI("A little preparation."),
-                  d.jsx("br", {}),
-                  translateUI("A better start."),
-                ],
-              }),
-              d.jsx("p", {
-                children:
-                  translateUI("Choose your presenter, review the content, and bring the team together."),
-              }),
-              d.jsxs("button", {
-                className: "primary large",
-                onClick: () => n(f),
-                children: [translateUI("Build a meeting "), d.jsx(Nn, { size: 21 })],
-              }),
-              h &&
-                d.jsxs("button", {
-                  className: "text-button",
-                  onClick: () => n(h),
-                  children: [translateUI("Use last template: "), h.name],
-                }),
-              d.jsxs("div", {
-                className: "prep-note",
-                children: [
-                  d.jsx(nf, { size: 16 }),
-                  translateUI(" Aim for 10 minutes or less to prepare"),
-                ],
-              }),
-            ],
-          }),
-          d.jsx("div", {
-            className: "start-preview",
-            children:
-              m &&
-              f &&
-              d.jsxs(d.Fragment, {
-                children: [
-                  d.jsx(Fi, {
-                    slide: m.slides[0],
-                    theme: f.theme,
-                    groups: f.groups,
-                    date: m.date,
-                  }),
-                  d.jsxs("div", {
-                    className: "preview-caption",
-                    children: [
-                      d.jsxs("div", {
-                        children: [
-                          d.jsx("strong", { children: f.name }),
-                          d.jsxs("span", {
-                            children: [
-                              f.slides.length,
-                              translateUI(" slides · Ready to customize"),
-                            ],
-                          }),
-                        ],
-                      }),
-                      d.jsx("span", {
-                        className: "status-chip green",
-                        children: translateUI("Ready"),
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-          }),
-        ],
-      }),
-      d.jsxs("div", {
-        className: "section-heading",
-        children: [
-          d.jsx("h2", { children: translateUI("Your workspace") }),
-        ],
-      }),
-      d.jsxs("div", {
-        className: "workspace-links",
-        children: [
-          d.jsxs("button", {
-            onClick: () => i("templates"),
-            children: [
-              d.jsx(ey, {}),
-              d.jsxs("span", {
-                children: [
-                  d.jsx("strong", { children: translateUI("Templates") }),
-                  d.jsxs("small", {
-                    children: [
-                      c.length,
-                      translateUI(" reusable meeting format"),
-                      c.length === 1 ? "" : "s",
-                    ],
-                  }),
-                ],
-              }),
-              d.jsx(Nn, {}),
-            ],
-          }),
-          d.jsxs("button", {
-            onClick: () => i("library"),
-            children: [
-              d.jsx(Pv, {}),
-              d.jsxs("span", {
-                children: [
-                  d.jsx("strong", { children: translateUI("Content library") }),
-                  d.jsxs("small", {
-                    children: [
-                      s.items.filter((v) => !v.archived).length,
-                      translateUI(" items in rotation"),
-                    ],
-                  }),
-                ],
-              }),
-              d.jsx(Nn, {}),
-            ],
-          }),
-          d.jsxs("button", {
-            onClick: () => i("backup"),
-            children: [
-              d.jsx(tu, {}),
-              d.jsxs("span", {
-                children: [
-                  d.jsx("strong", { children: translateUI("Backup & restore") }),
-                  d.jsx("small", {
-                    children: s.settings.lastBackupAt
-                      ? translateUI("Last export ") + Pt(s.settings.lastBackupAt)
-                      : translateUI("Protect and share your content"),
-                  }),
-                ],
-              }),
-              d.jsx(Nn, {}),
-            ],
-          }),
-        ],
-      }),
-      d.jsxs("div", {
-        className: "section-heading",
-        children: [
-          d.jsx("h2", { children: translateUI("Saved presentations") }),
-          d.jsxs("button", {
-            className: "text-button",
-            onClick: () => n(),
-            children: [d.jsx(ai, { size: 16 }), translateUI(" New meeting")],
-          }),
-        ],
-      }),
-      g.length
-        ? d.jsx("div", {
-            className: "recent-list",
-            children: g.map((v) =>
-              d.jsxs(
-                "button",
-                {
-                  onClick: () => r(v.id),
-                  children: [
-                    d.jsx("span", {
-                      className: "recent-icon",
-                      children:
-                        v.status === "completed"
-                          ? d.jsx(nw, {})
-                          : d.jsx(nf, {}),
-                    }),
-                    d.jsxs("span", {
-                      children: [
-                        d.jsx("strong", { children: v.templateName }),
-                        d.jsxs("small", {
-                          children: [
-                            v.presenter || translateUI("Presenter not set"),
-                            " · ",
-                            Pt(v.date),
-                          ],
-                        }),
-                      ],
-                    }),
-                    d.jsx("span", {
-                      className: "status-chip",
-                      children:
-                        isMeetingExpired(v)
-                          ? translateUI("Presented")
-                          : v.status === "completed"
-                          ? translateUI("Completed")
-                          : v.status === "presenting"
-                            ? translateUI("Resume")
-                            : translateUI("Ready to present"),
-                    }),
-                    d.jsx(Nn, { size: 18 }),
-                  ],
-                },
-                v.id,
-              ),
-            ),
-          })
-        : d.jsx(fr, {
-            title: translateUI("A fresh start"),
-            text: translateUI("Your saved drafts and presented meetings will appear here."),
-          }),
-      d.jsx("p", {
-        className: "sample-note",
-        children:
-          translateUI("Pilot starter content is labeled SAMPLE. Replace it with your approved lessons, photos, videos, and stretches."),
-      }),
-    ],
-  });
+function hE({onBuild,onResume}) {
+ return d.jsx(globalThis.MMB.HomeGuide,{onBuild,onOpen:onResume});
 }
+
 const Zg = {
   intro: "Introduction",
   divider: "Section divider",
@@ -25272,7 +25041,7 @@ const lz = [
   { id: "backup", label: translateUI("Backup & restore"), icon: tu },
   { id: "settings", label: translateUI("Settings"), icon: Xw },
 ];
-function rz({navigationOpen:v=false,onCloseNavigation=()=>{}}={}) {
+function rz({navigationOpen:v=false,onCloseNavigation=()=>{},sidebarActions}={}) {
   const { state: n, update: i, run: r } = qt(),
     [s, c] = ae.useState("home"),
     [f, h] = ae.useState(),
@@ -25415,7 +25184,7 @@ function rz({navigationOpen:v=false,onCloseNavigation=()=>{}}={}) {
                   }),
                 ],
               }),
-            ]}),],
+            ]}),sidebarActions&&d.jsx("div",{className:"sidebar-account-actions",children:sidebarActions})],
           }),
           d.jsxs("main", {
             className: "main-content",

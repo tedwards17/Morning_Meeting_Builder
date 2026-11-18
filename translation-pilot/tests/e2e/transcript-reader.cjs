@@ -13,7 +13,7 @@ const assert=require('node:assert/strict');
   await context.grantPermissions(['clipboard-read','clipboard-write']);
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:5192/demo/');await page.locator('.start-panel').waitFor();
-  await page.getByRole('button',{name:'Build a meeting',exact:true}).last().click();
+  await page.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();
   await page.getByPlaceholder('Who is leading today?').fill('Transcript tester');
   await page.getByRole('button',{name:'Save presentation',exact:true}).click();
   await page.getByText('Presentation saved for future use.',{exact:true}).waitFor();

@@ -48,7 +48,7 @@ const assert=require('node:assert/strict');
   await page.getByRole('button',{name:'Cancelar',exact:true}).click();
   await page.getByRole('button',{name:'Volver al editor de reuniones',exact:true}).click();
   await page.getByRole('button',{name:'Inicio',exact:true}).click();
-  await page.getByRole('button',{name:'Crear una reunión',exact:true}).last().click();
+  await page.getByRole('button',{name:'Crear una nueva reunión',exact:true}).last().click();
   await page.getByPlaceholder('¿Quién dirige la reunión de hoy?').fill('Spanish presenter');
   await page.getByRole('button',{name:'Guardar presentación',exact:true}).click();
   await page.getByText('Presentación guardada para usarla después.',{exact:true}).waitFor();

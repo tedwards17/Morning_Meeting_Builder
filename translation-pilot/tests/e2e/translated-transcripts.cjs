@@ -16,7 +16,7 @@ const {spawn}=require('node:child_process');const fs=require('node:fs');const as
    await route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await page.goto('http://127.0.0.1:5196/demo/');await page.locator('.start-panel').waitFor();
-  await page.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Bilingual test');
+  await page.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Bilingual test');
   await page.getByRole('button',{name:'Save presentation',exact:true}).click();await page.getByText('Presentation saved for future use.',{exact:true}).waitFor();
   const original=await page.evaluate(async()=>{
    const state=await MMB.repository.load(),meeting=state.meetings[0],slide=meeting.slides[0];meeting.status='completed';meeting.startedAt=new Date().toISOString();

@@ -23,7 +23,7 @@ const assert=require('node:assert/strict');
    ok(`${viewport.width}: Spanish selection changes the flag and interface`,await flag.getAttribute('title')==='Español'&&await page.getByRole('heading',{name:'Buenos días.',exact:true}).isVisible()&&await page.evaluate(()=>document.title==='Morning Meeting Builder'));
    await flag.click();await menu.getByRole('button',{name:'English',exact:true}).click();
    if(viewport.width<=680)await page.locator('.mobile-menu').click();
-   await page.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Caption placement test');
+   await page.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await page.getByPlaceholder('Who is leading today?').fill('Caption placement test');
    await page.getByRole('button',{name:'Save presentation',exact:true}).click();await page.getByRole('button',{name:'Present saved meeting',exact:true}).click();
    await page.getByRole('button',{name:'Dismiss message',exact:true}).click();
    await page.getByRole('button',{name:'Preview captions',exact:true}).click();await page.locator('.translation-caption').waitFor();await page.waitForTimeout(250);

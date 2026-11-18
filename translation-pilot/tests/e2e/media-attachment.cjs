@@ -19,7 +19,7 @@ function check(name,value){assert.ok(value,name);console.log('PASS',name);count+
   await login(p);
   await p.evaluate(async()=>{const s=await MMB.repository.load();s.settings.defaultTemplateId='00000000-0000-4000-8000-000000000600';await MMB.repository.save(s);});await p.reload();await p.locator('.start-panel').waitFor();
   if(await p.getByLabel('Meeting location',{exact:true}).count())await p.getByLabel('Meeting location',{exact:true}).selectOption('d7b00000-0000-4000-8000-000000000011');
-  await p.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill(presenter);
+  await p.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill(presenter);
   await p.locator('.agenda-select').filter({hasText:'Small changes. Better work.'}).click();await p.getByLabel('Skip this slide',{exact:true}).uncheck();
   await p.evaluate(()=>{const originalPut=IDBObjectStore.prototype.put,originalGet=IDBObjectStore.prototype.get;window.cacheFault='quota';
    IDBObjectStore.prototype.put=function(...args){if(this.transaction.db.name==='dtb-morning-meeting'&&this.name==='assets'){if(cacheFault==='quota')throw new DOMException('Injected cache quota exceeded','QuotaExceededError');if(cacheFault==='blocked')return new Promise(()=>{});}return originalPut.apply(this,args);};

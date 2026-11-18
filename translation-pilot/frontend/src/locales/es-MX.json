@@ -448,7 +448,7 @@
   "No transcript was captured. During presentation, choose Start transcript or Start Translation to save speech text.": "No se capturó una transcripción. Durante la presentación, elige Iniciar transcripción o Iniciar traducción para guardar el texto de voz.",
   "All meeting accounts": "Todas las cuentas de reunión",
   "Your saved meetings and meeting notes": "Tus reuniones guardadas y sus notas",
-  "Build a new meeting": "Crear una reunión nueva",
+  "Build a new meeting": "Crear una nueva reunión",
   "Meetings are saved in this browser. Company account history requires the hosted account service.": "Las reuniones se guardan en este navegador. El historial de cuentas de la empresa requiere el servicio de cuentas del servidor.",
   "Paused": "Pausada",
   "Saved": "Guardada",
@@ -1337,5 +1337,12 @@
   "Left": "Izquierda",
   "Center": "Centro",
   "Right": "Derecha",
-  "Choose a valid logo position.": "Elige una posición válida para el logotipo."
+  "Choose a valid logo position.": "Elige una posición válida para el logotipo.",
+  "Today’s meeting": "La reunión de hoy",
+  "Meeting shortcuts": "Accesos a la reunión",
+  "Present a saved meeting": "Presentar una reunión guardada",
+  "Choose a template": "Elegir una plantilla",
+  "Choose a meeting template to get started.": "Elige una plantilla para comenzar.",
+  "No meeting ready for today": "No hay una reunión lista para hoy",
+  "Save a meeting for today and it will appear here.": "Guarda una reunión para hoy y aparecerá aquí."
 }

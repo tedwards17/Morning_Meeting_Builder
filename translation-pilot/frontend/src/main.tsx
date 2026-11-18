@@ -1,3 +1,4 @@
+import {HomeGuide} from './home-guide';
 import {TemplateDistribution} from "./template-distribution";
 import {formatMeetingDate} from "./meeting-date";
 import {ThemeImages,SlideBackground} from "./design-ui";
@@ -32,6 +33,7 @@ import "../recovered/index-BdPx4Tei.css";
 import "./v2.css";
 import { learnableKey } from "./remote";
 const React = RecoveredReact as typeof RT;
+globalThis.MMB.HomeGuide=HomeGuide;
 globalThis.MMB.BuilderContent=BuilderContent;
 globalThis.MMB.SafeSlide=SafeSlide;
 globalThis.MMB.SlideBackground=SlideBackground;
@@ -49,7 +51,7 @@ globalThis.MMB.ContentSelector = ContentSelector;
 globalThis.MMB.ContentCards = ContentCards;
 globalThis.MMB.FilePicker = FilePicker;
 globalThis.MMB.LanguageSelector = LanguageSelector;
-const Original = OriginalApp as RT.ComponentType<{navigationOpen:boolean;onCloseNavigation:()=>void}>;
+const Original = OriginalApp as RT.ComponentType<{navigationOpen:boolean;onCloseNavigation:()=>void;sidebarActions?:RT.ReactNode}>;
 const Provider = AppProvider as RT.ComponentType<{ children: RT.ReactNode }>;
 function useRuntime() {
   const [, set] = React.useState(0);
@@ -1032,8 +1034,7 @@ function Workspace() {
         <button className="account-menu-toggle icon-button" aria-label={translateUI("Open navigation")} aria-controls="mmb-navigation" aria-expanded={navigationOpen} onClick={()=>setNavigationOpen(value=>!value)}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <div className="account-identity"><strong>{runtime.hosted?runtime.session?.account.username:translateUI("Browser preview")}</strong>
-          <span>{runtime.hosted?uiLabel(role??""):translateUI("Local data only")}</span></div>
+        <div className="account-identity"><strong>{runtime.hosted?((globalThis.MMB.locations??[]).find((location:Row)=>location.id===runtime.session?.account.location_id)?.name??runtime.session?.account.username):translateUI("Browser preview")}</strong></div>
         {(!runtime.hosted||role!=="location")&&<button onClick={()=>setOpen(true)}>{translateUI("Company workspace")}</button>}
         {runtime.hosted && role !== "location" && (
           <label>
@@ -1052,17 +1053,11 @@ function Workspace() {
             </select>
           </label>
         )}
-        {runtime.hosted && (
-          <button className="account-signout"
-            onClick={() => runtime.logout().catch(runtime.reportError)}
-          >
-            {translateUI("Sign out")}</button>
-        )}
       </div>
       {runtime.error && <div className="v2-error" role="alert"><span>{uiError(runtime.error)}</span>
         <button className="icon-button" aria-label={translateUI("Dismiss error")} onClick={runtime.clearError}>×</button>
       </div>}
-      <Original navigationOpen={navigationOpen} onCloseNavigation={closeNavigation} />
+      <Original navigationOpen={navigationOpen} onCloseNavigation={closeNavigation} sidebarActions={runtime.hosted?<button type="button" className="account-signout" onClick={()=>runtime.logout().catch(runtime.reportError)}>{translateUI('Sign out')}</button>:undefined} />
       {open && <Manager close={() => setOpen(false)} />}
       <span className="sr-only">{state.settings.company}</span>
     </>

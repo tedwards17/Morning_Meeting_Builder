@@ -27,7 +27,7 @@ let checks=0;const check=(name,ok)=>{assert.ok(ok,name);checks++;console.log('PA
     const slides=['Navigation one','Temporary image','YouTube playback','Explicit finish'].map((title,i)=>({...base,id:crypto.randomUUID(),title,type:i===1||i===2?'gallery':'text',libraryId:undefined,contentIds:[],selection:'manual',text:'Shop meeting navigation check',defaultSkipped:false,optional:false,mediaUrl:i===2?'https://www.youtube.com/watch?v=dQw4w9WgXcQ':undefined}));
     await MMB.repository.save({...s,templates:[...s.templates,{...t,id,name:'Navigation fixture',slides,groups:[]}],settings:{...s.settings,lastTemplateId:id,defaultTemplateId:id}});
    });
-   await p.reload();await p.getByRole('button',{name:'Build a meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill('Navigation tester');
+   await p.reload();await p.getByRole('button',{name:'Build a new meeting',exact:true}).last().click();await p.getByPlaceholder('Who is leading today?').fill('Navigation tester');
    await p.locator('.meeting-agenda .agenda-row').filter({has:p.getByText('Temporary image',{exact:true})}).locator('.agenda-select').click();
    const chooser=p.waitForEvent('filechooser');await p.getByRole('button',{name:'Upload images / videos',exact:true}).click();await(await chooser).setFiles({name:'shop-test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAIAAAAC64paAAAAHUlEQVR4nGOU9M5jIBcwka1zVPOo5lHNo5qpohkASx8A+rXaktMAAAAASUVORK5CYII=','base64')});await p.getByText('Media attached and saved to this meeting.',{exact:true}).waitFor();
    await p.getByRole('button',{name:'Save presentation',exact:true}).click();
